@@ -36,7 +36,9 @@ context="$(mktemp -d)"
 trap 'rm -rf "$context"' EXIT
 
 echo "Exporting ${commit} ($(git -C "$repository_root" log -1 --format=%s "$commit"))"
-git -C "$repository_root" archive --format=tar "$commit" | tar -x -C "$context"
+# autocrlf off for this one command: on Windows, archive would otherwise rewrite the
+# committed LF files (scripts, configs) with CRLF line endings.
+git -C "$repository_root" -c core.autocrlf=false archive --format=tar "$commit" | tar -x -C "$context"
 cp "$repository_root/.dockerignore" "$context/.dockerignore"
 
 docker build \

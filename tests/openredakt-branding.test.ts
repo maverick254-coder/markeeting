@@ -3,7 +3,7 @@ import test from "node:test";
 import { heroContent } from "../src/content/hero";
 import { faqItems } from "../src/content/faq";
 import { finalCtaContent } from "../src/content/final-cta";
-import { siteConfig } from "../src/content/site";
+import { publicSiteUrl, resolveCanonicalOrigin, siteConfig } from "../src/content/site";
 import { buildArticleJsonLd, buildArticleMetadata } from "../src/lib/blog/seo";
 import type { BlogArticle } from "../src/lib/blog/types";
 
@@ -39,6 +39,24 @@ test("legacy external coordinates remain explicit and pending rather than invent
   assert.equal(siteConfig.externalCoordinates.status, "legacy-pending-migration");
   assert.equal(siteConfig.externalCoordinates.url, "https://saferedact.io");
   assert.equal(siteConfig.externalCoordinates.email, "support@saferedact.io");
+});
+
+test("the canonical origin defaults to the legacy coordinate and accepts only a bare HTTPS origin", () => {
+  assert.equal(publicSiteUrl, "https://saferedact.io");
+  assert.equal(resolveCanonicalOrigin(undefined), "https://saferedact.io");
+  assert.equal(resolveCanonicalOrigin("  "), "https://saferedact.io");
+  assert.equal(resolveCanonicalOrigin("https://redactplus.io"), "https://redactplus.io");
+  assert.equal(resolveCanonicalOrigin("https://redactplus.io/"), "https://redactplus.io");
+
+  for (const unsafe of [
+    "http://redactplus.io",
+    "https://redactplus.io/blog",
+    "https://redactplus.io?x=1",
+    "https://user:pass@redactplus.io",
+    "redactplus.io",
+  ]) {
+    assert.throws(() => resolveCanonicalOrigin(unsafe), /SITE_CANONICAL_ORIGIN/, unsafe);
+  }
 });
 
 test("article metadata and structured data publish under OpenRedakt", () => {

@@ -25,6 +25,7 @@ Fixed coordinates:
 | DNS | Spaceship: `@` and `www` A `31.97.42.73`, TTL 5 min; parking records removed by Spaceship once records existed |
 | Certificate | lineage `redactplus.io`, webroot, Let's Encrypt, reload hook on renewal |
 | Server record | `/root/deploy/redactplus-landing/releases.log`, plus `pre-release-*.txt` baselines and Nginx backups |
+| Support chat | Enabled in `app.env` (the "OpenRedakt" website inbox on `chatwoot.safaridesk.io`). Chatwoot sends `frame-ancestors` from that inbox's allowed domains, so `redactplus.io` must be listed there or the widget frame is blocked and the launcher falls back to email. |
 
 Later releases are recorded in `releases.log` on the server, not here.
 

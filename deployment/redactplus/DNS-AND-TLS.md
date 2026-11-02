@@ -121,10 +121,12 @@ The container must already be healthy on `127.0.0.1:6095` (DEPLOYMENT.md step 9)
 ### 6. Renewal verification
 
 ```bash
-certbot renew --cert-name redactplus.io --dry-run
+certbot renew --cert-name redactplus.io --dry-run --no-random-sleep-on-renew
 grep -E '^(authenticator|webroot_path|deploy_hook|renew_hook)' /etc/letsencrypt/renewal/redactplus.io.conf
 systemctl list-timers certbot.timer
 ```
+
+Without `--no-random-sleep-on-renew`, a non-interactive `renew` waits a random delay of up to several minutes before contacting the CA, which looks like a hang over SSH.
 
 Renewal works because the final site's port-80 block keeps serving `/.well-known/acme-challenge/` from the same webroot. Other lineages on this host have known renewal problems. `--cert-name` keeps these commands scoped to this one.
 

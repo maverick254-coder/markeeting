@@ -14,6 +14,20 @@ Fixed coordinates:
 | Nginx site | `/etc/nginx/sites-available/redactplus.io` (symlinked into `sites-enabled`) |
 | Certificate lineage | `/etc/letsencrypt/live/redactplus.io/` (new; nothing existing is touched) |
 
+## Current deployment (first release, 2026-11-02)
+
+| | |
+|---|---|
+| Site commit (image) | `ec1cd355fe20b5aca1fadb8b31cc16d73790d6d9` (`main`, Design B) |
+| Image | `registry.safaridesk.io/safari/redactplus-landing:ec1cd355fe20b5aca1fadb8b31cc16d73790d6d9` |
+| Digest | `sha256:ec906b564b3499e60e1d20f14cf1951df40290413814fa9b9d27ffdc3e82eca1` |
+| Canonical origin | `https://redactplus.io` (baked into the image) |
+| DNS | Spaceship: `@` and `www` A `31.97.42.73`, TTL 5 min; parking records removed by Spaceship once records existed |
+| Certificate | lineage `redactplus.io`, webroot, Let's Encrypt, reload hook on renewal |
+| Server record | `/root/deploy/redactplus-landing/releases.log`, plus `pre-release-*.txt` baselines and Nginx backups |
+
+Later releases are recorded in `releases.log` on the server, not here.
+
 ## Before the first release (one-time)
 
 1. **Content.** The canonical origin is handled by `SITE_CANONICAL_ORIGIN`, baked in as `https://redactplus.io`. Visible branding ("OpenRedakt", support email, download link) is a separate rebranding decision; see README.

@@ -46,13 +46,14 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
-    pids_limit: 256
 
+    # Compose v5 rejects a top-level pids_limit next to deploy limits; it lives here.
     deploy:
       resources:
         limits:
           memory: 512M
           cpus: "1.0"
+          pids: 256
 
     healthcheck:
       test:

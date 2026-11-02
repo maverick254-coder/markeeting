@@ -1,0 +1,88 @@
+# RedactPlus marketing site: Compose template for /root/deploy/redactplus-landing/.
+#
+# Installed on the server as compose.yaml beside two files that are never committed:
+#   .env      the release pin (RELEASE_SHA, RELEASE_DIGEST); see release.env.example
+#   app.env   runtime settings, mode 600;                     see app.env.example
+#
+# The image is addressed by tag AND digest. Docker resolves name:tag@digest by the
+# digest alone, so re-pushing the same tag cannot change what this file runs.
+# Watchtower on this host runs with --label-enable; this service opts out explicitly.
+name: redactplus-landing
+
+services:
+  redactplus-landing:
+    container_name: redactplus-landing
+    image: "registry.safaridesk.io/safari/redactplus-landing:${RELEASE_SHA:?set RELEASE_SHA in .env}@${RELEASE_DIGEST:?set RELEASE_DIGEST in .env}"
+    pull_policy: missing
+    restart: unless-stopped
+    init: true
+
+    env_file:
+      - path: ./app.env
+        required: true
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      # Keeps the V8 heap well inside the memory limit below.
+      NODE_OPTIONS: --max-old-space-size=384
+
+    # Loopback only. Host nginx is the sole public path to the container.
+    ports:
+      - "127.0.0.1:6095:3000"
+
+    # The application tree is read-only. Next writes its image-optimisation cache to
+    # a named volume, and on first request copies prerendered route bodies (such as
+    # /robots.txt) into .next/server/route-cache. Next tolerates a failed copy and
+    # serves from memory, but a small tmpfs keeps that path writable anyway.
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+      - /app/.next/server/route-cache:size=8m,mode=1777
+    volumes:
+      - image-cache:/app/.next/cache
+
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>r.ok?r.json():null).then(b=>process.exit(b&&b.status==='ready'?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+      io.safaridesk.service: redactplus-landing
+
+    networks:
+      - redactplus
+
+# A dedicated bridge network. No other project's network is attached.
+networks:
+  redactplus:
+    name: redactplus-landing
+
+volumes:
+  image-cache:
+    name: redactplus-landing-image-cache

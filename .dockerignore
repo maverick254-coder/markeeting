@@ -1,0 +1,34 @@
+# Docker build context for deployment/redactplus/Dockerfile.
+#
+# Allowlist: everything is excluded, then only what `npm ci` and `next build` need is
+# re-included. Screenshot masters (assets/), documentation, tests, the OAuth broker,
+# local environment files, Git metadata and build output never enter the context, so
+# they cannot reach any image layer.
+*
+
+!package.json
+!package-lock.json
+!next.config.ts
+!tsconfig.json
+!postcss.config.js
+!tailwind.config.ts
+!.eslintrc.json
+
+!src
+!public
+!content
+!config
+!scripts
+
+# Re-excluded inside the allowed directories. The last matching rule wins.
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/node_modules
+**/.DS_Store
+**/Thumbs.db
+# A generated CMS file would shadow the runtime /admin/config.yml route.
+public/admin/config.yml

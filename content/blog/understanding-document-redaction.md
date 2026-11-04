@@ -4,7 +4,7 @@ slug: understanding-document-redaction
 excerpt: Document redaction helps organizations protect sensitive information
   before sharing files. Learn what redaction means, why it matters, and how a
   structured review process reduces disclosure risks.
-author: OpenRedakt Team
+author: RedactPlus Team
 type: article
 category: Data Privacy
 tags:

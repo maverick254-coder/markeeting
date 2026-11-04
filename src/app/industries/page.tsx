@@ -66,7 +66,7 @@ export default function IndustriesPage() {
 
         <section id="industry-directory" data-scroll-target className="section-y bg-canvas text-ink" aria-labelledby="industry-directory-heading">
           <Container>
-            <SectionIntro id="industry-directory-heading" eyebrow="Industry directory" title="Find the guide for your records" description="Each guide covers the people a sector protects, the records and media involved, the practical challenges, and the OpenRedakt capabilities that apply." />
+            <SectionIntro id="industry-directory-heading" eyebrow="Industry directory" title="Find the guide for your records" description="Each guide covers the people a sector protects, the records and media involved, the practical challenges, and the RedactPlus capabilities that apply." />
             <div className="mt-14 space-y-16">
               {groups.map((group) => (
                 <div key={group.id} aria-labelledby={`group-${group.id}`} role="group">
@@ -109,7 +109,7 @@ export default function IndustriesPage() {
               })}
             </div>
             <p className="mt-12 border-t border-border-subtle/60 pt-6 text-[0.9375rem] leading-7 text-ink-muted">
-              New to the process? Read <Link href="/how-it-works" className="font-semibold text-accent-ink hover:text-accent-ink-hover">how redaction review works</Link> or <Link href="/why-openredakt" className="font-semibold text-accent-ink hover:text-accent-ink-hover">why teams evaluate OpenRedakt</Link>.
+              New to the process? Read <Link href="/how-it-works" className="font-semibold text-accent-ink hover:text-accent-ink-hover">how redaction review works</Link> or <Link href="/why-redactplus" className="font-semibold text-accent-ink hover:text-accent-ink-hover">why teams evaluate RedactPlus</Link>.
             </p>
           </Container>
         </section>

@@ -5,7 +5,7 @@ export function EditorialHero() {
   return (
     <section className="blog-hero pt-[8.25rem] sm:pt-[9.25rem]">
       <Container className="flex max-w-4xl flex-col items-center pb-12 text-center sm:pb-14">
-        <p className="type-eyebrow">OpenRedakt Blog</p>
+        <p className="type-eyebrow">RedactPlus Blog</p>
         <h1 className="type-display mt-4">
           Blog
         </h1>

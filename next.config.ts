@@ -30,6 +30,12 @@ const nextConfig: NextConfig = {
         destination: "/blog?type=news",
         permanent: true,
       },
+      {
+        // The page was renamed with the RedactPlus rebrand; old links and bookmarks keep working.
+        source: "/why-openredakt",
+        destination: "/why-redactplus",
+        permanent: true,
+      },
     ];
   },
   async headers() {

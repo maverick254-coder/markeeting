@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
-import { pricingPackages, pricingSharedLicenseNote } from "@/content/pricing";
+import { pricingPackages, pricingSharedLicenseNote, type PricingPackage } from "@/content/pricing";
 import { cn } from "@/lib/utils";
 
 const annualFormatter = new Intl.NumberFormat("en-US", {
@@ -17,107 +17,111 @@ const monthlyFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
-const familyIcon = {
-  documents: "document",
-  audio: "audio",
-} as const;
+/** Every package CTA carries its package to the shared enquiry form, which preselects it. */
+export function packageEnquiryHref(slug: PricingPackage["slug"]) {
+  return `/book-a-demo?package=${slug}`;
+}
+
+function PackagePrice({ plan }: { plan: PricingPackage }) {
+  if (plan.price.kind === "contact") {
+    return (
+      <>
+        <p className="font-heading text-[1.75rem] font-semibold leading-10 tracking-[-0.03em] text-ink">Contact Sales</p>
+        <p className="mt-1 text-[0.8125rem] leading-5 text-ink-muted">Quantity, term and price agreed with you</p>
+      </>
+    );
+  }
+
+  const { annualUsd, monthlyEquivalentUsd } = plan.price;
+  return (
+    <>
+      <p className="flex flex-wrap items-baseline gap-x-1.5">
+        <span className="font-heading text-[2.25rem] font-semibold leading-10 tracking-[-0.035em] text-ink">
+          {annualFormatter.format(annualUsd)}
+        </span>
+        <span className="text-sm text-ink-muted">/ user / year</span>
+      </p>
+      <p className="mt-1 text-[0.8125rem] leading-5 text-ink-muted">
+        {Number.isInteger(monthlyEquivalentUsd) ? "" : "About "}
+        {monthlyFormatter.format(monthlyEquivalentUsd)}/month equivalent, billed annually
+      </p>
+    </>
+  );
+}
 
 export function PricingCards() {
   return (
     <>
-      {/* At desktop width each card is a subgrid over four shared rows (summary, price, CTA,
-          features), so prices and buttons line up even when copy wraps differently. */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 lg:grid-rows-[repeat(4,auto)]">
+      {/* At desktop width each card is a subgrid over four shared rows (heading, price,
+          features, action), so prices, lists and buttons line up across the three cards. */}
+      <div className="mx-auto grid max-w-[66rem] gap-4 md:grid-cols-2 lg:grid-cols-3 lg:grid-rows-[repeat(4,auto)] lg:gap-5">
         {pricingPackages.map((plan) => {
-          const proposed = plan.priceStatus === "proposed";
+          const highlighted = "highlight" in plan && Boolean(plan.highlight);
 
           return (
             <article
               key={plan.slug}
               aria-labelledby={`package-${plan.slug}`}
+              data-package={plan.slug}
               className={cn(
-                "relative flex min-w-0 flex-col rounded-panel border bg-surface-raised p-6 shadow-panel sm:p-8 lg:row-span-4 lg:grid lg:grid-rows-subgrid lg:gap-y-0",
-                plan.families.length > 1 && "md:col-span-2 lg:col-span-1",
-                plan.emphasized
-                  ? "border-accent-warm/60 bg-[linear-gradient(180deg,rgb(var(--or-coral)/0.12),rgb(var(--or-graphite))_34%)]"
-                  : "border-border-subtle"
+                "relative flex min-w-0 flex-col rounded-[20px] border bg-surface-raised p-5 sm:p-6 lg:row-span-4 lg:grid lg:grid-rows-subgrid lg:gap-y-0",
+                plan.slug === "enterprise" && "md:col-span-2 lg:col-span-1",
+                highlighted
+                  ? "border-accent-warm/55 shadow-[0_18px_44px_-24px_rgb(194_65_42/0.45)]"
+                  : "border-border-subtle shadow-[0_1px_2px_rgb(var(--or-shadow)/0.05)]"
               )}
             >
-              <div>
-                <h3
-                  id={`package-${plan.slug}`}
-                  className="font-heading text-2xl font-semibold tracking-[-0.02em] text-ink"
-                >
+              <header>
+                {highlighted ? (
+                  <span className="absolute -top-3 left-5 rounded-full border border-accent-warm/40 bg-canvas px-2.5 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.06em] text-accent-ink sm:left-6">
+                    {"highlight" in plan ? plan.highlight : null}
+                  </span>
+                ) : null}
+                <h3 id={`package-${plan.slug}`} className="font-heading text-xl font-semibold tracking-[-0.02em] text-ink">
                   {plan.name}
                 </h3>
-                <p className="mt-2 flex items-center gap-2 text-sm font-semibold text-accent-mint">
-                  {plan.families.map((family) => (
-                    <Icon key={family} name={familyIcon[family]} size={16} className="shrink-0" />
-                  ))}
-                  {plan.scopeLabel}
-                </p>
-                <p className="mt-4 text-body leading-7 text-ink-muted">{plan.description}</p>
+                <p className="mt-1.5 text-sm leading-6 text-ink-muted">{plan.summary}</p>
+              </header>
+
+              <div className="mt-5 border-t border-border-subtle pt-5">
+                <PackagePrice plan={plan} />
               </div>
 
-              <div className="mt-6 border-t border-border-subtle pt-6">
-                {proposed ? (
-                  <>
-                    <p className="font-heading text-3xl font-semibold text-ink">Contact Sales</p>
-                    <p className="mt-3 text-sm leading-6 text-ink-muted">
-                      <span className="font-semibold text-ink">
-                        {annualFormatter.format(plan.annualPriceUsd)} per license/year proposed
-                      </span>
-                      <br />
-                      Approximately {monthlyFormatter.format(plan.monthlyEquivalentUsd)} monthly equivalent.
-                      Pending business confirmation.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex flex-wrap items-end gap-x-2 gap-y-1">
-                      <p className="font-heading text-4xl font-semibold tracking-[-0.03em] text-ink">
-                        {annualFormatter.format(plan.annualPriceUsd)}
-                      </p>
-                      <p className="pb-1 text-sm text-ink-muted">/ license / year</p>
-                    </div>
-                    <p className="mt-3 text-sm text-ink-muted">
-                      {Number.isInteger(plan.monthlyEquivalentUsd) ? "" : "Approximately "}
-                      {monthlyFormatter.format(plan.monthlyEquivalentUsd)} per license/month equivalent
-                    </p>
-                  </>
+              <ul
+                className={cn(
+                  "mt-5 space-y-2.5",
+                  plan.slug === "enterprise" && "md:grid md:grid-cols-2 md:gap-x-6 md:space-y-0 md:gap-y-2.5 lg:block lg:space-y-2.5"
                 )}
-                <p className="mt-3 text-xs font-semibold uppercase tracking-[0.08em] text-accent-cool">
-                  Per license. Billed annually.
-                </p>
-              </div>
-
-              <Button
-                asChild
-                variant={plan.emphasized ? "primary" : "secondary"}
-                size="lg"
-                className="mt-6 w-full lg:self-start"
               >
-                <Link href={`/book-a-demo?package=${plan.slug}`}>
-                  {plan.ctaLabel}
-                  <Icon name="arrow" size={17} />
-                </Link>
-              </Button>
-
-              <ul className="mt-7 space-y-3 border-t border-border-subtle pt-6">
                 {plan.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-3 text-sm leading-6 text-ink-muted">
-                    <Icon name="check-circle" size={18} className="mt-0.5 shrink-0 text-accent-mint" />
+                  <li key={feature} className="flex items-start gap-2.5 text-sm leading-[1.4rem] text-ink">
+                    <Icon name="check-circle" size={16} className="mt-[0.2rem] shrink-0 text-accent-mint" />
                     <span>{feature}</span>
                   </li>
                 ))}
               </ul>
+
+              <div className="mt-6 flex flex-col justify-end gap-2.5">
+                <Button asChild variant={highlighted ? "primary" : "secondary"} size="md" className="w-full">
+                  <Link href={packageEnquiryHref(plan.slug)} aria-label={`${plan.ctaLabel}: ${plan.name} package`}>
+                    {plan.ctaLabel}
+                    <Icon name="arrow" size={16} />
+                  </Link>
+                </Button>
+                <p className="text-center text-xs leading-5 text-ink-muted">{plan.footnote}</p>
+              </div>
             </article>
           );
         })}
       </div>
-      <p className="mt-8 flex items-start gap-3 text-sm leading-6 text-ink-muted lg:justify-center">
-        <Icon name="shield-check" size={18} className="mt-0.5 shrink-0 text-accent-cool" />
-        <span>{pricingSharedLicenseNote}</span>
+      <p className="mx-auto mt-6 flex max-w-[46rem] items-start gap-2.5 text-sm leading-6 text-ink-muted lg:justify-center lg:text-center">
+        <Icon name="shield-check" size={17} className="mt-0.5 shrink-0 text-accent-cool" />
+        <span>
+          {pricingSharedLicenseNote}{" "}
+          <Link href="#compare" className="font-medium text-accent-ink underline-offset-4 hover:underline">
+            Compare packages
+          </Link>
+        </span>
       </p>
     </>
   );

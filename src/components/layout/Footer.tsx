@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { demoHref, footerGroups } from "@/content/navigation";
 import { publicSupportEmail, siteConfig } from "@/content/site";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Container } from "@/components/ui/Container";
 
 const linkClass =
@@ -30,7 +31,7 @@ export function Footer({ homePage = false, invitation = true }: { homePage?: boo
               <span className="block">Share with confidence.</span>
             </h2>
             <p className="mx-auto mt-6 max-w-[33rem] text-[1.0625rem] leading-7 text-ink-muted">
-              See how OpenRedakt helps your team review and redact sensitive information in documents and audio.
+              See how RedactPlus helps your team review and redact sensitive information in documents and media.
             </p>
             <Link
               href={demoHref}
@@ -67,9 +68,14 @@ export function Footer({ homePage = false, invitation = true }: { homePage?: boo
           ))}
         </nav>
 
-        <div className="mt-16 flex flex-col gap-2 text-[0.8125rem] text-ink-muted sm:mt-20 sm:flex-row sm:items-center sm:justify-between">
-          <p>&copy; {new Date().getFullYear()} {siteConfig.name}. All rights reserved.</p>
-          <p>Windows desktop software. Review exported files before you share them.</p>
+        <div className="mt-16 flex flex-col gap-4 border-t border-[rgb(28_25_23/0.08)] pt-8 text-[0.8125rem] text-ink-muted sm:mt-20 sm:flex-row sm:items-center sm:justify-between">
+          <Link href="/" aria-label={`${siteConfig.name} home`} className="-ml-1.5 w-fit rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool">
+            <BrandLogo tone="light" height={40} decorative />
+          </Link>
+          <div className="flex flex-col gap-1 sm:items-end sm:text-right">
+            <p>&copy; {new Date().getFullYear()} {siteConfig.name}. All rights reserved.</p>
+            <p>Windows desktop software. Review exported files before you share them.</p>
+          </div>
         </div>
       </Container>
 

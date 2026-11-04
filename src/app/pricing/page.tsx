@@ -8,19 +8,21 @@ import { AnimateOnScroll } from "@/components/ui/AnimateOnScroll";
 import { Container } from "@/components/ui/Container";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { SectionHeading } from "@/components/ui/SectionHeading";
+import { brandAssets } from "@/content/brand";
 import { pricingLicensingSteps } from "@/content/pricing";
 
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "Compare OpenRedakt annual licenses for document redaction, audio redaction, or both supported workflows.",
+    "Compare RedactPlus annual licenses: Document, Document + Media for audio and video, or Enterprise for multi-user agreements.",
   alternates: { canonical: "/pricing" },
   openGraph: {
     type: "website",
     url: "/pricing",
-    title: "OpenRedakt Pricing",
+    title: "RedactPlus Pricing",
     description:
-      "Annual per-license pricing for OpenRedakt document and audio redaction workflows.",
+      "Annual per-user pricing for RedactPlus Document and Document + Media licenses, and Enterprise agreements.",
+    images: [brandAssets.openGraphImage],
   },
 };
 
@@ -37,12 +39,12 @@ export default function PricingPage() {
                 Redaction software that fits the work you do.
               </h1>
               <p className="type-lede mx-auto mt-5 max-w-2xl">
-                Choose a license for document workflows, audio workflows, or both. Each package helps teams review and protect sensitive information before it is shared.
+                Start with documents, add audio and video with Document + Media, or agree a multi-user arrangement with Enterprise.
               </p>
               <div className="mx-auto mt-8 flex max-w-lg flex-col items-center gap-1 rounded-[18px] border border-border-subtle bg-canvas/80 px-6 py-4 text-center shadow-[0_1px_2px_rgb(var(--or-shadow)/0.04)]">
-                <p className="text-sm font-semibold text-ink">Per license. Billed annually.</p>
+                <p className="text-sm font-semibold text-ink">Per named user. Billed annually in USD.</p>
                 <p className="text-sm leading-5 text-ink-muted">
-                  Monthly figures are planning equivalents. OpenRedakt does not present a month-to-month payment schedule on this page.
+                  Monthly figures are planning equivalents, not a month-to-month payment option.
                 </p>
               </div>
             </div>
@@ -56,7 +58,7 @@ export default function PricingPage() {
                 align="center"
                 eyebrow="Choose your workflow"
                 title={<span id="packages-heading">Three packages, clearly scoped</span>}
-                description="Essential and Advanced are separate, capability-specific packages: Essential covers documents and Advanced covers audio. Complete Suite combines both supported workflows under one license."
+                description="Document covers document redaction. Document + Media adds audio and video to every document capability; there is no audio-only license. Enterprise is agreed with our sales team."
               />
             </AnimateOnScroll>
             <div className="mt-10 lg:mt-12">
@@ -88,7 +90,7 @@ export default function PricingPage() {
                 <SectionHeading
                   eyebrow="Licensing"
                   title={<span id="licensing-heading">How licensing works</span>}
-                  description="OpenRedakt uses sales-led provisioning and named-user licenses. Your team manages assigned access in the Control Center; this page does not imply online checkout or instant activation."
+                  description="RedactPlus uses sales-led provisioning and named-user licenses. Your team manages assigned access in the Control Center; this page does not imply online checkout or instant activation."
                 />
               </AnimateOnScroll>
               <ol className="grid gap-4 sm:grid-cols-2">

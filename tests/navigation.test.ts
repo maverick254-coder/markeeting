@@ -22,7 +22,7 @@ test("primary navigation follows the approved multipage model", () => {
   assert.deepEqual(menu("features").links.map((link) => link.label), ["Features Overview", "Document Redaction", "Audio Redaction"]);
   // Documentation stays out until a published address is configured; no dead links.
   assert.equal(documentationLink, null);
-  assert.deepEqual(menu("resources").links.map((link) => link.href), ["/how-it-works", "/why-openredakt"]);
+  assert.deepEqual(menu("resources").links.map((link) => link.href), ["/how-it-works", "/why-redactplus"]);
   // Contact leaves the header but stays reachable from the footer; demo CTAs lead to /book-a-demo.
   assert.ok(!primaryNav.some((item) => item.href === "/contact"));
   assert.ok(footerGroups.some((group) => group.links.some((link) => link.href === "/contact")));

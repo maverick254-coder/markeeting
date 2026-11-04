@@ -3,6 +3,7 @@ import test from "node:test";
 
 const baseUrl = process.env.TEST_BASE_URL;
 const routeTest = baseUrl ? test : test.skip;
+const packages = ["document", "document-media", "enterprise"];
 
 function visibleText(html) {
   return html
@@ -27,7 +28,7 @@ routeTest("public marketing presents document and audio redaction without unfini
   assert.match(text, /Audio redaction/i);
   assert.doesNotMatch(
     text,
-    /Video redaction|Image redaction|Video review controls|Documents & images|common image formats|Video files|Scanned images/i
+    /Image redaction|Documents & images|common image formats|Scanned images/i
   );
   assert.match(html, /href="\/pricing"/);
   // Light-theme product captures only: the project library and the document workspace.
@@ -35,54 +36,6 @@ routeTest("public marketing presents document and audio redaction without unfini
   assert.match(html, /document-workspace\.png/i);
   assert.doesNotMatch(html, /hero-document-review\.png|format-documents\.png/i);
   assert.doesNotMatch(html, /step-open\.png|format-video\.png|homepage\.png|ai%20tools|ai-tools/i);
-});
-
-routeTest("pricing route makes package scope and annual per-license billing unambiguous", async () => {
-  const response = await fetch(`${baseUrl}/pricing`);
-  assert.equal(response.status, 200);
-
-  const html = await response.text();
-  const text = visibleText(html);
-
-  assert.match(text, /Redaction software that fits the work you do/i);
-  assert.match(text, /OpenRedakt Essential/);
-  assert.match(text, /\$1,500/);
-  assert.match(text, /\$125/);
-  assert.match(text, /OpenRedakt Advanced/);
-  assert.match(text, /\$2,500/);
-  assert.match(text, /\$208\.33/);
-  assert.match(text, /OpenRedakt Complete Suite/);
-  assert.match(text, /\$3,500/);
-  assert.match(text, /\$291\.67/);
-  assert.match(text, /proposed/i);
-  assert.match(text, /pending (?:business )?confirmation/i);
-  assert.match(text, /Contact Sales/);
-  assert.match(text, /Per license\. Billed annually\./i);
-  assert.match(text, /Essential and Advanced are separate, capability-specific packages/i);
-  assert.match(text, /Compare packages/i);
-  assert.match(text, /Not included/i);
-  assert.match(text, /one-year term/i);
-  assert.match(text, /named-user license/i);
-  assert.match(text, /assigned by email/i);
-  assert.match(text, /Control Center/i);
-  assert.match(text, /owner\/admin/i);
-  assert.match(text, /view and release/i);
-  assert.match(text, /Confirmed in (?:your )?quote/i);
-  assert.match(text, /How licensing works/i);
-  assert.match(text, /OpenRedakt provisions/i);
-  assert.match(text, /signs in on the Windows desktop/i);
-  assert.match(text, /signed, device-bound license/i);
-  assert.doesNotMatch(text, /self-service (?:checkout|purchase)|instant provisioning|automatically renews|automatic renewal/i);
-  assert.doesNotMatch(text, /(?:^|\D)2 devices per (?:user|license)|two devices per (?:user|license)/i);
-  assert.match(html, /<table/);
-  assert.match(html, /<caption/);
-  // Package buttons carry the choice to the enquiry form on /book-a-demo.
-  for (const slug of ["essential", "advanced", "complete-suite"]) {
-    assert.match(packageCard(html, slug), new RegExp(`href="/book-a-demo\\?package=${slug}"`));
-  }
-  assert.doesNotMatch(html, /name="packageInterest"/);
-  assert.match(html, /id="footer-invitation-heading"/);
-  assert.match(html, /<link rel="canonical" href="https:\/\/saferedact\.io\/pricing"/);
 });
 
 function packageCard(html, slug) {
@@ -97,7 +50,7 @@ function comparisonRows(html) {
   return [...match[0].matchAll(/<tr[^>]*>\s*<th scope="row"[^>]*>([\s\S]*?)<\/th>([\s\S]*?)<\/tr>/g)].map(
     ([, capability, cells]) => ({
       capability: visibleText(capability),
-      included: [...cells.matchAll(/<td[\s\S]*?<\/td>/g)].map(([cell]) => visibleText(cell) === "Included"),
+      status: [...cells.matchAll(/<td[^>]*data-status="([a-z]+)"/g)].map(([, status]) => status),
     })
   );
 }
@@ -106,71 +59,115 @@ function cardBullets(card) {
   return [...card.matchAll(/<li(?:\s[^>]*)?>[\s\S]*?<\/li>/g)].map(([item]) => visibleText(item));
 }
 
-routeTest("pricing cards give a concise, correctly scoped summary of each package", async () => {
+routeTest("pricing presents Document, Document + Media and Enterprise with verified prices", async () => {
+  const response = await fetch(`${baseUrl}/pricing`);
+  assert.equal(response.status, 200);
+
+  const html = await response.text();
+  const text = visibleText(html);
+
+  assert.match(text, /Redaction software that fits the work you do/i);
+  assert.match(text, /Per named user\. Billed annually in USD\./);
+  assert.match(text, /there is no audio-only license/i);
+  assert.match(text, /Compare packages/i);
+  assert.match(text, /Not included/i);
+  assert.match(text, /By agreement/);
+  assert.match(text, /one-year term/i);
+  assert.match(text, /named-user license/i);
+  assert.match(text, /assigned by email/i);
+  assert.match(text, /Control Center/i);
+  assert.match(text, /owner\/admin/i);
+  assert.match(text, /view and release/i);
+  assert.match(text, /Confirmed in (?:your )?quote/i);
+  assert.match(text, /How licensing works/i);
+  assert.match(text, /RedactPlus provisions/i);
+  assert.match(text, /signs in on the Windows desktop/i);
+  assert.match(text, /signed, device-bound license/i);
+
+  // The former package names and the unconfirmed bundle price are gone.
+  assert.doesNotMatch(text, /Essential|Advanced|Complete Suite|\$3,500|\$291\.67|proposed|OpenRedakt/);
+  assert.doesNotMatch(text, /self-service (?:checkout|purchase)|instant provisioning|automatically renews|automatic renewal/i);
+  assert.doesNotMatch(text, /(?:^|\D)2 devices per (?:user|license)|two devices per (?:user|license)/i);
+  assert.match(html, /<table/);
+  assert.match(html, /<caption/);
+  // Package buttons carry the choice to the enquiry form on /book-a-demo.
+  for (const slug of packages) {
+    assert.match(packageCard(html, slug), new RegExp(`href="/book-a-demo\\?package=${slug}"`));
+  }
+  assert.doesNotMatch(html, /name="packageInterest"/);
+  assert.match(html, /id="footer-invitation-heading"/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/saferedact\.io\/pricing"/);
+});
+
+routeTest("pricing cards are compact and correctly scoped", async () => {
   const response = await fetch(`${baseUrl}/pricing`);
   assert.equal(response.status, 200);
   const html = await response.text();
 
   const cards = Object.fromEntries(
-    ["essential", "advanced", "complete-suite"].map((slug) => {
+    packages.map((slug) => {
       const card = packageCard(html, slug);
-      return [slug, { text: visibleText(card), bullets: cardBullets(card) }];
+      return [slug, { html: card, text: visibleText(card), bullets: cardBullets(card) }];
     })
   );
 
   for (const [slug, card] of Object.entries(cards)) {
-    assert.ok(card.bullets.length >= 5 && card.bullets.length <= 8, `${slug} shows ${card.bullets.length} bullets`);
-    assert.doesNotMatch(card.text, /not included|more capabilities|full comparison|Every license includes/i);
+    assert.ok(card.bullets.length >= 4 && card.bullets.length <= 6, `${slug} shows ${card.bullets.length} bullets`);
+    assert.ok(card.text.length <= 620, `${slug} card text is ${card.text.length} characters`);
   }
 
-  const essential = cards.essential.text;
-  assert.match(essential, /OpenRedakt Essential Documents/);
-  assert.match(essential, /OCR/);
-  assert.match(essential, /On-device AI detection/);
-  assert.match(essential, /independently verified/);
-  assert.match(essential, /PDF, PDF\/A and TIFF export/);
-  assert.doesNotMatch(essential, /speech|Voice disguise|Waveform|transcript/i);
+  const document = cards.document.text;
+  assert.match(document, /^Document Redact documents and scanned pages/);
+  assert.match(document, /\$1,500 \/ user \/ year/);
+  assert.match(document, /\$125 ?\/month equivalent, billed annually/);
+  assert.match(document, /OCR/);
+  assert.match(document, /On-device AI detection/);
+  assert.match(document, /PDF, PDF\/A and TIFF export/);
+  assert.match(document, /Audio and video are not included/);
+  assert.doesNotMatch(document.replace("Audio and video are not included", ""), /audio|speech|voice|waveform|transcri|video|media/i);
+  assert.match(cards.document.html, /aria-label="Request a demo: Document package"/);
 
-  const advanced = cards.advanced.text;
-  assert.match(advanced, /OpenRedakt Advanced Audio/);
-  assert.match(advanced, /On-device speech-to-text/);
-  assert.match(advanced, /AI detection of spoken/);
-  assert.match(advanced, /transcript synchronized with playback/);
-  assert.match(advanced, /voice disguise/);
-  assert.match(advanced, /Export redacted audio and redacted transcripts/);
-  assert.doesNotMatch(advanced, /OCR|PDF|Bates|verif|report|document/i);
+  const media = cards["document-media"].text;
+  assert.match(media, /^Most complete Document \+ Media Everything in Document, plus audio and video redaction/);
+  assert.match(media, /\$2,500 \/ user \/ year/);
+  assert.match(media, /About \$208\.33 ?\/month equivalent, billed annually/);
+  assert.match(media, /Everything in Document/);
+  assert.match(media, /Audio redaction for WAV, MP3, M4A, FLAC and more/);
+  assert.match(media, /Video redaction: blur, pixelate or black out areas/);
+  assert.match(media, /Export redacted audio, video and transcripts/);
+  assert.doesNotMatch(media, /verified (?:audio|video)|(?:audio|video) report/i);
 
-  const suite = cards["complete-suite"].text;
-  assert.match(suite, /OpenRedakt Complete Suite Documents \+ Audio/);
-  assert.match(suite, /Everything in Essential and Advanced/);
-  assert.match(suite, /Document and audio redaction/);
-  assert.match(suite, /Verified document exports, plus redacted audio and transcripts/);
+  const enterprise = cards.enterprise.text;
+  assert.match(enterprise, /^Enterprise Multi-user licensing/);
+  assert.match(enterprise, /Contact Sales/);
+  assert.doesNotMatch(enterprise, /\$\d/);
+  assert.match(enterprise, /Document or Document \+ Media capabilities, as agreed/);
+  assert.match(cards.enterprise.html, /aria-label="Contact Sales: Enterprise package"/);
+
+  // Exactly one card is differentiated, with the primary button.
+  assert.equal((visibleText(html).match(/Most complete/g) ?? []).length, 1);
 
   const pageText = visibleText(html);
-  assert.match(pageText, /named-user license assigned by email, managed by your owners and admins in the Control Center/);
+  assert.match(pageText, /Every license is a named user, assigned by email and managed by your owners and admins in the RedactPlus Control Center/);
 });
 
-routeTest("the comparison table is short and agrees with the package scope on each card", async () => {
+routeTest("the comparison table agrees with each package's licence", async () => {
   const response = await fetch(`${baseUrl}/pricing`);
   const html = await response.text();
   const rows = comparisonRows(html);
 
   assert.ok(rows.length >= 8 && rows.length <= 12, `${rows.length} comparison rows`);
   for (const row of rows) {
-    assert.equal(row.included.length, 3, row.capability);
-    assert.equal(row.included[2], true, `Complete Suite must include "${row.capability}"`);
-    // A row held by only one single-family package must be about that package's format.
-    if (row.included[0] !== row.included[1]) {
-      const documentRow = row.included[0];
-      assert.equal(/audio|speech|transcri|voice/i.test(row.capability), !documentRow, row.capability);
+    assert.equal(row.status.length, 3, row.capability);
+    const [document, media] = row.status;
+    if (/audio|video|transcri|voice/i.test(row.capability)) {
+      assert.equal(document, "excluded", `Document must not include "${row.capability}"`);
+      assert.equal(media, "included", row.capability);
     }
+    if (/document|OCR/i.test(row.capability)) assert.deepEqual([document, media], ["included", "included"], row.capability);
   }
-
-  const advancedDocumentRows = rows.filter((row) => /document|OCR|Bates/i.test(row.capability) && row.included[1]);
-  assert.deepEqual(advancedDocumentRows, [], "Advanced must not be credited with document capabilities");
-  const essentialAudioRows = rows.filter((row) => /audio|speech|transcri/i.test(row.capability) && row.included[0]);
-  assert.deepEqual(essentialAudioRows, [], "Essential must not be credited with audio capabilities");
-  assert.ok(rows.some((row) => /Control Center/.test(row.capability) && row.included.every(Boolean)));
+  assert.ok(rows.some((row) => /Control Center/.test(row.capability) && row.status.every((status) => status === "included")));
+  assert.ok(rows.some((row) => /Negotiated/.test(row.capability) && row.status.join() === "excluded,excluded,included"));
 
   const table = visibleText(html.match(/<table[\s\S]*?<\/table>/)[0]);
   assert.doesNotMatch(table, /LibreOffice|AIFF|ALAC|\.docx/);
@@ -182,6 +179,8 @@ routeTest("supported formats and technical requirements are answered in the FAQ"
 
   assert.match(text, /Which file formats does each package support\?/);
   assert.match(text, /What are the technical requirements\?/);
+  assert.match(text, /Can we license audio redaction on its own\?/);
+  assert.match(text, /When should we choose Enterprise\?/);
 });
 
 routeTest("pricing page advertises no unsupported or unapproved capabilities", async () => {
@@ -190,7 +189,7 @@ routeTest("pricing page advertises no unsupported or unapproved capabilities", a
 
   assert.doesNotMatch(
     text,
-    /video redaction|image redaction|face detection|license plates?|translation|translate|speaker identification|diarization|Outlook|\.pst|mailbox|email redaction|cloud storage|storage quota|unlimited|\bSLA\b|dedicated account|account manager|priority support|integrations?\b|collaboration|audit trail|free trial/i
+    /image redaction|face detection|license plates?|translation|translate|speaker identification|diarization|Outlook|\.pst|mailbox|email redaction|cloud storage|storage quota|unlimited|\bSLA\b|dedicated account|account manager|priority support|integrations?\b|collaboration|audit trail|free trial|\d+\+ seats/i
   );
 });
 
@@ -213,21 +212,28 @@ routeTest("pricing navigation and sitemap expose one canonical pricing destinati
   assert.match(pricing, /<a\b(?=[^>]*\bhref="\/pricing")(?=[^>]*\baria-current="page")[^>]*>/);
   assert.match(sitemap, /<loc>https:\/\/saferedact\.io\/pricing<\/loc>/);
   assert.equal((sitemap.match(/https:\/\/saferedact\.io\/pricing<\/loc>/g) ?? []).length, 1);
+  assert.match(sitemap, /<loc>https:\/\/saferedact\.io\/why-redactplus<\/loc>/);
+  assert.doesNotMatch(sitemap, /why-openredakt/);
 });
 
-routeTest("pricing CTA query context preselects only a recognized package", async () => {
-  // Package buttons on /pricing link to /book-a-demo?package=..., where the form lives.
-  const [recognizedResponse, unknownResponse] = await Promise.all([
-    fetch(`${baseUrl}/book-a-demo?package=advanced`),
-    fetch(`${baseUrl}/book-a-demo?package=starter`),
-  ]);
-  assert.equal(recognizedResponse.status, 200);
-  assert.equal(unknownResponse.status, 200);
-
-  const recognized = await recognizedResponse.text();
-  const unknown = await unknownResponse.text();
-
-  assert.match(recognized, /<option[^>]*value="advanced"[^>]*selected=""[^>]*>OpenRedakt Advanced<\/option>/);
-  assert.doesNotMatch(unknown, /<option[^>]*value="[^"]+"[^>]*selected=""[^>]*>OpenRedakt/);
+routeTest("each package CTA preselects that package on the enquiry form", async () => {
+  for (const slug of packages) {
+    const html = await (await fetch(`${baseUrl}/book-a-demo?package=${slug}`)).text();
+    const selected = [...html.matchAll(/<option[^>]*value="([^"]+)"[^>]*selected=""[^>]*>([^<]*)<\/option>/g)];
+    assert.equal(selected.length, 1, slug);
+    assert.equal(selected[0][1], slug);
+    assert.match(selected[0][2], /^RedactPlus (?:Document|Document \+ Media|Enterprise)$/);
+  }
 });
 
+routeTest("former package links preselect the current package that covers them", async () => {
+  const expectations = { essential: "document", advanced: "document-media", "complete-suite": "document-media" };
+  for (const [legacy, current] of Object.entries(expectations)) {
+    const html = await (await fetch(`${baseUrl}/book-a-demo?package=${legacy}`)).text();
+    assert.match(html, new RegExp(`<option[^>]*value="${current}"[^>]*selected=""`), legacy);
+  }
+  const unknown = await (await fetch(`${baseUrl}/book-a-demo?package=starter`)).text();
+  assert.doesNotMatch(unknown, /<option[^>]*value="[^"]+"[^>]*selected=""[^>]*>RedactPlus/);
+  // Former values never appear as choices.
+  assert.doesNotMatch(unknown, /value="(?:essential|advanced|complete-suite)"/);
+});

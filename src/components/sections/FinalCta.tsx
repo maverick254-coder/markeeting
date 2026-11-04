@@ -136,7 +136,7 @@ export function DemoEnquiry({
             <Field label={form.packageLabel} htmlFor="packageInterest">
               <select id="packageInterest" name="packageInterest" value={formData.packageInterest} onChange={(event) => setFormData((current) => ({ ...current, packageInterest: event.target.value as PricingPackageSlug | "" }))} className={cn(fieldClass, !formData.packageInterest && "text-ink-muted")}>
                 <option value="">{form.packagePlaceholder}</option>
-                {pricingPackages.map((plan) => <option key={plan.slug} value={plan.slug} className="bg-surface-active text-ink">{plan.name}</option>)}
+                {pricingPackages.map((plan) => <option key={plan.slug} value={plan.slug} className="bg-surface-active text-ink">{`RedactPlus ${plan.name}`}</option>)}
               </select>
             </Field>
             <Field label={form.licenseCountLabel} htmlFor="licenseCount">

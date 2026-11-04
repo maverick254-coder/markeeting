@@ -1,4 +1,4 @@
-import type { PricingPackageSlug } from "@/content/pricing";
+import type { LegacyPricingPackageSlug, PricingPackageSlug } from "@/content/pricing";
 
 /** The two enquiry kinds the marketing site collects. */
 export const LEAD_KINDS = ["demo", "contact"] as const;
@@ -9,7 +9,10 @@ export interface LeadEnquiry {
   name: string;
   email: string;
   organization: string;
+  /** Always a current package: a former value is mapped before delivery. */
   packageInterest?: PricingPackageSlug;
+  /** The former package value the visitor actually chose, when they chose one. */
+  legacyPackageInterest?: LegacyPricingPackageSlug;
   licenseCount?: number;
   fileType: string;
   message: string;

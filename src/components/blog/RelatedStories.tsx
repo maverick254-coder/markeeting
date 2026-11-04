@@ -21,7 +21,7 @@ export function RelatedStories({ articles }: { articles: readonly BlogArticle[] 
             Related posts
           </h2>
           <p className="mt-3 text-body text-ink-muted">
-            More practical guidance selected from published OpenRedakt topics.
+            More practical guidance selected from published RedactPlus topics.
           </p>
         </div>
         <div className="mt-8 grid border-t border-border-subtle md:grid-cols-2 lg:grid-cols-3">

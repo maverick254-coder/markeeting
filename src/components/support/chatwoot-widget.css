@@ -1,6 +1,6 @@
 /*
  * Chatwoot's SDK injects these holder rules through an inline <style> element.
- * OpenRedakt intentionally keeps a strict `style-src 'self'` CSP, so the browser
+ * RedactPlus intentionally keeps a strict `style-src 'self'` CSP, so the browser
  * rejects that element. Shipping the small holder contract as local CSS preserves
  * the CSP while leaving the hosted iframe and custom launcher intact.
  */

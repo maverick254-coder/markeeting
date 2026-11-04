@@ -156,7 +156,7 @@ function WorkflowsSection({ page }: { page: IndustryPageContent }) {
   return (
     <section className="section-y bg-canvas text-ink" aria-labelledby={`${page.slug}-workflows`}>
       <Container>
-        <SectionIntro id={`${page.slug}-workflows`} eyebrow="Relevant workflows" title={`How OpenRedakt supports ${page.navLabel.toLowerCase()} workflows`} description="Each workflow lists the capabilities that apply, with the conditions that affect them in practice." tone="warm" />
+        <SectionIntro id={`${page.slug}-workflows`} eyebrow="Relevant workflows" title={`How RedactPlus supports ${page.navLabel.toLowerCase()} workflows`} description="Each workflow lists the capabilities that apply, with the conditions that affect them in practice." tone="warm" />
         <div className="mt-8">
           {page.workflows.map((workflow, index) => {
             const feature = featureLinkFor(workflow.format);

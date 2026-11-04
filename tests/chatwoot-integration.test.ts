@@ -95,7 +95,7 @@ test("the custom support launcher exposes accessible loading and fallback states
       fallbackEmail: "support@saferedact.io",
     })
   );
-  assert.match(idle, /aria-label="Open OpenRedakt support chat"/);
+  assert.match(idle, /aria-label="Open RedactPlus support chat"/);
   assert.match(idle, />Chat with us</);
 
   const loading = renderToStaticMarkup(

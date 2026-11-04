@@ -16,10 +16,10 @@ const routes = [
   ["/industries/education", "Redaction for student records, school correspondence, and recorded meetings."],
   ["/industries/human-resources", "Redaction for personnel files, workplace investigations, and interview recordings."],
   ["/industries/media-journalism", "Protect sources in recorded interviews and obtained documents."],
-  ["/how-it-works", "How OpenRedakt takes a file from source to reviewed output."],
-  ["/why-openredakt", "Why OpenRedakt: one review-led workflow for documents and audio."],
-  ["/contact", "Contact OpenRedakt or request a demo."],
-  ["/book-a-demo", "See OpenRedakt on your own redaction workflow."],
+  ["/how-it-works", "How RedactPlus takes a file from source to reviewed output."],
+  ["/why-redactplus", "Why RedactPlus: one review-led workflow for documents and audio."],
+  ["/contact", "Contact RedactPlus or request a demo."],
+  ["/book-a-demo", "See RedactPlus on your own redaction workflow."],
 ];
 const drafts = ["/industries/real-estate", "/industries/ai-data-teams"];
 
@@ -42,7 +42,7 @@ test("new marketing routes render one H1, a canonical, Open Graph, and breadcrum
     assert.ok(html.replace(/&#x27;/g, "'").includes(h1), `${path} needs its approved H1`);
     assert.match(html, new RegExp(`rel="canonical" href="https://saferedact\\.io${escape(path)}"`), path);
     assert.match(html, /<meta property="og:title" content="[^"]+"/, path);
-    assert.match(html, /<meta property="og:site_name" content="OpenRedakt"/, path);
+    assert.match(html, /<meta property="og:site_name" content="RedactPlus"/, path);
     assert.match(html, new RegExp(`<meta property="og:url" content="https://saferedact\\.io${escape(path)}"`), path);
     assert.match(html, /aria-label="Breadcrumb"/, path);
     assert.match(html, /<script type="application\/ld\+json" nonce="[^"]+">\{"@context":"https:\/\/schema\.org","@type":"BreadcrumbList"/, path);
@@ -121,9 +121,9 @@ test("book a demo reuses the single enquiry form without claiming a meeting is b
   assert.doesNotMatch(html, /id="footer-invitation-heading"/);
   assert.doesNotMatch(html, /(?:meeting|demo) (?:is|has been) (?:booked|scheduled)/i);
 
-  const preselected = (await page("/book-a-demo?package=advanced")).html;
-  assert.match(preselected, /<option value="advanced"[^>]*selected=""/);
-  const unknown = (await page("/book-a-demo?package=enterprise")).html;
+  const preselected = (await page("/book-a-demo?package=document-media")).html;
+  assert.match(preselected, /<option value="document-media"[^>]*selected=""/);
+  const unknown = (await page("/book-a-demo?package=starter")).html;
   assert.doesNotMatch(unknown, /<option value="[a-z-]+"[^>]*selected=""/);
 });
 
@@ -132,7 +132,7 @@ test("the homepage keeps its section anchors and links to the dedicated pages", 
   for (const id of ["services", "how-it-works", "why-saferedact", "industries", "faq", "demo-enquiry"]) {
     assert.match(html, new RegExp(`id="${id}"`), id);
   }
-  for (const href of ["/features", "/industries", "/how-it-works", "/why-openredakt", "/contact", "/book-a-demo", "/blog"]) {
+  for (const href of ["/features", "/industries", "/how-it-works", "/why-redactplus", "/contact", "/book-a-demo", "/blog"]) {
     assert.match(html, new RegExp(`href="${escape(href)}"`), href);
   }
 });

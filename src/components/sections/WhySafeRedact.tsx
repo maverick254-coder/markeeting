@@ -35,7 +35,7 @@ const stories: readonly Story[] = [
       capture: "document-workspace",
       crop: "story",
       mobileCrop: "manualMobile",
-      alt: "The OpenRedakt document workspace with no document open: the manual redaction panel with selection modes and reasons, the page tools, and the project panel listing files with their preparation status. Project and file names are blurred.",
+      alt: "The RedactPlus document workspace with no document open: the manual redaction panel with selection modes and reasons, the page tools, and the project panel listing files with their preparation status. Project and file names are blurred.",
     },
   },
   {
@@ -50,7 +50,7 @@ const stories: readonly Story[] = [
       capture: "audio-workspace",
       crop: "story",
       mobileCrop: "storyMobile",
-      alt: "The OpenRedakt audio workspace: masking effects and range controls beside a recording's waveform, transport controls and timeline. File names in the side panel are blurred.",
+      alt: "The RedactPlus audio workspace: masking effects and range controls beside a recording's waveform, transport controls and timeline. File names in the side panel are blurred.",
     },
   },
 ];

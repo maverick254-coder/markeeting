@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { pricingPackageSlugs } from "@/content/pricing";
+import { acceptedPackageValues, isLegacyPricingPackageSlug, resolvePricingPackageSlug } from "@/content/pricing";
 import { clientKey, createRateLimiter, looksAutomated } from "./abuse";
 import { leadTransport } from "./delivery";
 import { LEAD_KINDS, LeadDeliveryError } from "./types";
@@ -8,9 +8,13 @@ import type { LeadEnquiry, LeadTransport } from "./types";
 
 const MAX_REQUEST_BYTES = 16 * 1024;
 const supportedFileTypes = [
-  "Audio files",
   "PDF documents",
   "Word documents",
+  "Audio files",
+  "Video files",
+  "Documents and media",
+  // Offered before Document + Media replaced the audio-only package; a page loaded before
+  // that change may still send it, and it keeps its meaning.
   "Documents and audio",
   "Not sure",
 ] as const;
@@ -25,7 +29,9 @@ const contactSchema = z
     name: z.string().trim().min(2).max(100),
     email: z.string().trim().email().max(254),
     organization: z.string().trim().max(120).optional().default(""),
-    packageInterest: z.enum(pricingPackageSlugs).optional(),
+    // Current package values, plus the former ones (see legacyPricingPackageSlugs), which are
+    // mapped to the current package below and recorded so their original meaning is kept.
+    packageInterest: z.enum(acceptedPackageValues).optional(),
     licenseCount: z.number().int().min(1).max(1_000).optional(),
     fileType: z.enum(supportedFileTypes),
     message: z.string().trim().min(10).max(2_000),
@@ -115,7 +121,12 @@ export function createContactHandler({
         );
       }
 
-      const { website, ...enquiry } = parsed.data;
+      const { website, packageInterest: requestedPackage, ...details } = parsed.data;
+      const enquiry: LeadEnquiry = {
+        ...details,
+        ...(requestedPackage ? { packageInterest: resolvePricingPackageSlug(requestedPackage) ?? undefined } : {}),
+        ...(isLegacyPricingPackageSlug(requestedPackage) ? { legacyPackageInterest: requestedPackage } : {}),
+      };
       // The honeypot and the content heuristics answer exactly like a validation
       // miss, so an unattended sender learns nothing about which control caught it.
       if (website?.trim() || looksAutomated(enquiry)) {
@@ -136,7 +147,7 @@ export function createContactHandler({
       }
 
       try {
-        const receipt = await transport.deliver(enquiry as LeadEnquiry, { referenceId });
+        const receipt = await transport.deliver(enquiry, { referenceId });
         logOutcome(referenceId, receipt.delivered ? "delivered" : "accepted-not-delivered", transport.name);
         return NextResponse.json(
           { accepted: true, delivered: receipt.delivered, referenceId },

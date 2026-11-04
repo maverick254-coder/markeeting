@@ -1,10 +1,10 @@
 export const siteConfig = {
-  name: "OpenRedakt",
+  name: "RedactPlus",
   tagline: "AI-powered redaction software",
   description:
-    "Windows redaction software with AI-assisted workflows for documents and audio.",
-  // Official OpenRedakt coordinates have not been approved yet. Keep the existing
-  // working destinations explicit rather than presenting them as new-brand URLs.
+    "Windows redaction software with AI-assisted workflows for documents and media.",
+  // The support mailbox and download host still run on the earlier domain. They work today,
+  // so they stay explicit rather than being replaced with unprovisioned redactplus.io addresses.
   externalCoordinates: {
     status: "legacy-pending-migration" as const,
     url: "https://saferedact.io",

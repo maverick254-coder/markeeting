@@ -39,7 +39,7 @@ function runTests(baseUrl) {
     "tests/marketing-only.test.mjs",
     "tests/features-routes.test.mjs",
     "tests/site-routes.test.mjs",
-    "tests/openredakt-routes.test.mjs",
+    "tests/redactplus-routes.test.mjs",
     "tests/phase1-homepage.test.mjs",
     "tests/phase4a-routes.test.mjs",
     "tests/pricing-product-scope.test.mjs",

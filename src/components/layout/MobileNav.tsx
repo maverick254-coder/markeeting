@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { PrimaryNavItem } from "@/content/navigation";
 import { siteConfig } from "@/content/site";
 import { Button } from "@/components/ui/Button";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/utils";
 import { isCurrentPage, isRouteActive } from "@/lib/nav";
@@ -112,11 +112,8 @@ export function MobileNav({ isOpen, onClose, pathname, items, ctaHref }: MobileN
       >
         {/* The sheet covers the header, so this is the only close control on screen. */}
         <div className="flex h-12 items-center justify-between pl-1">
-          <span className="inline-flex items-center gap-2.5 font-heading text-[1.1875rem] font-semibold tracking-[-0.03em] text-ink" aria-hidden="true">
-            <span className="flex h-7 w-7 items-center justify-center rounded-[8px] bg-accent-warm/15">
-              <Image src="/favicon.svg" alt="" width={18} height={18} />
-            </span>
-            <span><span className="text-accent-ink">Open</span>Redakt</span>
+          <span aria-hidden="true" className="-ml-1.5 inline-flex items-center">
+            <BrandLogo tone="light" height={40} decorative />
           </span>
           <button
             type="button"

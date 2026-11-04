@@ -2,7 +2,7 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { bookDemoPage } from "@/content/pages";
-import { pricingPackages, type PricingPackageSlug } from "@/content/pricing";
+import { resolvePricingPackageSlug, type PricingPackageSlug } from "@/content/pricing";
 import { publicSupportEmail } from "@/content/site";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -32,9 +32,9 @@ type BookDemoPageProps = {
 export default async function BookDemoPage({ searchParams }: BookDemoPageProps) {
   const parameters = await searchParams;
   const requestedPackage = Array.isArray(parameters.package) ? parameters.package[0] : parameters.package;
-  const initialPackage = pricingPackages.some((plan) => plan.slug === requestedPackage)
-    ? (requestedPackage as PricingPackageSlug)
-    : "";
+  // Current package values preselect directly; a value from the former package names is read
+  // as the current package that covers it, and anything else leaves the choice open.
+  const initialPackage: PricingPackageSlug | "" = resolvePricingPackageSlug(requestedPackage) ?? "";
 
   return (
     <>

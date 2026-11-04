@@ -77,7 +77,7 @@ export const capabilityClaims: CapabilityClaims = {
   },
   "BLOCK-COMPLIANCE": {
     status: "blocked",
-    publicWording: "OpenRedakt is certified compliant with named regulations.",
+    publicWording: "RedactPlus is certified compliant with named regulations.",
   },
   "BLOCK-GUARANTEE": {
     status: "blocked",
@@ -85,19 +85,19 @@ export const capabilityClaims: CapabilityClaims = {
   },
   "BLOCK-COLLABORATION": {
     status: "blocked",
-    publicWording: "OpenRedakt includes cloud collaboration, RBAC, or storage integrations.",
+    publicWording: "RedactPlus includes cloud collaboration, RBAC, or storage integrations.",
   },
 };
 
 export const featureOverview: FeatureOverviewContent = {
-  eyebrow: "OpenRedakt features",
+  eyebrow: "RedactPlus features",
   h1: "One review workflow for documents and audio.",
   summary:
     "Bring documents and recordings into a consistent process: prepare the source, mark or review sensitive content, confirm each decision, then export and inspect the result.",
   seo: {
     title: "Document and Audio Redaction Software for Windows",
     description:
-      "Explore OpenRedakt review-led redaction workflows for documents and audio recordings, with manual control, supported detection, and output checks.",
+      "Explore RedactPlus review-led redaction workflows for documents and audio recordings, with manual control, supported detection, and output checks.",
     canonicalPath: "/features",
   },
   workflow: [
@@ -107,9 +107,9 @@ export const featureOverview: FeatureOverviewContent = {
     { title: "Export and inspect", description: "Render the reviewed output, re-open it, and check the result before it is released." },
   ],
   faq: [
-    { question: "Does OpenRedakt handle more than PDFs?", answer: "Yes. The desktop workflow supports PDFs, supported converted documents, and common audio formats. Some imports require local conversion or media tools, so final format support is confirmed during evaluation." },
-    { question: "Does OpenRedakt make redaction decisions automatically?", answer: "No. Where supported engines surface candidates, a reviewer still decides what to mark, adjust, approve, reject, or exempt." },
-    { question: "Where does processing happen?", answer: "Core review and rendering workflows run in the Windows desktop application. Some detection paths can be configured per job to use optional services; OpenRedakt is not described as universally offline." },
+    { question: "Does RedactPlus handle more than PDFs?", answer: "Yes. The desktop workflow supports PDFs, supported converted documents, and common audio formats. Some imports require local conversion or media tools, so final format support is confirmed during evaluation." },
+    { question: "Does RedactPlus make redaction decisions automatically?", answer: "No. Where supported engines surface candidates, a reviewer still decides what to mark, adjust, approve, reject, or exempt." },
+    { question: "Where does processing happen?", answer: "Core review and rendering workflows run in the Windows desktop application. Some detection paths can be configured per job to use optional services; RedactPlus is not described as universally offline." },
     { question: "What does output checking mean?", answer: "It means inspecting the rendered deliverable and running supported checks against it. It does not replace source review or guarantee that every sensitive item was discovered." },
   ],
 };
@@ -125,14 +125,14 @@ export const featurePages: readonly FeaturePageContent[] = [
     seo: {
       title: "Document Redaction Software for Windows",
       description:
-        "Review sensitive content in PDFs, scanned pages, and supported office files with OCR, manual controls, candidate findings, and output checks in OpenRedakt.",
+        "Review sensitive content in PDFs, scanned pages, and supported office files with OCR, manual controls, candidate findings, and output checks in RedactPlus.",
       canonicalPath: "/features/document-redaction",
     },
     claimIds: ["DOC-INPUT", "DOC-OCR", "DOC-CANDIDATES", "DOC-MANUAL", "DOC-REVIEW", "DOC-OUTPUT-CHECK", "DOC-REPORT"],
     media: {
       kind: "screenshot",
       screenshotId: "document-workspace",
-      caption: "The current OpenRedakt document workspace, with no document open. Project and file names are blurred.",
+      caption: "The current RedactPlus document workspace, with no document open. Project and file names are blurred.",
     },
     atGlance: ["PDF and supported office-file preparation", "Text and area controls for manual review", "Candidate findings remain subject to reviewer decisions"],
     problem: {
@@ -154,7 +154,7 @@ export const featurePages: readonly FeaturePageContent[] = [
     supportedFormats: ["PDF, including scanned pages with OCR", "DOCX / RTF / TXT / HTML / Markdown", "Office and OpenDocument formats via configured conversion tooling"],
     formatNote: "PDF is native. Other supported inputs are converted for document review; several legacy, spreadsheet, and presentation formats require a local LibreOffice installation.",
     faq: [
-      { question: "Can OpenRedakt work with scanned PDFs?", answer: "Yes, when OCR tooling is configured. OCR quality depends on scan clarity, layout, language, and source preparation, so recognised text and proposed marks still require review." },
+      { question: "Can RedactPlus work with scanned PDFs?", answer: "Yes, when OCR tooling is configured. OCR quality depends on scan clarity, layout, language, and source preparation, so recognised text and proposed marks still require review." },
       { question: "Are office files edited in place?", answer: "No. Supported non-PDF files are prepared as PDFs for the redaction workflow. Conversion availability varies by format and installed tooling." },
       { question: "Can reviewers add marks manually?", answer: "Yes. Reviewers can select recognised text or draw page areas, then adjust the mark and record a reason before export." },
       { question: "Does output checking guarantee every item was removed?", answer: "No. It adds a second inspection step against the rendered result. It cannot prove that the source review identified every sensitive item." },
@@ -174,14 +174,14 @@ export const featurePages: readonly FeaturePageContent[] = [
     seo: {
       title: "Audio and Transcript Redaction Software",
       description:
-        "Review recordings on a waveform, mark sensitive time ranges, preview supported masking effects, and export inspected audio with OpenRedakt's Windows workflow.",
+        "Review recordings on a waveform, mark sensitive time ranges, preview supported masking effects, and export inspected audio with RedactPlus's Windows workflow.",
       canonicalPath: "/features/audio-redaction",
     },
     claimIds: ["AUD-INPUT", "AUD-TIMELINE", "AUD-EFFECTS", "AUD-PREVIEW", "AUD-TRANSCRIPT-CONTEXT", "AUD-EXPORT"],
     media: {
       kind: "screenshot",
       screenshotId: "audio-workspace",
-      caption: "The current OpenRedakt audio workspace with a recording open. File names in the side panel are blurred.",
+      caption: "The current RedactPlus audio workspace with a recording open. File names in the side panel are blurred.",
     },
     atGlance: ["Manual waveform and timeline selections", "Mute, tone, silence, and supported noise effects", "Transcript context without claiming automatic analysis"],
     problem: {
@@ -197,13 +197,13 @@ export const featurePages: readonly FeaturePageContent[] = [
     ],
     sections: [
       { eyebrow: "Manual-first control", title: "Put the reviewer on the waveform.", description: "The active end-user path is manual audio redaction. Reviewers place time ranges directly, can adjust their boundaries, and keep the decision attached to the timeline.", bullets: ["Start and end controls for precise ranges", "Timeline markers remain visible during review", "Overlapping ranges are composed deterministically"] },
-      { eyebrow: "Effect choice", title: "Match the treatment to the disclosure risk.", description: "Different recordings call for different treatments. OpenRedakt supports several rendered effects, with availability tied to configured media tools.", bullets: ["Mute or silence a selected span", "Use tone or supported noise masks", "Preview the treatment before export where the source can be decoded"] },
+      { eyebrow: "Effect choice", title: "Match the treatment to the disclosure risk.", description: "Different recordings call for different treatments. RedactPlus supports several rendered effects, with availability tied to configured media tools.", bullets: ["Mute or silence a selected span", "Use tone or supported noise masks", "Preview the treatment before export where the source can be decoded"] },
       { eyebrow: "Transcript context", title: "Use words as context, not as an accuracy promise.", description: "When a transcript is available, it can sit beside the waveform and help orient review. The public workflow does not present automated transcript analysis or transcript-to-audio alignment as complete or exact.", bullets: ["Transcript text can support navigation and review", "Manual ranges remain the source of truth", "Exported transcript handling follows reviewed audio masks where supported"] },
     ],
     supportedFormats: ["WAV / MP3", "M4A / AAC / ALAC", "FLAC / OGG / OPUS", "WMA / AIFF / AMR input"],
     formatNote: "Supported decoding and export depend on the FFmpeg build configured with the application. Export choices are narrower than the accepted input list and should be confirmed with representative files.",
     faq: [
-      { question: "Does OpenRedakt automatically find every spoken identifier?", answer: "No. The current public workflow is manual-first. Transcript and detection infrastructure exists in the product, but automated transcript analysis is not presented as a complete end-user capability." },
+      { question: "Does RedactPlus automatically find every spoken identifier?", answer: "No. The current public workflow is manual-first. Transcript and detection infrastructure exists in the product, but automated transcript analysis is not presented as a complete end-user capability." },
       { question: "Which masking effects are available?", answer: "The implemented timeline includes mute, tone, silence, white and pink noise, filters, and reverse. This page promotes the core effects that can be demonstrated with the configured media toolchain." },
       { question: "Can I review the effect before export?", answer: "Supported effects can be previewed when the source decodes correctly and the required media tools are available. The exported file should still be listened to after rendering." },
       { question: "Is transcript timing exact?", answer: "No. Transcription and timing vary with the recording, speakers, noise, and engine. Manual timeline ranges remain the final review control." },

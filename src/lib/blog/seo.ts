@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import type { BlogArticle } from "./types";
+import { brandAssets } from "@/content/brand";
 import { publicSiteUrl, siteConfig } from "@/content/site";
 
 const siteUrl = publicSiteUrl;
@@ -9,6 +10,8 @@ export function buildArticleMetadata(article: BlogArticle): Metadata {
   const images = article.featuredImage && article.imageAlt
     ? [{ url: article.featuredImage, alt: article.imageAlt }]
     : undefined;
+  // Articles without their own image share the brand card rather than no image at all.
+  const shareImages = images ?? [brandAssets.openGraphImage];
 
   return {
     title: article.title,
@@ -23,13 +26,13 @@ export function buildArticleMetadata(article: BlogArticle): Metadata {
       publishedTime: article.date,
       modifiedTime: article.updatedDate,
       authors: [article.author],
-      images,
+      images: shareImages,
     },
     twitter: {
-      card: images ? "summary_large_image" : "summary",
+      card: "summary_large_image",
       title: article.title,
       description: article.seoDescription,
-      images: images?.map((image) => image.url),
+      images: shareImages.map((image) => image.url),
     },
   };
 }
@@ -49,6 +52,10 @@ export function buildArticleJsonLd(article: BlogArticle) {
       "@type": "Organization",
       name: siteConfig.name,
       url: siteUrl,
+      logo: {
+        "@type": "ImageObject",
+        url: `${siteUrl}${brandAssets.mark}`,
+      },
     },
     mainEntityOfPage: `${siteUrl}/blog/${article.slug}`,
     ...(article.featuredImage ? { image: `${siteUrl}${article.featuredImage}` } : {}),

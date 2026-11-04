@@ -36,12 +36,12 @@ const featureNav: Record<string, { label: string; description: string; icon: str
 const documentationUrl = process.env.NEXT_PUBLIC_DOCUMENTATION_URL?.trim() || null;
 
 export const documentationLink: NavMenuLink | null = documentationUrl
-  ? { label: "Documentation", href: documentationUrl, description: "Guides for the OpenRedakt desktop application", icon: "file-text" }
+  ? { label: "Documentation", href: documentationUrl, description: "Guides for the RedactPlus desktop application", icon: "file-text" }
   : null;
 
 const resourceLinks: readonly NavMenuLink[] = [
   { label: "How It Works", href: "/how-it-works", description: "The review lifecycle from source file to inspected output", icon: "layers" },
-  { label: "Why OpenRedakt", href: "/why-openredakt", description: "Where the workflow fits, and its stated limits", icon: "shield-check" },
+  { label: "Why RedactPlus", href: "/why-redactplus", description: "Where the workflow fits, and its stated limits", icon: "shield-check" },
   ...(documentationLink ? [documentationLink] : []),
 ];
 
@@ -107,7 +107,7 @@ export const footerGroups: readonly FooterGroup[] = [
     title: "Resources",
     links: [
       { label: "How it works", href: "/how-it-works" },
-      { label: "Why OpenRedakt", href: "/why-openredakt" },
+      { label: "Why RedactPlus", href: "/why-redactplus" },
       ...(documentationLink ? [{ label: documentationLink.label, href: documentationLink.href }] : []),
       { label: "Blog", href: "/blog" },
       { label: "Common questions", href: "#faq" },

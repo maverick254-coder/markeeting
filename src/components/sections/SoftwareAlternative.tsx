@@ -68,7 +68,7 @@ export function SoftwareAlternative() {
                     <div className="flex h-5 w-5 items-center justify-center rounded bg-accent/20">
                       <Icon name="shield-check" size={12} className="text-accent" />
                     </div>
-                    <span className="text-xs font-medium text-white/60">OpenRedakt</span>
+                    <span className="text-xs font-medium text-white/60">RedactPlus</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <div className="h-3 w-3 rounded-sm bg-white/10 hover:bg-white/20 transition-colors" />

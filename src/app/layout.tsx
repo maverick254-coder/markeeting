@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { brandAssets } from "@/content/brand";
 import { contentSecurityPolicyNonce } from "@/lib/csp";
 import { SupportChat } from "@/components/support/SupportChat";
 import {
@@ -33,11 +34,11 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: {
-    default: "OpenRedakt | AI-Powered Redaction Software",
-    template: "%s | OpenRedakt",
+    default: "RedactPlus | AI-Powered Redaction Software",
+    template: "%s | RedactPlus",
   },
   description:
-    "Windows redaction software with AI-assisted workflows for documents and audio.",
+    siteConfig.description,
   alternates: {
     canonical: "/",
   },
@@ -46,16 +47,26 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: publicSiteUrl,
     siteName: siteConfig.name,
-    title: "OpenRedakt | AI-Powered Redaction Software",
-    description:
-      "Windows redaction software with AI-assisted workflows for documents and audio.",
+    title: "RedactPlus | AI-Powered Redaction Software",
+    description: siteConfig.description,
+    images: [brandAssets.openGraphImage],
   },
   twitter: {
     card: "summary_large_image",
-    title: "OpenRedakt | AI-Powered Redaction Software",
-    description:
-      "Windows redaction software with AI-assisted workflows for documents and audio.",
+    title: "RedactPlus | AI-Powered Redaction Software",
+    description: siteConfig.description,
+    images: [brandAssets.openGraphImage.url],
   },
+  icons: {
+    icon: [
+      { url: brandAssets.favicon.ico, sizes: "48x48" },
+      { url: brandAssets.favicon.svg, type: "image/svg+xml" },
+      { url: brandAssets.favicon.png32, sizes: "32x32", type: "image/png" },
+      { url: brandAssets.favicon.png16, sizes: "16x16", type: "image/png" },
+    ],
+    apple: [{ url: brandAssets.appleTouchIcon, sizes: "180x180" }],
+  },
+  manifest: brandAssets.manifest,
   robots: {
     index: true,
     follow: true,
@@ -81,7 +92,6 @@ export default async function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} ${geistMono.variable}`}>
       <head>
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <script
           type="application/ld+json"
           suppressHydrationWarning
@@ -91,11 +101,17 @@ export default async function RootLayout({
               "@context": "https://schema.org",
               "@type": "SoftwareApplication",
               name: siteConfig.name,
-              description:
-                "Windows redaction software with AI-assisted workflows for documents and audio.",
+              description: siteConfig.description,
               url: publicSiteUrl,
+              image: new URL(brandAssets.openGraphImage.url, publicSiteUrl).toString(),
               applicationCategory: "BusinessApplication",
               operatingSystem: "Windows",
+              publisher: {
+                "@type": "Organization",
+                name: siteConfig.name,
+                url: publicSiteUrl,
+                logo: new URL(brandAssets.mark, publicSiteUrl).toString(),
+              },
             }),
           }}
         />

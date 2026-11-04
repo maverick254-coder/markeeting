@@ -160,7 +160,7 @@ export function RedactionBarCanvas({ fallback }: { fallback: ReactNode }) {
         <canvas ref={canvasRef} aria-hidden="true" className={styles.canvas} />
       </div>
       <p className="sr-only">
-        Animated illustration of the OpenRedakt redaction bar: a reviewed passage in a document is covered by a redaction mark, the bar becomes a
+        Animated illustration of the RedactPlus redaction bar: a reviewed passage in a document is covered by a redaction mark, the bar becomes a
         muted range on an audio waveform, then the time interval of a pixelated region in a video frame.
       </p>
       <div className={styles.legend}>

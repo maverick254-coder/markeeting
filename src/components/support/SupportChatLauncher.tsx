@@ -67,7 +67,7 @@ export function SupportChatLauncher({
       <button
         type="button"
         onClick={onActivate}
-        aria-label="Open OpenRedakt support chat"
+        aria-label="Open RedactPlus support chat"
         aria-busy={status === "loading"}
         disabled={status === "loading"}
         className="inline-flex min-h-12 items-center gap-2.5 rounded-full border border-accent-warm/35 bg-accent-warm px-4 py-3 font-heading text-body-sm font-semibold text-on-accent shadow-action transition-all duration-200 hover:bg-accent-warm-hover hover:shadow-action-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool focus-visible:ring-offset-2 focus-visible:ring-offset-canvas disabled:cursor-wait disabled:opacity-90 motion-safe:hover:-translate-y-0.5 motion-reduce:transition-none"

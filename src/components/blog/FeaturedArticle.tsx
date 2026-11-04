@@ -15,7 +15,7 @@ export function FeaturedArticle({ article }: { article: BlogArticle }) {
       <Image
         // Articles without their own image use the processed editorial cover.
         src={article.featuredImage ?? captureUrl("editorial-document-cover")}
-        alt={article.featuredImage ? article.imageAlt ?? "" : "OpenRedakt document review workspace"}
+        alt={article.featuredImage ? article.imageAlt ?? "" : "RedactPlus document review workspace"}
         fill
         priority
         sizes="(max-width: 1023px) 100vw, 1024px"

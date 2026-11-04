@@ -12,7 +12,7 @@ import { Faq } from "@/components/sections/Faq";
 /**
  * The homepage story (docs/design/homepage-storytelling-revision.md): the promise with
  * the product in the first screen, the problem, document and audio evidence on a warm
- * band, the shared workflow, why OpenRedakt, who it is for, questions, the blog, then
+ * band, the shared workflow, why RedactPlus, who it is for, questions, the blog, then
  * the footer's closing invitation.
  */
 export default function HomePage() {

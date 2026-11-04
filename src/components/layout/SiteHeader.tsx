@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -9,6 +8,7 @@ import { siteConfig } from "@/content/site";
 import { useElementInView } from "@/hooks/useElementInView";
 import { cn } from "@/lib/utils";
 import { isRouteActive } from "@/lib/nav";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { MobileNav } from "./MobileNav";
@@ -98,13 +98,12 @@ export function SiteHeader({ items, demoHref }: { items: readonly PrimaryNavItem
           <nav aria-label="Main navigation" className="grid h-14 grid-cols-[1fr_auto] items-center gap-4 pl-4 pr-2 min-[992px]:grid-cols-[1fr_auto_1fr]">
             <Link
               href="/"
-              className="inline-flex shrink-0 items-center gap-2.5 justify-self-start rounded-sm font-heading text-[1.1875rem] font-semibold tracking-[-0.03em] text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool"
+              className="-ml-1.5 inline-flex shrink-0 items-center justify-self-start rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool"
               aria-label={`${siteConfig.name} home`}
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-[8px] bg-accent-warm/15">
-                <Image src="/favicon.svg" alt="" width={18} height={18} priority />
-              </span>
-              <span><span className="text-accent-ink">Open</span>Redakt</span>
+              {/* Over the burnt-orange hero the orange mark would vanish, so the kit's white
+                  single-colour logo is used there; everywhere else the primary logo. */}
+              <BrandLogo tone={!compact && overDarkHero ? "mono-white" : "light"} height={40} priority decorative />
             </Link>
 
             <ul className="hidden items-center gap-0.5 min-[992px]:flex">

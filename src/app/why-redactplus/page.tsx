@@ -1,7 +1,7 @@
 import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { whyOpenRedaktPage } from "@/content/pages";
+import { whyRedactPlusPage } from "@/content/pages";
 import { demoHref } from "@/content/navigation";
 import { industryHref, liveIndustryPages } from "@/content/industries";
 import { Header } from "@/components/layout/Header";
@@ -20,11 +20,11 @@ import { buildBreadcrumbJsonLd } from "@/lib/seo/structured-data";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = buildPageMetadata(whyOpenRedaktPage.seo);
+export const metadata: Metadata = buildPageMetadata(whyRedactPlusPage.seo);
 
-const breadcrumbs = [{ name: "Home", path: "/" as const }, { name: "Why OpenRedakt", path: "/why-openredakt" as const }];
+const breadcrumbs = [{ name: "Home", path: "/" as const }, { name: "Why RedactPlus", path: "/why-redactplus" as const }];
 
-export default function WhyOpenRedaktPage() {
+export default function WhyRedactPlusPage() {
   return (
     <>
       <Header />
@@ -32,9 +32,9 @@ export default function WhyOpenRedaktPage() {
         <StructuredData data={buildBreadcrumbJsonLd(breadcrumbs)} />
         <PageHero
           layout="stacked"
-          eyebrow={whyOpenRedaktPage.eyebrow}
-          title={whyOpenRedaktPage.h1}
-          summary={whyOpenRedaktPage.summary}
+          eyebrow={whyRedactPlusPage.eyebrow}
+          title={whyRedactPlusPage.h1}
+          summary={whyRedactPlusPage.summary}
           primaryCta={{ label: "Request a Demo", href: demoHref }}
           secondaryCta={{ label: "Explore features", href: "/features" }}
           breadcrumbs={<Breadcrumbs items={breadcrumbs} />}
@@ -44,9 +44,9 @@ export default function WhyOpenRedaktPage() {
 
         <section className="section-y bg-canvas text-ink" aria-labelledby="why-pillars">
           <Container>
-            <SectionIntro id="why-pillars" eyebrow="Positioning" title="What OpenRedakt is built to do well" tone="warm" />
+            <SectionIntro id="why-pillars" eyebrow="Positioning" title="What RedactPlus is built to do well" tone="warm" />
             <ul className="mt-12 grid gap-px overflow-hidden rounded-[16px] border border-border-subtle/50 bg-border-subtle/50 md:grid-cols-2">
-              {whyOpenRedaktPage.pillars.map((pillar) => (
+              {whyRedactPlusPage.pillars.map((pillar) => (
                 <li key={pillar.title} className="bg-canvas p-6 sm:p-8">
                   <span className="grid h-9 w-9 place-items-center rounded-[10px] border border-border-subtle/70 bg-surface-raised text-accent-ink"><Icon name={pillar.icon} size={17} /></span>
                   <h3 className="type-h3 mt-5">{pillar.title}</h3>
@@ -59,15 +59,15 @@ export default function WhyOpenRedaktPage() {
 
         <section className="section-y bg-canvas text-ink" aria-labelledby="why-fit">
           <Container>
-            <SectionIntro id="why-fit" eyebrow="Fit" title="Where OpenRedakt fits, and where it may not" description="A clear answer here saves an evaluation that was never going to work." />
+            <SectionIntro id="why-fit" eyebrow="Fit" title="Where RedactPlus fits, and where it may not" description="A clear answer here saves an evaluation that was never going to work." />
             <div className="mt-12 grid gap-5 lg:grid-cols-2">
               <div className="rounded-[16px] border border-border-subtle/60 bg-surface-raised/40 p-6 sm:p-8">
                 <h3 className="type-h3 text-[1.25rem]">A strong fit for</h3>
-                <ul className="mt-5 border-t border-border-subtle/60">{whyOpenRedaktPage.fit.map((item) => <li key={item} className="flex gap-3 border-b border-border-subtle/60 py-3.5 text-[0.9375rem] leading-7 text-ink-muted"><Icon name="check-circle" size={17} className="mt-1 shrink-0 text-accent-ink" />{item}</li>)}</ul>
+                <ul className="mt-5 border-t border-border-subtle/60">{whyRedactPlusPage.fit.map((item) => <li key={item} className="flex gap-3 border-b border-border-subtle/60 py-3.5 text-[0.9375rem] leading-7 text-ink-muted"><Icon name="check-circle" size={17} className="mt-1 shrink-0 text-accent-ink" />{item}</li>)}</ul>
               </div>
               <div className="rounded-[16px] border border-accent-warm/25 bg-accent-warm/[0.06] p-6 sm:p-8">
                 <h3 className="type-h3 text-[1.25rem]">Not the right tool if you need</h3>
-                <ul className="mt-5 border-t border-accent-warm/15">{whyOpenRedaktPage.notFit.map((item) => <li key={item} className="flex gap-3 border-b border-accent-warm/15 py-3.5 text-[0.9375rem] leading-7 text-ink-muted"><Icon name="info" size={17} className="mt-1 shrink-0 text-accent-ink" />{item}</li>)}</ul>
+                <ul className="mt-5 border-t border-accent-warm/15">{whyRedactPlusPage.notFit.map((item) => <li key={item} className="flex gap-3 border-b border-accent-warm/15 py-3.5 text-[0.9375rem] leading-7 text-ink-muted"><Icon name="info" size={17} className="mt-1 shrink-0 text-accent-ink" />{item}</li>)}</ul>
               </div>
             </div>
           </Container>
@@ -78,7 +78,7 @@ export default function WhyOpenRedaktPage() {
             <div className="grid gap-10 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-16">
               <SectionIntro id="why-evidence" eyebrow="How we describe the product" title="Every capability here is one the product ships" tone="warm" />
               <div className="lg:pt-9">
-                <p className="type-lede">{whyOpenRedaktPage.evidence}</p>
+                <p className="type-lede">{whyRedactPlusPage.evidence}</p>
                 <p className="mt-6 text-[0.9375rem] leading-7 text-ink-muted">
                   Follow the <Link href="/how-it-works" className="font-semibold text-accent-ink hover:text-accent-ink-hover">six-stage review lifecycle</Link> or compare the <Link href="/features" className="font-semibold text-accent-ink hover:text-accent-ink-hover">document and audio workflows</Link>.
                 </p>
@@ -105,7 +105,7 @@ export default function WhyOpenRedaktPage() {
           </Container>
         </section>
 
-        <FaqSection idPrefix="why" items={whyOpenRedaktPage.faq} title="Questions teams ask during evaluation" description="Straight answers about positioning, processing, and how to test fit." />
+        <FaqSection idPrefix="why" items={whyRedactPlusPage.faq} title="Questions teams ask during evaluation" description="Straight answers about positioning, processing, and how to test fit." />
 
       </main>
       <Footer />

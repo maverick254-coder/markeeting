@@ -104,7 +104,7 @@ export const formatTabs = [
     eyebrow: "Page and region review",
     title: "Work through findings in document context",
     description:
-      "OpenRedakt combines detected findings with manual text and area controls so reviewers can inspect each page before export.",
+      "RedactPlus combines detected findings with manual text and area controls so reviewers can inspect each page before export.",
     bullets: [
       "PDF and supported converted document intake",
       "Manual text and area selection",
@@ -162,7 +162,7 @@ export const useCaseGroups = [
 ] as const;
 
 export const workbenchLabels = {
-  product: "OpenRedakt Workbench",
+  product: "RedactPlus Workbench",
   file: "case-records.pdf",
   record: "Intake record",
   page: "Page 01 / 03",

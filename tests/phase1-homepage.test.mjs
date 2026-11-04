@@ -17,7 +17,7 @@ test("homepage exposes the approved Phase 1 platform narrative", async () => {
   // in an application window; no dark capture of an earlier build is published.
   assert.match(html, /data-hero-workbench/);
   assert.match(html, /project-workspace\.png/);
-  assert.match(html, /The OpenRedakt project library/);
+  assert.match(html, /The RedactPlus project library/);
   assert.doesNotMatch(html, /hero-document-review|format-documents/);
   assert.match(html, /Documents/);
   assert.match(html, /Audio/);

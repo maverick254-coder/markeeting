@@ -1,6 +1,6 @@
 import { LeadDeliveryError } from "../types";
 import type { DeliveryContext, DeliveryReceipt, LeadEnquiry, LeadTransport } from "../types";
-import { pricingPackages } from "@/content/pricing";
+import { describePackageInterest } from "@/content/pricing";
 
 export interface HttpsEmailSettings {
   endpoint: string;
@@ -68,7 +68,13 @@ export function readHttpsEmailSettings(
 }
 
 function subjectFor(enquiry: LeadEnquiry): string {
-  const label = enquiry.kind === "demo" ? "Demo enquiry" : "Contact enquiry";
+  // An Enterprise choice is a sales conversation, so the operator sees it from the subject line.
+  const label =
+    enquiry.packageInterest === "enterprise"
+      ? "Sales enquiry (Enterprise)"
+      : enquiry.kind === "demo"
+        ? "Demo enquiry"
+        : "Contact enquiry";
   // The organisation is operator-facing context, not a header injection vector:
   // newlines cannot survive the schema, and the value is JSON-encoded regardless.
   return enquiry.organization
@@ -77,9 +83,7 @@ function subjectFor(enquiry: LeadEnquiry): string {
 }
 
 function bodyFor(enquiry: LeadEnquiry, referenceId: string): string {
-  const packageName = enquiry.packageInterest
-    ? pricingPackages.find((plan) => plan.slug === enquiry.packageInterest)?.name
-    : undefined;
+  const packageName = describePackageInterest(enquiry.legacyPackageInterest ?? enquiry.packageInterest);
 
   return [
     `Reference: ${referenceId}`,

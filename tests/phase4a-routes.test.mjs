@@ -82,7 +82,7 @@ test("a long-form article exposes breadcrumbs, matching heading anchors, TOC, an
   assert.match(html, /aria-label="On this page"/);
   assert.match(html, /href="#what-is-document-redaction"/);
   assert.match(html, /<h2[^>]*id="what-is-document-redaction"/);
-  assert.match(html, /alt="OpenRedakt document review workspace"/);
+  assert.match(html, /alt="RedactPlus document review workspace"/);
   assert.match(html, /aria-label="Discuss your redaction workflow"/);
   assert.match(html, /href="\/book-a-demo"/);
   // The shared footer invitation closes the article; there is no second closing CTA.

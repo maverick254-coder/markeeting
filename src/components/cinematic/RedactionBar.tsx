@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import styles from "./cinematic.module.css";
 
 /**
- * OpenRedakt's signature mark: one horizontal bar, the shape shared by a redacted
+ * RedactPlus's signature mark: one horizontal bar, the shape shared by a redacted
  * passage, a selected audio range and a video time interval. Decorative only.
  */
 export function RedactionBar({

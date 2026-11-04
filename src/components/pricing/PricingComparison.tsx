@@ -1,21 +1,50 @@
 import { Icon } from "@/components/ui/Icon";
 import {
-  comparisonRowIncludes,
+  comparisonRowStatus,
   pricingComparisonSections,
   pricingPackages,
+  type PricingCellStatus,
 } from "@/content/pricing";
+
+const statusLabel: Record<PricingCellStatus, string> = {
+  included: "Included",
+  excluded: "Not included",
+  agreement: "By agreement",
+};
+
+function Cell({ status }: { status: PricingCellStatus }) {
+  if (status === "included") {
+    return (
+      <>
+        <Icon name="check-circle" size={20} className="inline-block text-accent-mint" />
+        <span className="sr-only">{statusLabel.included}</span>
+      </>
+    );
+  }
+  if (status === "agreement") {
+    return <span className="text-[0.6875rem] font-medium leading-4 text-ink-muted sm:text-xs">{statusLabel.agreement}</span>;
+  }
+  return (
+    <>
+      <span aria-hidden="true" className="text-lg leading-none text-ink-muted/60">
+        –
+      </span>
+      <span className="sr-only">{statusLabel.excluded}</span>
+    </>
+  );
+}
 
 export function PricingComparison() {
   return (
     <div className="overflow-hidden rounded-panel border border-border-subtle bg-surface-raised shadow-panel">
       <table className="w-full table-fixed border-collapse text-left">
         <caption className="sr-only">
-          Comparison of the capabilities included in Essential, Advanced, and Complete Suite
+          Comparison of the capabilities included in Document, Document + Media, and Enterprise
         </caption>
         <colgroup>
-          <col className="w-[43%] sm:w-[52%]" />
+          <col className="w-[40%] sm:w-[49%]" />
           {pricingPackages.map((plan) => (
-            <col key={plan.slug} className="w-[19%] sm:w-[16%]" />
+            <col key={plan.slug} className="w-[20%] sm:w-[17%]" />
           ))}
         </colgroup>
         <thead>
@@ -28,7 +57,6 @@ export function PricingComparison() {
                 <span className="block font-heading text-[0.6875rem] font-semibold leading-4 text-ink min-[380px]:text-xs sm:text-sm">
                   {plan.shortName}
                 </span>
-                <span className="mt-1 hidden text-xs font-medium text-ink-muted sm:block">{plan.scopeLabel}</span>
               </th>
             ))}
           </tr>
@@ -46,29 +74,22 @@ export function PricingComparison() {
             </tr>
             {section.rows.map((row) => (
               <tr key={row.capability} className="border-b border-border-subtle last:border-b-0">
-                <th scope="row" className="px-4 py-4 text-sm font-medium leading-6 text-ink sm:px-6">
+                <th scope="row" className="px-4 py-3.5 text-sm font-medium leading-6 text-ink sm:px-6">
                   {row.capability}
                 </th>
-                {pricingPackages.map((plan) => {
-                  const included = comparisonRowIncludes(plan, row);
-                  return (
-                    <td key={plan.slug} className="px-1 py-4 text-center sm:px-4">
-                      {included ? (
-                        <Icon name="check-circle" size={20} className="inline-block text-accent-mint" />
-                      ) : (
-                        <span aria-hidden="true" className="text-lg leading-none text-ink-muted/60">
-                          –
-                        </span>
-                      )}
-                      <span className="sr-only">{included ? "Included" : "Not included"}</span>
-                    </td>
-                  );
-                })}
+                {pricingPackages.map((plan) => (
+                  <td key={plan.slug} data-status={comparisonRowStatus(plan, row)} className="px-1 py-3.5 text-center sm:px-4">
+                    <Cell status={comparisonRowStatus(plan, row)} />
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
         ))}
       </table>
+      <p className="border-t border-border-subtle px-4 py-3 text-xs leading-5 text-ink-muted sm:px-6">
+        Enterprise agreements include the Document or Document + Media capabilities your organization chooses.
+      </p>
     </div>
   );
 }

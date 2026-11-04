@@ -1,6 +1,6 @@
 /**
  * Prototype A scene: one coral redaction bar that moves between three verified
- * OpenRedakt workflows. Each motif shows only a supported capability:
+ * RedactPlus workflows. Each motif shows only a supported capability:
  *   document: a reviewed passage covered by a redaction mark (DOC-MANUAL, DOC-REVIEW)
  *   audio:    a manual range on a waveform with a mute effect (AUD-TIMELINE, AUD-EFFECTS)
  *   video:    a static manual region with pixelation and its time interval

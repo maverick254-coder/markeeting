@@ -125,7 +125,7 @@ test("contact form states the delivery outcome instead of assuming one", async (
   assert.doesNotMatch(content, /we will reply/i);
 });
 
-test("why OpenRedakt states only register-backed differentiators", async () => {
+test("why RedactPlus states only register-backed differentiators", async () => {
   const services = await read("src/components/sections/Services.tsx");
   // Only the published copy, not the source comments that list what is excluded.
   const reasons = services.slice(services.indexOf("const reasons = ["), services.indexOf("] as const;"));

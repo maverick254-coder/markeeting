@@ -1,7 +1,7 @@
 export const qualityContent = {
   headline: "Review Before Export",
   intro:
-    "OpenRedakt keeps detection suggestions and review controls together so teams can inspect redactions before creating an output file.",
+    "RedactPlus keeps detection suggestions and review controls together so teams can inspect redactions before creating an output file.",
   points: [
     {
       title: "Candidate Detection",

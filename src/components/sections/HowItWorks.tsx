@@ -27,19 +27,19 @@ const stepVisuals = [
     capture: "document-workspace",
     crop: "filesPanel",
     mobileCrop: "filesMobile",
-    alt: "OpenRedakt project panel listing files with their preparation status (Ready, Not prepared) and the action to add files. File and project names are blurred.",
+    alt: "RedactPlus project panel listing files with their preparation status (Ready, Not prepared) and the action to add files. File and project names are blurred.",
   },
   {
     capture: "document-workspace",
     crop: "manualTools",
     mobileCrop: "manualMobile",
-    alt: "OpenRedakt manual redaction panel: select marks or text, draw a free-form area, choose the redaction appearance and record a reason. No document is open in this view.",
+    alt: "RedactPlus manual redaction panel: select marks or text, draw a free-form area, choose the redaction appearance and record a reason. No document is open in this view.",
   },
   {
     capture: "audio-export",
     crop: "dialogFourThree",
     mobileCrop: "summary",
-    alt: "OpenRedakt export dialog: the redacted copy is written as a new file with the chosen file type and export mode, and the original is left unchanged",
+    alt: "RedactPlus export dialog: the redacted copy is written as a new file with the chosen file type and export mode, and the original is left unchanged",
   },
 ] as const;
 

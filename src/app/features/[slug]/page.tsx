@@ -1,5 +1,6 @@
 import React from "react";
 import type { Metadata } from "next";
+import { brandAssets } from "@/content/brand";
 import { notFound } from "next/navigation";
 import { featureHref, getFeaturePage, publishedFeaturePages } from "@/content/features";
 import { Header } from "@/components/layout/Header";
@@ -23,7 +24,7 @@ export async function generateMetadata({ params }: FeatureRouteProps): Promise<M
     title: page.seo.title,
     description: page.seo.description,
     alternates: { canonical: page.seo.canonicalPath },
-    openGraph: { title: page.seo.title, description: page.seo.description, url: page.seo.canonicalPath },
+    openGraph: { title: page.seo.title, description: page.seo.description, url: page.seo.canonicalPath, images: [brandAssets.openGraphImage] },
     twitter: { card: "summary", title: page.seo.title, description: page.seo.description },
   };
 }

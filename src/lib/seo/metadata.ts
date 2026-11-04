@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { brandAssets } from "@/content/brand";
 import { siteConfig } from "@/content/site";
 import type { SeoFields } from "@/lib/marketing/content";
 
@@ -18,7 +19,8 @@ export function buildPageMetadata(seo: SeoFields): Metadata {
       title: seo.title,
       description: seo.description,
       url: seo.canonicalPath,
+      images: [brandAssets.openGraphImage],
     },
-    twitter: { card: "summary", title: seo.title, description: seo.description },
+    twitter: { card: "summary_large_image", title: seo.title, description: seo.description, images: [brandAssets.openGraphImage.url] },
   };
 }

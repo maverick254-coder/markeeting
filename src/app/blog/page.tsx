@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { brandAssets } from "@/content/brand";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArticleArchive } from "@/components/blog/ArticleArchive";
@@ -59,7 +60,7 @@ export async function generateMetadata({ searchParams }: BlogPageProps): Promise
   return {
     title: type && label ? `${label} | Blog` : "Blog",
     description:
-      "OpenRedakt company news, product updates, industry insights, and practical guides about responsible redaction workflows.",
+      "RedactPlus company news, product updates, industry insights, and practical guides about responsible redaction workflows.",
     alternates: { canonical },
     // Search results and deeper pages are refinements of a page that is already
     // indexed; indexing them would compete with it.
@@ -67,9 +68,10 @@ export async function generateMetadata({ searchParams }: BlogPageProps): Promise
     openGraph: {
       type: "website",
       url: canonical,
-      title: type && label ? `${label} | OpenRedakt Blog` : "Blog | OpenRedakt",
+      title: type && label ? `${label} | RedactPlus Blog` : "Blog | RedactPlus",
       description:
-        "Company news, product updates, industry insights, and practical guides from OpenRedakt.",
+        "Company news, product updates, industry insights, and practical guides from RedactPlus.",
+      images: [brandAssets.openGraphImage],
     },
   };
 }
@@ -163,7 +165,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
                 contextLabel={
                   query
                     ? `Results for “${query}”`
-                    : activeTag?.name ?? activeLabel ?? "Latest from OpenRedakt"
+                    : activeTag?.name ?? activeLabel ?? "Latest from RedactPlus"
                 }
               />
               <Pagination
@@ -197,7 +199,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
                     .
                   </>
                 ) : (
-                  "Approved OpenRedakt content will appear here after editorial review and publication."
+                  "Approved RedactPlus content will appear here after editorial review and publication."
                 )}
               </p>
             </div>

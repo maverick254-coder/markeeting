@@ -118,11 +118,16 @@ test("shared actions provide restrained feedback and mobile motion remains optio
   assert.match(tailwind, /"fade-in":\s*"fade-in 0\.3s/);
 });
 
-test("metadata declares a canonical homepage without adding speculative social assets", async () => {
+test("metadata declares a canonical homepage and shares only the official brand card", async () => {
   const layout = await read("src/app/layout.tsx");
+  const brand = await read("src/content/brand.ts");
 
   assert.match(layout, /alternates:\s*\{\s*canonical:\s*"\/"/s);
-  assert.doesNotMatch(layout, /images:\s*\[/);
+  // The only social image is the management-approved card from the RedactPlus logo kit.
+  for (const [, images] of layout.matchAll(/images:\s*\[([^\]]*)\]/g)) {
+    assert.match(images, /^brandAssets\.openGraphImage(?:\.url)?$/);
+  }
+  assert.match(brand, /url: "\/images\/brand\/redactplus-og\.png",\s*width: 1200,\s*height: 630/);
 });
 
 test("phase 3 uses no scroll or animation package", async () => {

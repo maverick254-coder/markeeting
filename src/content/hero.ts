@@ -17,6 +17,6 @@ export const heroContent = {
     href: "/how-it-works",
   },
   showcase: {
-    alt: "The OpenRedakt project library: recent projects with their file counts and review status, library views such as Needs review and Exported, and a project to continue. Project names, folder paths and file names are blurred.",
+    alt: "The RedactPlus project library: recent projects with their file counts and review status, library views such as Needs review and Exported, and a project to continue. Project names, folder paths and file names are blurred.",
   },
 };

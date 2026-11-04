@@ -1,7 +1,7 @@
 export const finalCtaContent = {
-  headline: "Request an OpenRedakt Demo",
+  headline: "Request a RedactPlus Demo",
   subheadline:
-    "Tell us which source formats and review workflow you want to evaluate. You can also contact OpenRedakt directly by email.",
+    "Tell us which source formats and review workflow you want to evaluate. You can also contact RedactPlus directly by email.",
   form: {
     nameLabel: "Full Name",
     namePlaceholder: "Your name",
@@ -15,10 +15,11 @@ export const finalCtaContent = {
     licenseCountPlaceholder: "For example, 10",
     fileTypeLabel: "File Type",
     fileTypeOptions: [
-      "Audio files",
       "PDF documents",
       "Word documents",
-      "Documents and audio",
+      "Audio files",
+      "Video files",
+      "Documents and media",
       "Not sure",
     ],
     messageLabel: "Project Details",

@@ -180,7 +180,7 @@ test("the chronological archive renders semantic month headings and only supplie
   assert.doesNotMatch(html, /placeholder|coming soon/i);
 });
 
-test("the featured story uses the approved OpenRedakt product visual when no image is published", async () => {
+test("the featured story uses the approved RedactPlus product visual when no image is published", async () => {
   const { FeaturedArticle } = await import("../src/components/blog/FeaturedArticle");
   const featured = article("featured-review", "2026-03-15T09:00:00.000Z", {
     title: "A review-led redaction workflow",
@@ -196,7 +196,7 @@ test("the featured story uses the approved OpenRedakt product visual when no ima
   // not a raw product screenshot.
   assert.match(html, /%2Fimages%2Fproduct%2Feditorial-document-cover\.png/);
   assert.doesNotMatch(html, /hero-document-review/);
-  assert.match(html, /alt="OpenRedakt document review workspace"/);
+  assert.match(html, /alt="RedactPlus document review workspace"/);
   assert.doesNotMatch(html, /placeholder|coming soon/i);
 });
 

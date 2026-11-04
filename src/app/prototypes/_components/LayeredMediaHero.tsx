@@ -59,7 +59,7 @@ export function LayeredMediaHero() {
             <ProductFrame aspectRatio="4 / 3">
               <Image
                 src="/images/product/document-workspace.png"
-                alt="The OpenRedakt document workspace with no document open: manual redaction tools beside the page"
+                alt="The RedactPlus document workspace with no document open: manual redaction tools beside the page"
                 width={1437}
                 height={824}
                 sizes="(min-width: 1120px) 1250px, 160vw"
@@ -72,7 +72,7 @@ export function LayeredMediaHero() {
         </div>
       </div>
       <p className="sr-only">
-        A real OpenRedakt document review capture in front, with diagrams of an audio range and a video region behind it.
+        A real RedactPlus document review capture in front, with diagrams of an audio range and a video region behind it.
       </p>
       <div className={styles.legend}>
         <ol className={cn(styles.phases, styles.animate)} aria-label="Formats shown" key={`legend-${run}`}>

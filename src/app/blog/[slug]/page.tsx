@@ -48,7 +48,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const leadImage = article.featuredImage ?? captureUrl("editorial-document-cover");
   const leadImageAlt = article.featuredImage
     ? (article.imageAlt ?? "")
-    : "OpenRedakt document review workspace";
+    : "RedactPlus document review workspace";
 
   return (
     <article>

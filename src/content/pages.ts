@@ -14,11 +14,11 @@ export const industriesHub = {
   eyebrow: "Industries",
   h1: "Industry guides to document and audio redaction.",
   summary:
-    "Every sector protects different people and answers to different recipients. Find the records and recordings your team handles, then see which reviewer-controlled OpenRedakt workflows apply.",
+    "Every sector protects different people and answers to different recipients. Find the records and recordings your team handles, then see which reviewer-controlled RedactPlus workflows apply.",
   seo: {
     title: "Redaction Software by Industry and Use Case",
     description:
-      "See how redaction needs differ across legal, government, healthcare, finance, insurance, education, HR, and media teams, and which OpenRedakt workflows fit each.",
+      "See how redaction needs differ across legal, government, healthcare, finance, insurance, education, HR, and media teams, and which RedactPlus workflows fit each.",
     canonicalPath: "/industries",
     primaryIntent: "redaction software by industry",
     secondaryThemes: ["redaction use cases", "industry redaction requirements", "who uses redaction software"],
@@ -37,9 +37,9 @@ export const industriesHub = {
         "No. Every guide uses the same Windows desktop application and the same document and audio workflows. The guides differ in which records, risks, and checks matter to each sector.",
     },
     {
-      question: "Does OpenRedakt hold industry-specific certifications?",
+      question: "Does RedactPlus hold industry-specific certifications?",
       answer:
-        "No. OpenRedakt does not claim certification or compliance under named sector regulations. It provides a review workflow; your legal and governance teams decide what each disclosure requires.",
+        "No. RedactPlus does not claim certification or compliance under named sector regulations. It provides a review workflow; your legal and governance teams decide what each disclosure requires.",
     },
     {
       question: "Why isn't my industry listed?",
@@ -59,13 +59,13 @@ export type LifecycleStage = {
 
 export const howItWorksPage = {
   eyebrow: "How it works",
-  h1: "How OpenRedakt takes a file from source to reviewed output.",
+  h1: "How RedactPlus takes a file from source to reviewed output.",
   summary:
     "Every format follows the same discipline: open the source, make it reviewable, find or mark sensitive content, decide on each mark, render a new file, and inspect what will actually be shared.",
   seo: {
     title: "How Redaction Review Works, Step by Step",
     description:
-      "Follow the OpenRedakt lifecycle from opening a document or recording through candidate review, manual marks, export, output inspection, and reporting.",
+      "Follow the RedactPlus lifecycle from opening a document or recording through candidate review, manual marks, export, output inspection, and reporting.",
     canonicalPath: "/how-it-works",
     primaryIntent: "how redaction software works",
     secondaryThemes: ["redaction workflow", "redaction process steps", "how to redact audio recordings", "redaction review process"],
@@ -171,16 +171,16 @@ export const howItWorksPage = {
   ] satisfies MarketingFaq[],
 } satisfies SupportingPageContent & Record<string, unknown>;
 
-export const whyOpenRedaktPage = {
-  eyebrow: "Why OpenRedakt",
-  h1: "Why OpenRedakt: one review-led workflow for documents and audio.",
+export const whyRedactPlusPage = {
+  eyebrow: "Why RedactPlus",
+  h1: "Why RedactPlus: one review-led workflow for documents and audio.",
   summary:
-    "OpenRedakt is built for teams whose disclosures mix documents and recordings, and who need a person to make, and be able to explain, each redaction decision.",
+    "RedactPlus is built for teams whose disclosures mix documents and recordings, and who need a person to make, and be able to explain, each redaction decision.",
   seo: {
-    title: "Why OpenRedakt for Document and Audio Redaction",
+    title: "Why RedactPlus for Document and Audio Redaction",
     description:
-      "Why teams evaluate OpenRedakt: one review workflow for documents and audio, reviewer control over every mark, output inspection, and clearly stated limits.",
-    canonicalPath: "/why-openredakt",
+      "Why teams evaluate RedactPlus: one review workflow for documents and audio, reviewer control over every mark, output inspection, and clearly stated limits.",
+    canonicalPath: "/why-redactplus",
     primaryIntent: "document and audio redaction software",
     secondaryThemes: ["document and audio redaction in one tool", "review-led redaction", "redaction software comparison criteria", "desktop redaction software for Windows"],
   },
@@ -227,14 +227,14 @@ export const whyOpenRedaktPage = {
     "Every capability described on this site is checked against the shipped product. Capabilities that depend on configuration say so, and we do not publish certifications, accuracy figures, or promises of error-free output.",
   faq: [
     {
-      question: "How is OpenRedakt different from a PDF redaction tool?",
+      question: "How is RedactPlus different from a PDF redaction tool?",
       answer:
-        "A PDF tool covers documents. OpenRedakt applies the same review discipline to documents and audio recordings, so a mixed disclosure can be prepared in one application.",
+        "A PDF tool covers documents. RedactPlus applies the same review discipline to documents and audio recordings, so a mixed disclosure can be prepared in one application.",
     },
     {
-      question: "Does OpenRedakt work offline?",
+      question: "Does RedactPlus work offline?",
       answer:
-        "Core review and rendering run in the Windows desktop application. Some detection paths can be configured per job to use optional services, so OpenRedakt is not described as universally offline.",
+        "Core review and rendering run in the Windows desktop application. Some detection paths can be configured per job to use optional services, so RedactPlus is not described as universally offline.",
     },
     {
       question: "Why do you publish limitations?",
@@ -242,7 +242,7 @@ export const whyOpenRedaktPage = {
         "Because redaction errors are costly and hard to reverse. Knowing what the software does not do lets your team plan the review steps that cover the gap.",
     },
     {
-      question: "How should we evaluate OpenRedakt?",
+      question: "How should we evaluate RedactPlus?",
       answer:
         "With representative files from your own workflow. A guided demo confirms format support, detection behaviour, and the output inspection your release process needs.",
     },
@@ -251,16 +251,16 @@ export const whyOpenRedaktPage = {
 
 export const contactPage = {
   eyebrow: "Contact",
-  h1: "Contact OpenRedakt or request a demo.",
+  h1: "Contact RedactPlus or request a demo.",
   summary:
     "Tell us which formats you redact, who reviews them, and where the output goes. We will use that to plan a demo around your own workflow.",
   seo: {
-    title: "Contact OpenRedakt or Request a Redaction Demo",
+    title: "Contact RedactPlus or Request a Redaction Demo",
     description:
-      "Request an OpenRedakt demo or contact the team about document and audio redaction workflows, supported formats, pricing, and evaluation with representative files.",
+      "Request a RedactPlus demo or contact the team about document and audio redaction workflows, supported formats, pricing, and evaluation with representative files.",
     canonicalPath: "/contact",
     primaryIntent: "redaction software demo",
-    secondaryThemes: ["contact OpenRedakt", "redaction software evaluation", "book a redaction demo"],
+    secondaryThemes: ["contact RedactPlus", "redaction software evaluation", "book a redaction demo"],
   },
   lastReviewed: "2026-10-26",
   include: [
@@ -276,20 +276,20 @@ export const contactPage = {
  */
 export const bookDemoPage = {
   eyebrow: "Book a demo",
-  h1: "See OpenRedakt on your own redaction workflow.",
+  h1: "See RedactPlus on your own redaction workflow.",
   summary:
     "Tell us about the documents or recordings you need to redact. We reply by email to arrange a demo around your formats, your review steps, and the package you are considering.",
   seo: {
-    title: "Book an OpenRedakt Demo for Document and Audio Redaction",
+    title: "Book a RedactPlus Demo for Document and Audio Redaction",
     description:
-      "Request a guided OpenRedakt demo. Describe your document or audio workflow, the package you are considering, and how many licenses you need, and we will reply by email.",
+      "Request a guided RedactPlus demo. Describe your document or media workflow, the package you are considering, and how many licenses you need, and we will reply by email.",
     canonicalPath: "/book-a-demo",
     primaryIntent: "book a redaction software demo",
     secondaryThemes: ["redaction software demo", "document redaction demo", "audio redaction demo"],
   },
   lastReviewed: "2026-10-29",
   points: [
-    "A walkthrough of document or audio redaction, matched to the package you are considering",
+    "A walkthrough of document or media redaction, matched to the package you are considering",
     "Time for licensing questions: packages, license counts, and administration in the Control Center",
     "No sensitive files needed. Describe your records in general terms",
   ],

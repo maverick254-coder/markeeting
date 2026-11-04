@@ -47,7 +47,7 @@ export const industryPages: readonly IndustryPageContent[] = [
     seo: {
       title: "Legal Redaction Software for Case Files & Evidence",
       description:
-        "Review privileged, personal, and case-sensitive details in pleadings, discovery sets, exhibits, and recorded statements before disclosure with OpenRedakt.",
+        "Review privileged, personal, and case-sensitive details in pleadings, discovery sets, exhibits, and recorded statements before disclosure with RedactPlus.",
       canonicalPath: "/industries/legal",
       primaryIntent: "legal redaction software",
       secondaryThemes: ["redact discovery documents", "privilege redaction", "redacting court filings", "recorded statement redaction", "redact recorded calls"],
@@ -112,14 +112,14 @@ export const industryPages: readonly IndustryPageContent[] = [
       },
     ],
     considerations: [
-      "OpenRedakt records review decisions and reasons for document marks. It does not determine whether material is privileged or whether a redaction is legally sufficient.",
+      "RedactPlus records review decisions and reasons for document marks. It does not determine whether material is privileged or whether a redaction is legally sufficient.",
       "Rules on what must be removed from court filings differ by court and jurisdiction. Confirm the applicable rules with counsel before production.",
       "Audio redaction is manual-first: reviewers mark each span on the timeline and listen to the rendered recording before it is served.",
       "Inspect the rendered production files, not only the working project, before they are served or filed.",
     ],
     faq: [
       {
-        question: "Can OpenRedakt decide what is privileged?",
+        question: "Can RedactPlus decide what is privileged?",
         answer:
           "No. Configured engines can surface candidate personal information, but privilege is a legal judgement. Reviewers mark privileged passages manually and record the reason against the mark.",
       },
@@ -227,16 +227,16 @@ export const industryPages: readonly IndustryPageContent[] = [
       },
     ],
     considerations: [
-      "Exemption categories and disclosure rules are jurisdiction-specific. Reviewers can record a reason against each document mark; OpenRedakt does not supply or interpret legal exemptions.",
+      "Exemption categories and disclosure rules are jurisdiction-specific. Reviewers can record a reason against each document mark; RedactPlus does not supply or interpret legal exemptions.",
       "Some detection paths can be configured per job to use optional services. Confirm which engines a job uses before processing records with handling restrictions.",
-      "OpenRedakt is a Windows desktop application. It is not a request-tracking or case-management system.",
+      "RedactPlus is a Windows desktop application. It is not a request-tracking or case-management system.",
       "Output checks support review but cannot prove that every sensitive item was found.",
     ],
     faq: [
       {
-        question: "Does OpenRedakt apply freedom-of-information exemptions automatically?",
+        question: "Does RedactPlus apply freedom-of-information exemptions automatically?",
         answer:
-          "No. Exemptions are legal decisions. OpenRedakt can surface candidate personal information where engines are configured, and reviewers record the reason for each document mark in their own terms.",
+          "No. Exemptions are legal decisions. RedactPlus can surface candidate personal information where engines are configured, and reviewers record the reason for each document mark in their own terms.",
       },
       {
         question: "Can we show why information was withheld?",
@@ -244,7 +244,7 @@ export const industryPages: readonly IndustryPageContent[] = [
           "For documents, each mark can carry a recorded reason, and the workflow can create a report describing the reviewed actions to keep with the release file.",
       },
       {
-        question: "Does OpenRedakt track requests and deadlines?",
+        question: "Does RedactPlus track requests and deadlines?",
         answer:
           "No. It is a redaction review application. Teams use it alongside whatever system they already use to log requests, deadlines, and correspondence.",
       },
@@ -285,7 +285,7 @@ export const industryPages: readonly IndustryPageContent[] = [
     eyebrow: "Local government",
     h1: "Redaction for council and municipal records that residents can see.",
     summary:
-      "Councils publish and share records constantly: planning files, committee papers, complaint responses, and meeting recordings. OpenRedakt gives small records teams one desktop workflow for the resident details inside them.",
+      "Councils publish and share records constantly: planning files, committee papers, complaint responses, and meeting recordings. RedactPlus gives small records teams one desktop workflow for the resident details inside them.",
     audience: {
       title: "For councils, municipalities, and city services",
       description:
@@ -349,7 +349,7 @@ export const industryPages: readonly IndustryPageContent[] = [
     ],
     faq: [
       {
-        question: "Can OpenRedakt redact signatures on scanned planning forms?",
+        question: "Can RedactPlus redact signatures on scanned planning forms?",
         answer:
           "Yes. Reviewers can draw area marks over signatures, handwriting, or any other visual content on a page. Configured OCR helps with typed text, but handwriting recognition should not be assumed.",
       },
@@ -457,16 +457,16 @@ export const industryPages: readonly IndustryPageContent[] = [
       },
     ],
     considerations: [
-      "OpenRedakt does not claim certification or compliance under any named health-privacy regulation. Your organisation remains responsible for its own privacy obligations.",
+      "RedactPlus does not claim certification or compliance under any named health-privacy regulation. Your organisation remains responsible for its own privacy obligations.",
       "Some detection paths can be configured per job to use optional services. Confirm the job configuration before processing patient records.",
       "Candidate detection looks for categories of identifiers. It cannot judge whether clinical narrative indirectly identifies someone.",
       "Removing direct identifiers is not the same as de-identifying a dataset for research. Apply your organisation's own de-identification standard.",
     ],
     faq: [
       {
-        question: "Does OpenRedakt hold health-privacy certifications?",
+        question: "Does RedactPlus hold health-privacy certifications?",
         answer:
-          "No. OpenRedakt does not claim certification or compliance under named health-privacy regulations. It provides a review workflow; your privacy and legal teams decide what each disclosure requires.",
+          "No. RedactPlus does not claim certification or compliance under named health-privacy regulations. It provides a review workflow; your privacy and legal teams decide what each disclosure requires.",
       },
       {
         question: "Can it find patient names and record numbers automatically?",
@@ -574,12 +574,12 @@ export const industryPages: readonly IndustryPageContent[] = [
     considerations: [
       "Candidate categories depend on the configured engine. Test detection with your own statement layouts and identifier formats.",
       "Audio redaction is manual-first. Reviewers mark spoken account or verification details on the timeline; automated transcript analysis is not presented as a complete workflow.",
-      "OpenRedakt does not claim certification under payment-card or financial-sector security standards.",
+      "RedactPlus does not claim certification under payment-card or financial-sector security standards.",
       "It is a desktop review application, not a document-management, archiving, or retention system.",
     ],
     faq: [
       {
-        question: "Can OpenRedakt find account numbers automatically?",
+        question: "Can RedactPlus find account numbers automatically?",
         answer:
           "Configured engines can surface candidate identifiers, including number patterns, for review. Coverage depends on configuration and document layout, so reviewers confirm each finding and check repeated headers and footers.",
       },
@@ -594,9 +594,9 @@ export const industryPages: readonly IndustryPageContent[] = [
           "Yes. Supported audio formats open on a waveform where reviewers mark the sensitive spans, apply a supported effect, and listen to the exported recording.",
       },
       {
-        question: "Does OpenRedakt hold payment-card security certifications?",
+        question: "Does RedactPlus hold payment-card security certifications?",
         answer:
-          "No. OpenRedakt does not claim certification under payment-card or other financial-sector standards. Evaluate it against your own security and data-handling requirements.",
+          "No. RedactPlus does not claim certification under payment-card or other financial-sector standards. Evaluate it against your own security and data-handling requirements.",
       },
     ],
     relatedFeatures: ["document-redaction", "audio-redaction"],
@@ -622,7 +622,7 @@ export const industryPages: readonly IndustryPageContent[] = [
     seo: {
       title: "Insurance Claims Redaction for Files and Statements",
       description:
-        "Review policyholder, medical, and third-party details in claims files, medical reports, recorded statements, and claim calls with OpenRedakt.",
+        "Review policyholder, medical, and third-party details in claims files, medical reports, recorded statements, and claim calls with RedactPlus.",
       canonicalPath: "/industries/insurance",
       primaryIntent: "insurance claims redaction",
       secondaryThemes: ["redact claims documents", "policyholder data redaction", "recorded statement redaction", "redact claim call recordings", "redact medical reports in claims"],
@@ -630,7 +630,7 @@ export const industryPages: readonly IndustryPageContent[] = [
     eyebrow: "Insurance",
     h1: "Redaction for claims files, recorded statements, and supporting reports.",
     summary:
-      "A single claim can hold policy documents, medical reports, correspondence, and a recorded statement. OpenRedakt brings documents and recordings into one review process before the file is shared with experts, counterparties, or litigants.",
+      "A single claim can hold policy documents, medical reports, correspondence, and a recorded statement. RedactPlus brings documents and recordings into one review process before the file is shared with experts, counterparties, or litigants.",
     audience: {
       title: "For claims, investigations, and recovery teams",
       description:
@@ -689,11 +689,11 @@ export const industryPages: readonly IndustryPageContent[] = [
     considerations: [
       "Audio redaction is manual-first. Reviewers mark each span and listen to the exported statement before it is shared.",
       "Audio decoding and export depend on configured FFmpeg tooling and the formats in each source file. Test with your own recorded statements.",
-      "OpenRedakt does not decide what a counterparty or court is entitled to see.",
+      "RedactPlus does not decide what a counterparty or court is entitled to see.",
     ],
     faq: [
       {
-        question: "Can OpenRedakt remove medical details from a claim file?",
+        question: "Can RedactPlus remove medical details from a claim file?",
         answer:
           "Yes. Configured engines can surface candidate identifiers, and reviewers mark medical and injury details manually where context makes them sensitive, then check the rendered copy before it is shared.",
       },
@@ -744,7 +744,7 @@ export const industryPages: readonly IndustryPageContent[] = [
     eyebrow: "Education",
     h1: "Redaction for student records, school correspondence, and recorded meetings.",
     summary:
-      "Schools, colleges, and universities release records to parents, students, regulators, and courts. OpenRedakt helps staff remove other students' details and sensitive notes from documents and recordings before they leave the institution.",
+      "Schools, colleges, and universities release records to parents, students, regulators, and courts. RedactPlus helps staff remove other students' details and sensitive notes from documents and recordings before they leave the institution.",
     audience: {
       title: "For schools, districts, colleges, and universities",
       description:
@@ -801,14 +801,14 @@ export const industryPages: readonly IndustryPageContent[] = [
       },
     ],
     considerations: [
-      "Rules on releasing student records vary by country, region, and institution. OpenRedakt does not interpret them.",
+      "Rules on releasing student records vary by country, region, and institution. RedactPlus does not interpret them.",
       "Audio redaction is manual-first; reviewers mark each span where another student is named and listen to the exported recording.",
       "Records involving children warrant a second review of the exported output before release.",
       "Emails are reviewed once saved in a supported document format. PST and OST mailbox files are not promoted as a supported input.",
     ],
     faq: [
       {
-        question: "Can OpenRedakt mute other students' names in a recorded meeting?",
+        question: "Can RedactPlus mute other students' names in a recorded meeting?",
         answer:
           "Yes. Reviewers mark each span where another student is named, choose a supported effect such as mute or tone, preview it, and listen to the exported recording before release.",
       },
@@ -818,14 +818,14 @@ export const industryPages: readonly IndustryPageContent[] = [
           "Yes, once the thread is saved as a PDF or another supported document format. Candidate findings and manual text marks are reviewed together before the copy is rendered.",
       },
       {
-        question: "Does OpenRedakt open mailbox exports directly?",
+        question: "Does RedactPlus open mailbox exports directly?",
         answer:
           "Not currently. PST and OST mailbox files are not promoted as supported inputs while representative acceptance is pending. Save the relevant messages in a supported document format first.",
       },
       {
-        question: "Is OpenRedakt approved under student-privacy laws?",
+        question: "Is RedactPlus approved under student-privacy laws?",
         answer:
-          "No. OpenRedakt does not claim certification or compliance under named student-privacy laws. It provides a review workflow; your institution decides what each release requires.",
+          "No. RedactPlus does not claim certification or compliance under named student-privacy laws. It provides a review workflow; your institution decides what each release requires.",
       },
     ],
     relatedFeatures: ["document-redaction", "audio-redaction"],
@@ -917,13 +917,13 @@ export const industryPages: readonly IndustryPageContent[] = [
     ],
     considerations: [
       "Indirect identifiers such as job titles, shifts, locations, or descriptions of an event are judgement calls. Candidate detection does not assess them.",
-      "OpenRedakt is a desktop review application, not an HR information system or case-management platform.",
+      "RedactPlus is a desktop review application, not an HR information system or case-management platform.",
       "Rules on employee data requests differ by jurisdiction. Confirm what must be disclosed with your legal team.",
       "Recorded interviews are redacted manually on the timeline. Listen to the export before sharing it.",
     ],
     faq: [
       {
-        question: "Can OpenRedakt remove witness names from an investigation report?",
+        question: "Can RedactPlus remove witness names from an investigation report?",
         answer:
           "Yes. Candidate findings can surface names where engines are configured, and reviewers add manual marks for indirect identifiers such as roles or shift details, recording a reason for each.",
       },
@@ -938,7 +938,7 @@ export const industryPages: readonly IndustryPageContent[] = [
           "Yes. Mark the sensitive spans on the waveform, choose a supported effect such as mute or tone, and listen to the exported file before it is shared.",
       },
       {
-        question: "Is OpenRedakt an HR case-management system?",
+        question: "Is RedactPlus an HR case-management system?",
         answer:
           "No. It is a redaction review application that works alongside your existing HR and case-management systems.",
       },
@@ -966,7 +966,7 @@ export const industryPages: readonly IndustryPageContent[] = [
     seo: {
       title: "Redaction for Journalists: Protect Source Identities",
       description:
-        "Protect sources and private details in recorded interviews, podcasts, and obtained documents with timeline and page-level review in OpenRedakt.",
+        "Protect sources and private details in recorded interviews, podcasts, and obtained documents with timeline and page-level review in RedactPlus.",
       canonicalPath: "/industries/media-journalism",
       primaryIntent: "redaction software for journalists",
       secondaryThemes: ["redact audio interviews", "protect anonymous sources", "redact leaked documents", "podcast redaction", "mute names in recordings"],
@@ -974,7 +974,7 @@ export const industryPages: readonly IndustryPageContent[] = [
     eyebrow: "Media & journalism",
     h1: "Protect sources in recorded interviews and obtained documents.",
     summary:
-      "Newsrooms, podcast producers, and investigative teams publish recordings and documents that can identify people who were promised anonymity. OpenRedakt combines audio masking and document marks so producers can review exactly what the audience will hear and read.",
+      "Newsrooms, podcast producers, and investigative teams publish recordings and documents that can identify people who were promised anonymity. RedactPlus combines audio masking and document marks so producers can review exactly what the audience will hear and read.",
     audience: {
       title: "For newsrooms, documentary producers, and investigative teams",
       description:
@@ -1037,7 +1037,7 @@ export const industryPages: readonly IndustryPageContent[] = [
     ],
     faq: [
       {
-        question: "Can OpenRedakt disguise a source's voice?",
+        question: "Can RedactPlus disguise a source's voice?",
         answer:
           "The promoted audio effects are mute, tone, silence, and noise masks applied to selected ranges. Voice alteration that keeps speech intelligible is not presented as a supported capability.",
       },
@@ -1129,7 +1129,7 @@ export const industryPages: readonly IndustryPageContent[] = [
     slug: "ai-data-teams",
     publicationStatus: "draft",
     draftReason:
-      "OpenRedakt reviews individual source files. Without verified batch processing or dataset-level de-identification evidence, a dedicated page would risk implying automated dataset anonymisation.",
+      "RedactPlus reviews individual source files. Without verified batch processing or dataset-level de-identification evidence, a dedicated page would risk implying automated dataset anonymisation.",
     lastReviewed: "2026-10-26",
     group: "media-data",
     navLabel: "AI & Data Teams",
@@ -1148,7 +1148,7 @@ export const industryPages: readonly IndustryPageContent[] = [
     eyebrow: "AI & data teams",
     h1: "Review sensitive source material before authorized downstream use.",
     summary:
-      "Data teams sometimes need a person to review individual documents or recordings before they are approved for annotation or evaluation. OpenRedakt supports that file-by-file review.",
+      "Data teams sometimes need a person to review individual documents or recordings before they are approved for annotation or evaluation. RedactPlus supports that file-by-file review.",
     audience: {
       title: "For data stewards and annotation leads",
       description: "Teams that approve individual source files for downstream use and need a reviewer to check them first.",
@@ -1167,7 +1167,7 @@ export const industryPages: readonly IndustryPageContent[] = [
       { format: "document", title: "Source documents", description: "Review candidate identifiers and mark source documents before approval.", claimIds: ["DOC-CANDIDATES", "DOC-MANUAL", "DOC-REVIEW"] },
       { format: "audio", title: "Source recordings", description: "Mark and mask spoken personal details on the timeline.", claimIds: ["AUD-TIMELINE", "AUD-EFFECTS"] },
     ],
-    considerations: ["OpenRedakt does not de-identify datasets automatically or certify that a corpus is free of personal data."],
+    considerations: ["RedactPlus does not de-identify datasets automatically or certify that a corpus is free of personal data."],
     faq: [],
     relatedFeatures: ["document-redaction", "audio-redaction"],
     relatedIndustries: ["media-journalism"],

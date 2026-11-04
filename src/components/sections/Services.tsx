@@ -4,7 +4,7 @@ import { Container } from "@/components/ui/Container";
 import { Icon } from "@/components/ui/Icon";
 
 /**
- * What sets OpenRedakt apart, limited to what the application verifiably does:
+ * What sets RedactPlus apart, limited to what the application verifiably does:
  * reviewer decisions (DOC-REVIEW, AUD-TIMELINE), both workflows in one app, the optional
  * report of reviewed actions (DOC-REPORT; shown in the export dialog), and exports written to a
  * folder the user chooses (export dialog). No offline, compliance or accuracy claims.
@@ -28,7 +28,7 @@ const reasons = [
   {
     icon: "settings",
     title: "On your desktop, in your folders",
-    description: "OpenRedakt is a Windows desktop application. Each export is written as a new file to a folder you choose.",
+    description: "RedactPlus is a Windows desktop application. Each export is written as a new file to a folder you choose.",
   },
 ] as const;
 
@@ -37,7 +37,7 @@ export function Services() {
     <section id="services" aria-labelledby="why-heading" className="story-band section-y text-ink">
       <Container>
         <AnimateOnScroll className="mx-auto max-w-[44rem] text-center">
-          <p className="type-eyebrow">Why OpenRedakt</p>
+          <p className="type-eyebrow">Why RedactPlus</p>
           <h2 id="why-heading" className="mt-4 font-heading text-[clamp(2rem,1.4rem+2.1vw,3.25rem)] font-medium leading-[1.06] tracking-[-0.035em] text-ink text-balance">
             Built for the review, not just the redaction.
           </h2>
@@ -56,8 +56,8 @@ export function Services() {
           ))}
         </div>
         <div className="mt-10 text-center">
-          <Link href="/why-openredakt" className="inline-flex items-center gap-2 text-sm font-semibold text-accent-ink transition-colors hover:text-accent-ink-hover motion-reduce:transition-none">
-            How OpenRedakt describes its limits
+          <Link href="/why-redactplus" className="inline-flex items-center gap-2 text-sm font-semibold text-accent-ink transition-colors hover:text-accent-ink-hover motion-reduce:transition-none">
+            How RedactPlus describes its limits
             <Icon name="arrow" size={16} />
           </Link>
         </div>

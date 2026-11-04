@@ -64,7 +64,7 @@ Consequences:
 - **Writes outside `.next/cache`:** on first request Next copies prerendered route bodies (such as `/robots.txt`) into `.next/server/route-cache`. Next catches a failed copy and serves from memory. `compose.yaml` still mounts a small tmpfs there, so the read-only root filesystem never depends on that.
 - **Canonical URL:** `SITE_CANONICAL_ORIGIN` (in `src/content/site.ts`) sets the origin used in metadata, the sitemap, `robots.txt` and structured data. This image sets it to `https://redactplus.io`. Builds without it, such as Netlify, keep `https://saferedact.io`. A value that isn't a bare HTTPS origin fails the build. Commits from before this setting existed (`master`, Design A) always name saferedact.io.
 - **Branding still on the live site:**
-  - Visible branding is unchanged ("OpenRedakt") until the rebranding decision.
+  - Visible branding is RedactPlus, from the official logo kit (`public/images/brand/`, favicons and `site.webmanifest`).
   - The support address is `support@saferedact.io`.
   - The software download link goes to `https://saferedact.io/download`.
   - Internal identifiers (`SAFEREDACT_*`, the `saferedact-release/v1` health contract) are intentionally kept.

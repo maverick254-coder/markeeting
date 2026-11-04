@@ -99,15 +99,46 @@ test("delivery includes selected package and license count as operator context",
   await transport.deliver(
     {
       ...enquiry,
-      packageInterest: "complete-suite",
+      packageInterest: "document-media",
       licenseCount: 18,
     } as LeadEnquiry,
     { referenceId: "pricing-reference" }
   );
 
   const payload = JSON.parse(body);
-  assert.match(payload.text, /Package interest: OpenRedakt Complete Suite/);
+  assert.match(payload.text, /Package interest: RedactPlus Document \+ Media\n/);
   assert.match(payload.text, /Requested licenses: 18/);
+  assert.doesNotMatch(payload.subject, /Sales enquiry/);
+});
+
+test("an Enterprise enquiry reaches the operator as a sales enquiry", async () => {
+  let body = "";
+  const transport = resolveLeadTransport(configured, (async (_url: string, init: RequestInit) => {
+    body = String(init.body);
+    return new Response(JSON.stringify({ id: "provider-message-id" }), { status: 200, headers: { "Content-Type": "application/json" } });
+  }) as unknown as typeof fetch);
+
+  await transport.deliver({ ...enquiry, packageInterest: "enterprise", licenseCount: 120 } as LeadEnquiry, { referenceId: "enterprise-reference" });
+
+  const payload = JSON.parse(body);
+  assert.match(payload.subject, /^Sales enquiry \(Enterprise\)/);
+  assert.match(payload.text, /Package interest: RedactPlus Enterprise/);
+});
+
+test("a former package value keeps its original meaning in the delivered enquiry", async () => {
+  let body = "";
+  const transport = resolveLeadTransport(configured, (async (_url: string, init: RequestInit) => {
+    body = String(init.body);
+    return new Response(JSON.stringify({ id: "provider-message-id" }), { status: 200, headers: { "Content-Type": "application/json" } });
+  }) as unknown as typeof fetch);
+
+  await transport.deliver(
+    { ...enquiry, packageInterest: "document-media", legacyPackageInterest: "advanced" } as LeadEnquiry,
+    { referenceId: "legacy-reference" }
+  );
+
+  const payload = JSON.parse(body);
+  assert.match(payload.text, /Package interest: RedactPlus Document \+ Media \(selected as former package Advanced \(audio\)\)/);
 });
 
 test("a refused or unreachable provider raises a delivery error rather than claiming success", async () => {

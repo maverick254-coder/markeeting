@@ -5,7 +5,7 @@ import type { ArticleMonthGroup } from "@/lib/blog/types";
 export function ArticleArchive({
   groups,
   totalItems,
-  contextLabel = "Latest from OpenRedakt",
+  contextLabel = "Latest from RedactPlus",
 }: {
   groups: readonly ArticleMonthGroup[];
   totalItems: number;

@@ -193,18 +193,50 @@ test("package interest and a bounded license count reach the existing lead trans
     rateLimit: allowAll,
   });
 
-  const response = await handle(
-    enquiryRequest({
-      ...validEnquiry,
-      packageInterest: "advanced",
-      licenseCount: 24,
-    })
-  );
+  for (const packageInterest of ["document", "document-media", "enterprise"]) {
+    const response = await handle(enquiryRequest({ ...validEnquiry, packageInterest, licenseCount: 24 }));
+    assert.equal(response.status, 200, packageInterest);
+  }
 
-  assert.equal(response.status, 200);
-  assert.equal(enquiries.length, 1);
-  assert.equal(enquiries[0].packageInterest, "advanced");
-  assert.equal(enquiries[0].licenseCount, 24);
+  assert.deepEqual(
+    enquiries.map((enquiry) => [enquiry.packageInterest, enquiry.legacyPackageInterest, enquiry.licenseCount]),
+    [
+      ["document", undefined, 24],
+      ["document-media", undefined, 24],
+      ["enterprise", undefined, 24],
+    ]
+  );
+});
+
+test("a former package value is mapped to the current package and its original choice is kept", async () => {
+  const enquiries: Array<Record<string, unknown>> = [];
+  const handle = createContactHandler({
+    transport: stubTransport({
+      deliver: (async (enquiry: Record<string, unknown>) => {
+        enquiries.push(enquiry);
+        return { delivered: true };
+      }) as never,
+    }),
+    rateLimit: allowAll,
+  });
+
+  for (const packageInterest of ["essential", "advanced", "complete-suite"]) {
+    const response = await handle(enquiryRequest({ ...validEnquiry, packageInterest }));
+    assert.equal(response.status, 200, packageInterest);
+  }
+  const legacyFileType = await handle(enquiryRequest({ ...validEnquiry, fileType: "Documents and audio" }));
+  assert.equal(legacyFileType.status, 200);
+
+  assert.deepEqual(
+    enquiries.slice(0, 3).map((enquiry) => [enquiry.packageInterest, enquiry.legacyPackageInterest]),
+    [
+      ["document", "essential"],
+      ["document-media", "advanced"],
+      ["document-media", "complete-suite"],
+    ]
+  );
+  assert.equal(enquiries[3].packageInterest, undefined);
+  assert.equal("legacyPackageInterest" in enquiries[3], false);
 });
 
 test("invalid package and license-count values are refused before delivery", async () => {

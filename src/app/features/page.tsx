@@ -1,5 +1,6 @@
 import React from "react";
 import type { Metadata } from "next";
+import { brandAssets } from "@/content/brand";
 import { featureOverview } from "@/content/features";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
   title: featureOverview.seo.title,
   description: featureOverview.seo.description,
   alternates: { canonical: featureOverview.seo.canonicalPath },
-  openGraph: { title: featureOverview.seo.title, description: featureOverview.seo.description, url: featureOverview.seo.canonicalPath },
+  openGraph: { title: featureOverview.seo.title, description: featureOverview.seo.description, url: featureOverview.seo.canonicalPath, images: [brandAssets.openGraphImage] },
   twitter: { card: "summary", title: featureOverview.seo.title, description: featureOverview.seo.description },
 };
 
@@ -35,7 +36,7 @@ export default function FeaturesPage() {
         <ProofByProcess />
         <FeatureOverviewGrid />
         <div id="feature-workflow" data-scroll-target><FormatWorkflow steps={featureOverview.workflow} /></div>
-        <FaqSection idPrefix="features" items={featureOverview.faq} title="Understand the operating boundaries" description="OpenRedakt is evaluated against representative files and configured tooling, not universal promises." />
+        <FaqSection idPrefix="features" items={featureOverview.faq} title="Understand the operating boundaries" description="RedactPlus is evaluated against representative files and configured tooling, not universal promises." />
       </main>
       <Footer />
     </>

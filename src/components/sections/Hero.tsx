@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { heroContent } from "@/content/hero";
+import { PortalCta } from "@/components/portal-entry/PortalCta";
 import { AppWindow } from "@/components/media/AppWindow";
 import { ProductShot } from "@/components/media/ProductShot";
 import { Container } from "@/components/ui/Container";
@@ -37,13 +38,14 @@ export function Hero() {
               {heroContent.subheadline}
             </p>
             <div className="mt-9 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row sm:items-center">
-              <Link
-                href={heroContent.primaryCta.href}
+              <PortalCta
+                label={heroContent.downloadCta.label}
+                fallbackHref={heroContent.primaryCta.href}
+                fallbackLabel={heroContent.primaryCta.label}
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-[0.9375rem] font-semibold text-[#1c1917] shadow-[0_10px_30px_-8px_rgb(40_8_4/0.5)] transition-[background-color,transform] duration-200 hover:bg-[#fff1ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#a44116] motion-safe:hover:-translate-y-0.5 motion-reduce:transition-none"
               >
-                {heroContent.primaryCta.label}
                 <Icon name="arrow" size={17} />
-              </Link>
+              </PortalCta>
               <Link
                 href={heroContent.secondaryCta.href}
                 className="inline-flex min-h-12 items-center justify-center gap-1.5 rounded-full border border-white/25 bg-[rgb(40_12_4/0.22)] px-6 text-[0.9375rem] font-medium text-white backdrop-blur-sm transition-colors hover:bg-[rgb(40_12_4/0.34)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white motion-reduce:transition-none"

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360" role="img" aria-label="Development sample image: a review panel with two marks">
+  <rect width="720" height="360" rx="16" fill="#FAFAF9" stroke="#E7E5E4"/>
+  <rect x="24" y="24" width="440" height="312" rx="10" fill="#FFFFFF" stroke="#E7E5E4"/>
+  <g fill="#D6D3D1"><rect x="48" y="56" width="300" height="10" rx="5"/><rect x="48" y="80" width="360" height="10" rx="5"/><rect x="48" y="104" width="250" height="10" rx="5"/><rect x="48" y="152" width="330" height="10" rx="5"/><rect x="48" y="176" width="280" height="10" rx="5"/><rect x="48" y="224" width="350" height="10" rx="5"/></g>
+  <rect x="140" y="76" width="120" height="18" rx="3" fill="#1C1917"/><rect x="200" y="148" width="96" height="18" rx="3" fill="#1C1917"/>
+  <rect x="488" y="24" width="208" height="312" rx="10" fill="#FFFFFF" stroke="#E7E5E4"/>
+  <text x="508" y="56" font-family="system-ui, sans-serif" font-size="15" font-weight="600" fill="#1C1917">Marks (2)</text>
+  <g font-family="system-ui, sans-serif" font-size="13" fill="#57534E"><text x="508" y="92">Name · page 1</text><text x="508" y="120">Address · page 1</text></g>
+  <text x="508" y="316" font-family="ui-monospace, monospace" font-size="11" fill="#C2412A">DEVELOPMENT SAMPLE</text>
+</svg>

@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 import { isRouteActive } from "@/lib/nav";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/Button";
+import { PortalCta } from "@/components/portal-entry/PortalCta";
+import { isPageScrollLocked } from "@/components/portal-entry/scroll-lock";
 import { Icon } from "@/components/ui/Icon";
 import { MobileNav } from "./MobileNav";
 import { NavDropdown } from "./NavDropdown";
@@ -34,7 +36,12 @@ export function SiteHeader({ items, demoHref }: { items: readonly PrimaryNavItem
   const compact = isScrolled || menuOpen;
 
   useEffect(() => {
-    const onScroll = () => setIsScrolled(window.scrollY > 24);
+    const onScroll = () => {
+      // While a modal holds the page (scroll-lock.ts pins the body, so scrollY reads 0) the
+      // header keeps its current shape instead of jumping back to the unscrolled bar.
+      if (isPageScrollLocked()) return;
+      setIsScrolled(window.scrollY > 24);
+    };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -86,7 +93,9 @@ export function SiteHeader({ items, demoHref }: { items: readonly PrimaryNavItem
       <a href="#main-content" className="skip-link">
         Skip to content
       </a>
-      <header className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-3 pt-3 sm:px-5">
+      {/* While a modal locks the page the scrollbar is gone; --scroll-lock-gap keeps the bar
+          exactly where it was (src/components/portal-entry/scroll-lock.ts). */}
+      <header className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-3 pt-3 sm:px-5" style={{ right: "var(--scroll-lock-gap, 0px)" }}>
         <div
           className={cn(
             "pointer-events-auto mx-auto rounded-full border transition-[max-width,background-color,border-color,box-shadow] duration-300 ease-standard motion-reduce:transition-none",
@@ -126,13 +135,13 @@ export function SiteHeader({ items, demoHref }: { items: readonly PrimaryNavItem
 
             <div className="hidden items-center justify-self-end min-[992px]:flex">
               <Button variant="primary" size="sm" asChild>
-                <Link href={ctaHref}>Request a Demo</Link>
+                <PortalCta label="Download" fallbackHref={ctaHref} fallbackLabel="Request a Demo" />
               </Button>
             </div>
 
             <div className="flex items-center gap-2 justify-self-end min-[992px]:hidden">
               <Button variant="primary" size="sm" className="hidden sm:inline-flex" asChild>
-                <Link href={ctaHref}>Request a Demo</Link>
+                <PortalCta label="Download" fallbackHref={ctaHref} fallbackLabel="Request a Demo" />
               </Button>
               <button
                 ref={menuButtonRef}

@@ -136,7 +136,7 @@ export const pricingPackages = [
       "Permanent, verified redaction with metadata removed",
       "PDF, PDF/A and TIFF export with redaction reports",
     ],
-    ctaLabel: "Request a demo",
+    ctaLabel: "Contact Sales",
     footnote: "Documents only. Audio and video are not included.",
   },
   {
@@ -155,7 +155,7 @@ export const pricingPackages = [
       "Video redaction: blur, pixelate or black out areas",
       "Export redacted audio, video and transcripts",
     ],
-    ctaLabel: "Request a demo",
+    ctaLabel: "Contact Sales",
     footnote: "One license covers documents, audio and video.",
     highlight: "Most complete",
   },

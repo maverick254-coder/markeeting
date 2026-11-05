@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { PrimaryNavItem } from "@/content/navigation";
 import { siteConfig } from "@/content/site";
 import { Button } from "@/components/ui/Button";
+import { PortalCta } from "@/components/portal-entry/PortalCta";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/utils";
@@ -53,6 +54,9 @@ export function MobileNav({ isOpen, onClose, pathname, items, ctaHref }: MobileN
     outsideLandmarks.forEach((element) => element.setAttribute("inert", ""));
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      // A modal dialog opened from the menu (Download) handles its own keys; Escape there
+      // closes the dialog only and leaves the menu open behind it.
+      if (event.target instanceof Element && event.target.closest("dialog[open]")) return;
       if (event.key === "Escape") {
         event.preventDefault();
         onClose(true);
@@ -181,9 +185,7 @@ export function MobileNav({ isOpen, onClose, pathname, items, ctaHref }: MobileN
           </ul>
           <div className="mt-5 pt-1">
             <Button variant="primary" size="md" className="w-full" asChild>
-              <Link href={ctaHref} onClick={() => onClose(false)}>
-                Request a Demo
-              </Link>
+              <PortalCta label="Download" fallbackHref={ctaHref} fallbackLabel="Request a Demo" onBeforeOpen={() => onClose(false)} />
             </Button>
           </div>
         </nav>

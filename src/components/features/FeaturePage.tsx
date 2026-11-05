@@ -7,7 +7,6 @@ import { Container } from "@/components/ui/Container";
 import { Icon } from "@/components/ui/Icon";
 import { PageHero } from "@/components/marketing/PageHero";
 import { Breadcrumbs } from "@/components/marketing/Breadcrumbs";
-import { demoHref } from "@/content/navigation";
 import { FaqSection } from "@/components/marketing/FaqSection";
 import { FormatIndustryLinks } from "@/components/industries/IndustryParts";
 import type { FeatureSlug } from "@/lib/marketing/content";
@@ -31,7 +30,7 @@ export function FeaturePage({ page }: { page: FeaturePageContent }) {
         eyebrow={page.eyebrow}
         title={page.h1}
         summary={page.summary}
-        primaryCta={{ label: "Request a Demo", href: demoHref }}
+        primaryCta={{ label: "View Pricing", href: "/pricing" }}
         secondaryCta={{ label: "All features", href: "/features" }}
         breadcrumbs={<Breadcrumbs items={[{ name: "Home", path: "/" }, { name: "Features", path: "/features" }, { name: page.eyebrow, path: featureHref(page.slug) }]} />}
         media={<FeatureMedia slug={page.slug} media={page.media} />}

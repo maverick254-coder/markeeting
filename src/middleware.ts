@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { portalEntry } from "@/content/portal";
 import {
   chatwootWebSocketOrigin,
   resolveChatwootPublicConfig,
@@ -82,7 +83,12 @@ export function middleware(request: NextRequest) {
   const scopedScriptDirective = chatwootOrigin
     ? `${scriptDirective} ${chatwootOrigin}`
     : scriptDirective;
-  const policy = [scopedScriptDirective, ...sharedDirectives(chatwoot)].join("; ");
+  // The Download dialog submits credentials to the portal only in live mode; only then may
+  // scripts on this site connect to the portal origin.
+  const portalConnect = portalEntry?.submission === "live" ? portalEntry.portalOrigin : null;
+  const policy = [scopedScriptDirective, ...sharedDirectives(chatwoot)]
+    .map((directive) => (portalConnect && directive.startsWith("connect-src ") ? `${directive} ${portalConnect}` : directive))
+    .join("; ");
 
   // The request copy is what the renderer reads the nonce from; the response copy is
   // what the browser enforces. Both must carry the same nonce.

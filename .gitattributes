@@ -1,3 +1,5 @@
 # Official RedactPlus logo-kit artwork is kept byte-identical to the kit.
 public/images/brand/** -text
 public/favicon.svg -text
+apps/portal/public/images/brand/** -text
+apps/portal/public/favicon.svg -text

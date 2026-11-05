@@ -33,18 +33,25 @@ COPY . .
 
 # Read by the build and fixed into the output; changing any needs a new image.
 #   NEXT_PUBLIC_DOCUMENTATION_URL  inlined into the navigation bundle
-#   SITE_NOINDEX                   next.config.ts headers and the static /robots.txt
+#   NEXT_PUBLIC_PORTAL_URL         customer portal origin for the Download sign-in dialog;
+#                                  empty keeps the approved "Request a Demo" buttons
+#   SITE_NOINDEX                  next.config.ts headers and the static /robots.txt
 #   SITE_CANONICAL_ORIGIN          canonical links, sitemap, robots.txt, structured data
 #                                  (also baked into the runtime ENV below, so the
 #                                  prerendered and per-request output agree)
-# Production images leave the first two empty.
+# Production images leave the first two empty. NEXT_PUBLIC_PORTAL_URL stays empty until
+# the portal at home.redactplus.io is live.
 ARG NEXT_PUBLIC_DOCUMENTATION_URL=""
+ARG NEXT_PUBLIC_PORTAL_URL=""
+ARG NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH=""
 ARG SITE_NOINDEX=""
 ARG SITE_CANONICAL_ORIGIN="https://redactplus.io"
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production \
     CMS_ENABLED=false \
     NEXT_PUBLIC_DOCUMENTATION_URL=${NEXT_PUBLIC_DOCUMENTATION_URL} \
+    NEXT_PUBLIC_PORTAL_URL=${NEXT_PUBLIC_PORTAL_URL} \
+    NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH=${NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH} \
     SITE_NOINDEX=${SITE_NOINDEX} \
     SITE_CANONICAL_ORIGIN=${SITE_CANONICAL_ORIGIN}
 

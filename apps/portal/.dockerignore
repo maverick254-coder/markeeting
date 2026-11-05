@@ -1,0 +1,12 @@
+# Build context for deployment/portal/Dockerfile (context: apps/portal).
+node_modules
+.next
+.env
+.env.*
+!.env.example
+tests
+dev
+*.pem
+*.key
+*.tsbuildinfo
+public/dev-fixtures

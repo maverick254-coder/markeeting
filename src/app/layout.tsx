@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { brandAssets } from "@/content/brand";
 import { contentSecurityPolicyNonce } from "@/lib/csp";
 import { SupportChat } from "@/components/support/SupportChat";
+import { PortalDialogProvider } from "@/components/portal-entry/PortalDialogProvider";
+import { portalEntry } from "@/content/portal";
 import {
   publicSiteUrl,
   publicSupportEmail,
@@ -117,7 +119,7 @@ export default async function RootLayout({
         />
       </head>
       <body className="font-sans antialiased">
-        {children}
+        <PortalDialogProvider entry={portalEntry}>{children}</PortalDialogProvider>
         {chatwootConfig ? (
           <SupportChat config={chatwootConfig} fallbackEmail={publicSupportEmail} />
         ) : null}

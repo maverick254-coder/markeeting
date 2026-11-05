@@ -92,7 +92,7 @@ export function PortalDialogProvider({ entry, children }: { entry: PortalEntry |
           >
             <Icon name="close" size={18} />
           </button>
-          <AuthPanel key={session} portalOrigin={entry.portalOrigin} submission={entry.submission} onClose={close} />
+          <AuthPanel key={session} portalOrigin={entry.portalOrigin} submission={entry.submission} registration={entry.registration} onClose={close} />
         </div>
       </dialog>
     </PortalDialogContext.Provider>

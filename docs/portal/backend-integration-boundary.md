@@ -148,6 +148,13 @@ per device fingerprint, a disposable-domain policy, and so on.
 
 ## 6. Needed for sign-in inside the Download dialog (NOT YET VERIFIED, proposed)
 
+> **Superseded for registration (6 Nov 2026).** New customers no longer choose a password in the
+> dialog. Registration collects name, email and an optional organization, posts to the marketing
+> site's own `/api/registration`, and the backend emails a Keycloak set-up link. See
+> `docs/onboarding/backend-registration-contract.md`. The `register` row below, and the portal's
+> `register` credential action, are no longer used by the dialog; remove them when the backend
+> adapter is built. Sign-in and password reset below are unchanged.
+
 The marketing site's Download dialog has a full account form: create account (name, email,
 password, confirm) and sign in (email, password, forgot password). It posts to the portal, which
 owns the session: `POST https://home.redactplus.io/api/auth/credentials/{register|signin|password-reset}`.

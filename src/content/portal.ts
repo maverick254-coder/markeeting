@@ -10,7 +10,11 @@
  *
  * The marketing site holds no session and handles no passwords. The dialog only links to the
  * portal's /auth/start, which hands over to the shared RedactPlus sign-in (Keycloak).
+ * New-customer registration (no password) goes to this site's own /api/registration; see
+ * src/content/onboarding.ts.
  */
+
+import { registrationSubmission, type RegistrationSubmission } from "./onboarding";
 
 export type PortalAuthIntent = "register" | "signin";
 
@@ -57,7 +61,10 @@ export type CredentialSubmission = "disabled" | "live" | "preview";
 
 export interface PortalEntry {
   portalOrigin: string;
+  /** Existing-customer sign-in and password reset (the approved portal boundary). */
   submission: CredentialSubmission;
+  /** New-customer registration through this site's own /api/registration (src/content/onboarding.ts). */
+  registration: RegistrationSubmission;
 }
 
 export function credentialSubmission(raw: string | undefined): CredentialSubmission {
@@ -67,7 +74,11 @@ export function credentialSubmission(raw: string | undefined): CredentialSubmiss
 /** Null until the portal is configured; the header then keeps its approved "Request a Demo". */
 const configuredPortalOrigin = resolvePortalOrigin(process.env.NEXT_PUBLIC_PORTAL_URL);
 export const portalEntry: PortalEntry | null = configuredPortalOrigin
-  ? { portalOrigin: configuredPortalOrigin, submission: credentialSubmission(process.env.NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH) }
+  ? {
+      portalOrigin: configuredPortalOrigin,
+      submission: credentialSubmission(process.env.NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH),
+      registration: registrationSubmission(process.env.NEXT_PUBLIC_REDACTPLUS_REGISTRATION),
+    }
   : null;
 
 /** Same-origin check for the URL the portal returns after a successful sign-in. */

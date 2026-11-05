@@ -46,18 +46,12 @@ test("credential submission is off unless explicitly enabled, and only portal re
   }
 });
 
-test("form validation: required fields, email shape, password length and confirmation", () => {
-  const empty = { name: "", email: "", password: "", confirmPassword: "" };
-  assert.deepEqual(Object.keys(validateAuthForm("register", empty)).sort(), ["confirmPassword", "email", "name", "password"]);
+test("sign-in and reset validation: required fields and email shape", () => {
+  const empty = { email: "", password: "" };
   assert.deepEqual(Object.keys(validateAuthForm("signin", empty)).sort(), ["email", "password"]);
   assert.deepEqual(Object.keys(validateAuthForm("reset", empty)), ["email"]);
-  const good = { name: "Ada Lovelace", email: "ada@example.com", password: "correct horse", confirmPassword: "correct horse" };
-  assert.deepEqual(validateAuthForm("register", good), {});
-  assert.match(validateAuthForm("register", { ...good, email: "ada@" }).email ?? "", /valid email/);
-  assert.match(validateAuthForm("register", { ...good, password: "short", confirmPassword: "short" }).password ?? "", /at least 8/);
-  assert.match(validateAuthForm("register", { ...good, confirmPassword: "different" }).confirmPassword ?? "", /don.t match/);
-  assert.match(validateAuthForm("register", { ...good, name: "   " }).name ?? "", /full name/);
-  assert.deepEqual(validateAuthForm("signin", { ...empty, email: "ada@example.com", password: "x" }), {}, "sign-in does not impose the registration length rule");
+  assert.match(validateAuthForm("signin", { email: "ada@", password: "x" }).email ?? "", /valid email/);
+  assert.deepEqual(validateAuthForm("signin", { email: "ada@example.com", password: "x" }), {}, "sign-in imposes no length rule");
 });
 
 test("one shared dialog, mounted once in the root layout, holds the account form", () => {
@@ -76,12 +70,13 @@ test("one shared dialog, mounted once in the root layout, holds the account form
   );
 });
 
-test("the account form is accessible and never sends credentials unless live", () => {
+test("the sign-in form is accessible and never sends credentials unless live", () => {
   const panel = read("src/components/portal-entry/AuthPanel.tsx");
-  for (const field of ["name", "email", "password", "confirmPassword"]) {
+  for (const field of ["email", "password"]) {
     assert.ok(panel.includes(`htmlFor={id("${field}")}`), `${field} has a label`);
   }
-  assert.match(panel, /autoComplete=\{view === "register" \? "new-password" : "current-password"\}/);
+  assert.doesNotMatch(panel, /confirmPassword|new-password/, "registration collects no password");
+  assert.match(panel, /autoComplete="current-password"/);
   assert.match(panel, /aria-invalid=\{Boolean\(errors\.password\)\}/);
   assert.match(panel, /aria-pressed=\{showPassword\}/);
   assert.match(panel, /aria-label=\{showPassword \? "Hide password" : "Show password"\}/);
@@ -96,7 +91,8 @@ test("the account form is accessible and never sends credentials unless live", (
   assert.match(submit, /credentials: "include"/);
   assert.match(submit, /\$\{portalOrigin\}\/api\/auth\/credentials\/\$\{action\}/);
   assert.match(submit, /isPortalRedirect\(body\.redirect, portalOrigin\)/, "only a portal URL is followed");
-  assert.match(submit, /password: "", confirmPassword: ""/, "passwords are cleared after every attempt");
+  assert.match(submit, /password: ""/, "passwords are cleared after every attempt");
+  assert.doesNotMatch(submit, /credentials\/register|credentials\/\$\{view\}/, "registration never goes to the portal's password endpoint");
   assert.match(panel, /disabled=\{busy \|\| disabled\}/, "the submit button is disabled when not connected");
   assert.match(panel, /Continue on RedactPlus sign-in/, "the existing sign-in redirect stays as the labelled fallback");
   assert.doesNotMatch(panel, /localStorage|sessionStorage|document\.cookie|console\./, "nothing is stored or logged in the browser");

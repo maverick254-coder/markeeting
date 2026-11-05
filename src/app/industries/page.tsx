@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { industryGroups, liveIndustryPages } from "@/content/industries";
 import { industriesHub } from "@/content/pages";
-import { demoHref } from "@/content/navigation";
 import { featureHref, getFeaturePage } from "@/content/features";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -42,7 +41,7 @@ export default function IndustriesPage() {
           eyebrow={industriesHub.eyebrow}
           title={industriesHub.h1}
           summary={industriesHub.summary}
-          primaryCta={{ label: "Request a Demo", href: demoHref }}
+          primaryCta={{ label: "Explore Features", href: "/features" }}
           secondaryCta={{ label: "Browse the directory", href: "#industry-directory" }}
           breadcrumbs={<Breadcrumbs items={breadcrumbs} />}
           media={<DirectorySignal groups={groups} />}

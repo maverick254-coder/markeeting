@@ -125,7 +125,7 @@ routeTest("pricing cards are compact and correctly scoped", async () => {
   assert.match(document, /PDF, PDF\/A and TIFF export/);
   assert.match(document, /Audio and video are not included/);
   assert.doesNotMatch(document.replace("Audio and video are not included", ""), /audio|speech|voice|waveform|transcri|video|media/i);
-  assert.match(cards.document.html, /aria-label="Request a demo: Document package"/);
+  assert.match(cards.document.html, /aria-label="Contact Sales: Document package"/);
 
   const media = cards["document-media"].text;
   assert.match(media, /^Most complete Document \+ Media Everything in Document, plus audio and video redaction/);

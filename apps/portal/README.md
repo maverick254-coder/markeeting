@@ -1,0 +1,199 @@
+# RedactPlus community portal (`home.redactplus.io`)
+
+The signed-in half of the RedactPlus website: downloads, the community forum, documentation,
+news, release notes and support. It is a separate Next.js application in the marketing
+repository, with its own `package.json`, lockfile, image and deployment. The marketing site does
+not depend on it.
+
+It is a continuation of redactplus.io, not a second marketing site. It uses the same light
+palette, type scale, compact header, buttons and logo; it has no hero, no promotional cards and
+no sign-in or registration controls of its own.
+
+- **Every page requires a session.** Without one, the visitor goes through the existing entry
+  point (`/auth/start`, then RedactPlus sign-in) and back to the page they asked for.
+- **Account** is an initials avatar in the header whose only action is Sign out.
+- **Home** (`/`) is the downloads and resources hub: the latest verified installer, then
+  compact groups for getting started, news, documentation and the community.
+- **Forum** (`/forum`, `/forum/questions/[slug]`, `/forum/ask`): a Q&A index with search,
+  answered/unanswered filters, sorting, categories, tags and pagination; question pages with
+  answers, an accepted answer and nested comments; and a composer with Markdown preview and
+  image attachments. It runs on the `ForumService` interface. Production has no forum engine yet,
+  so it shows an empty, clearly labelled state, question URLs return 404, and nothing is posted.
+  The engine choice is in docs/portal/forum-and-cms-evaluation.md.
+- **News** (`/news`, `/news/[slug]`) renders published Markdown articles from `content/news`,
+  the same format Decap CMS edits.
+- **The download UI** shows product, version, platform, size, the download button and release
+  notes. The SHA-256 is not displayed: the manifest requires it, and `releases:verify` checks
+  it against the published file before a release is listed.
+- **Sign-in from the marketing dialog:** `POST /api/auth/credentials/{register|signin|password-reset}`
+  (src/lib/credential-auth) accepts only the marketing origin over CORS. It answers
+  `503 credential_auth_unavailable` until the backend credential API exists
+  (docs/portal/backend-integration-boundary.md §6).
+
+Phase status:
+- **Working:** sign-in, sessions, downloads, release notes and search.
+- **Forum:** layout only, with no backend. Production shows it empty and its controls are disabled.
+- **Not available yet:** Documentation, Tutorials, News, Announcements and Support tickets.
+  Each is marked that way on its page.
+
+## Structure
+
+```text
+apps/portal/
+  content/releases.json          release manifest (validated; empty until a real release is verified)
+  dev/mock-idp/server.mjs        DEVELOPMENT identity provider (loopback only, refuses production)
+  scripts/validate-releases.ts   manifest check, run before every build
+  scripts/verify-release.ts      downloads an installer and checks its size and SHA-256
+  src/middleware.ts              per-request nonce CSP
+  src/app/(portal)/              signed-in pages: / download forum docs news release-notes support search
+  src/app/{auth/error,signed-out,not-found}   the only pages shown without a session (minimal shell)
+  src/components/                header (nav, search, AccountMenu), DownloadSection, CommunityBoard, ...
+  src/lib/community/             forum shape, planned categories, development-only fixtures
+  src/lib/search.ts              portal search (sections and release notes)
+  src/lib/initials.ts            avatar initials from the verified session identity
+  src/app/auth/{start,callback,logout}/route.ts   OIDC journey
+  src/app/api/{downloads/[version],session,health}/route.ts
+  src/lib/config.ts              environment parsing and production guards
+  src/lib/oidc.ts                Authorization Code + PKCE client (openid-client 6.8.8)
+  src/lib/crypto.ts              AES-256-GCM sealing (HKDF keys per purpose)
+  src/lib/return-to.ts           post-sign-in redirect allowlist
+  src/lib/session/               server-side sessions (Postgres in production, memory locally)
+  src/lib/releases/              manifest schema and selection
+  src/lib/customer-api/          PROPOSED backend contract (not yet available)
+  tests/*.test.ts                unit tests
+  tests/routes/                  route tests against the built app and the development provider
+```
+
+## Commands
+
+```bash
+npm --prefix apps/portal ci
+npm --prefix apps/portal run typecheck
+npm --prefix apps/portal run lint
+npm --prefix apps/portal run build        # validates content/releases.json first
+npm --prefix apps/portal run test         # unit tests, then route tests (needs a build)
+```
+
+## Local development
+
+1. Copy `.env.example` to `.env.local`. Generate `PORTAL_SESSION_SECRET` and pick any 16+
+   character `PORTAL_OIDC_CLIENT_SECRET`.
+2. In one terminal, start the development identity provider with the same secret:
+   `MOCK_IDP_CLIENT_SECRET=<same value> npm --prefix apps/portal run dev:idp`
+3. In another terminal: `npm --prefix apps/portal run dev`, then open http://localhost:3200.
+
+The development provider says on every page that it is not RedactPlus sign-in. It asks for no
+password and accepts any test identity. The portal has **no mock mode**: it talks to this
+provider exactly as it would talk to Keycloak.
+
+Development settings cannot reach production:
+- `PORTAL_ENVIRONMENT` defaults to `production`.
+- Non-production values are refused unless the portal is served from a loopback origin.
+- Production refuses an `http` issuer, an `http` origin and the in-memory session store.
+- The provider refuses `NODE_ENV=production` and binds only to 127.0.0.1.
+
+## Environment variables (names only)
+
+| Name | Required | Purpose |
+|---|---|---|
+| `PORTAL_PUBLIC_ORIGIN` | yes | `https://home.redactplus.io`. Builds the redirect and post-logout URIs. |
+| `PORTAL_SESSION_SECRET` | yes | 32+ random bytes. Keys for the sign-in transaction cookie and for tokens at rest. |
+| `PORTAL_SESSION_STORE` | no | `postgres` (default). `memory` is local only. |
+| `PORTAL_DATABASE_URL`, `PORTAL_DATABASE_SSL` | with postgres | Portal-owned database. Schema: `src/lib/session/schema.sql`. |
+| `PORTAL_OIDC_ISSUER`, `PORTAL_OIDC_CLIENT_ID`, `PORTAL_OIDC_CLIENT_SECRET` | all or none | Keycloak realm and the portal's confidential client. Unset: sign-in reports itself unavailable. |
+| `PORTAL_OIDC_SCOPES` | no | Default `openid profile email`. |
+| `PORTAL_OIDC_REGISTRATION_PROMPT` | no | Default `create` (OIDC `prompt=create`). Set to empty if the realm rejects it. |
+| `PORTAL_DOWNLOAD_ALLOWED_HOSTS` | no | Exact host names that installer URLs may use. Empty: nothing is downloadable. |
+| `PORTAL_RELEASES_MANIFEST_PATH` | no | Overrides `content/releases.json` (tests use a fixture). |
+| `PORTAL_NEWS_DIR` | no | Overrides `content/news` (local previews use `tests/fixtures/news`). |
+| `PORTAL_CUSTOMER_API_URL` | no | Proposed backend customer API. **Not yet available.** |
+| `PORTAL_ACCOUNT_MANAGEMENT_URL` | no | Reserved. Not shown while the account menu holds Sign out only. |
+| `PORTAL_SUPPORT_EMAIL` | no | Shown in the footer and on Documentation. |
+| `PORTAL_MARKETING_ORIGIN` | no | Default `https://redactplus.io`. |
+| `TRUST_PROXY_HOPS` | no | `1` behind host nginx. Used for per-address rate limits. |
+| `PORTAL_ENVIRONMENT` | no | Never set in production. `development` and `test` work on loopback only. |
+| `PORTAL_DEV_COMMUNITY_FIXTURES` | no | `true` shows sample forum discussions, under a "Development sample data" banner. Refused in production. |
+
+## Authentication
+
+- **Start** (`/auth/start?intent=register|signin&return=/download`): creates a PKCE S256
+  verifier, a state and a nonce, and seals them with the return path into
+  `__Host-rp_auth`. That cookie is HttpOnly, Secure, SameSite=Lax and expires after 10
+  minutes. The browser is then redirected to the provider. `intent=register` adds
+  `prompt=create`.
+- **Callback**: the transaction cookie is single use. The code is exchanged on the server,
+  and state, nonce, issuer and PKCE are all checked. Any earlier session is destroyed and a
+  new random session ID is issued in `__Host-rp_session`: HttpOnly, Secure, SameSite=Lax,
+  host-only, never shared with `redactplus.io`. Only the SHA-256 of the ID is stored.
+- **Sessions**: they end after 8 hours idle or 24 hours in total. Provider tokens are stored
+  AES-256-GCM-encrypted and never reach the browser.
+- **Logout**: a POST only. It requires the portal's Origin (or Fetch Metadata same-origin)
+  plus the session's CSRF token. It destroys the session, then redirects to the provider's
+  end-session endpoint with `id_token_hint`.
+- **Redirects**: `return` accepts only same-origin paths under `/`, `/download`,
+  `/forum`, `/docs`, `/news`, `/release-notes`, `/support` and `/search`. Anything else falls back to `/`.
+- **Errors**: `/auth/error?reason=…` maps a fixed set of reasons to fixed messages. The query
+  value is never rendered.
+
+Keycloak client the backend team needs to create (see
+`docs/portal/backend-integration-boundary.md`):
+- confidential client, standard flow only, PKCE S256 required;
+- redirect URI `https://home.redactplus.io/auth/callback`;
+- post-logout redirect URI `https://home.redactplus.io/signed-out`;
+- web origin `https://home.redactplus.io`.
+
+## Release manifest (`content/releases.json`)
+
+```json
+{
+  "schemaVersion": 1,
+  "product": "RedactPlus Desktop",
+  "releases": [
+    {
+      "version": "1.4.0",
+      "channel": "stable",
+      "releasedOn": "YYYY-MM-DD",
+      "supported": true,
+      "installer": {
+        "platform": "windows-x64",
+        "fileName": "RedactPlus-Desktop-1.4.0-x64.exe",
+        "url": "https://<allowed host>/<path>",
+        "sizeBytes": 0,
+        "sha256": "<64 lower-case hex>",
+        "verification": { "method": "sha256-of-downloaded-file", "verifiedOn": "YYYY-MM-DD", "verifiedBy": "<role>" }
+      },
+      "systemRequirements": ["…"],
+      "notes": [{ "kind": "added|improved|fixed|security|known-issue", "text": "…" }],
+      "notesUrl": "https://… (optional)"
+    }
+  ]
+}
+```
+
+To publish a release:
+1. Upload the installer to an allowlisted host.
+2. Add the entry without its `verification` block.
+3. Run `npm --prefix apps/portal run releases:verify -- <version>`. It downloads the file and
+   checks the size and SHA-256.
+4. Only when that passes, add the `verification` block and merge.
+
+The portal links a release only when it is `supported`, its host is in
+`PORTAL_DOWNLOAD_ALLOWED_HOSTS` and the whole manifest validates. Downloads go through
+`/api/downloads/<version>`. That route requires a session, records the download in the
+customer's history, and redirects to the verified URL with `Referrer-Policy: no-referrer`.
+
+The shipped manifest is empty on purpose: no verified installer source exists yet.
+
+## Pending backend dependencies
+
+- The `redactplus-portal` Keycloak client and the confirmed issuer URL.
+- Self-registration on the realm, with required email verification.
+- `GET /v1/api/customer/me` for licence status and `POST /v1/api/customer/trial` for trial
+  provisioning. Both are proposed, not verified.
+- A 7-day term and a trial plan in the Control Center.
+- A verified installer host.
+
+Until the customer API exists:
+- the portal never claims a trial;
+- no licence or trial status is shown anywhere in the portal;
+- downloads are gated on sign-in only.

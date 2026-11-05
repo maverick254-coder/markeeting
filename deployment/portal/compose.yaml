@@ -1,0 +1,63 @@
+# RedactPlus customer portal: Compose template for /root/deploy/redactplus-portal/.
+# FILES ONLY — not deployed. Installed beside two files that are never committed:
+#   .env      the release pin (RELEASE_SHA, RELEASE_DIGEST), as for the marketing site
+#   app.env   runtime settings, mode 600; see app.env.example
+name: redactplus-portal
+
+services:
+  redactplus-portal:
+    container_name: redactplus-portal
+    image: "registry.safaridesk.io/safari/redactplus-portal:${RELEASE_SHA:?set RELEASE_SHA in .env}@${RELEASE_DIGEST:?set RELEASE_DIGEST in .env}"
+    pull_policy: missing
+    restart: unless-stopped
+    init: true
+    env_file:
+      - path: ./app.env
+        required: true
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      HOSTNAME: 0.0.0.0
+      NODE_OPTIONS: --max-old-space-size=256
+    # Loopback only; host nginx is the sole public path. 6095 is the marketing site.
+    ports:
+      - "127.0.0.1:6096:3000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+          cpus: "0.75"
+          pids: 256
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/api/health').then(r=>r.ok?r.json():null).then(b=>process.exit(b&&b.status==='ready'?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+      io.safaridesk.service: redactplus-portal
+    networks:
+      - redactplus-portal
+
+# Its own bridge network. The portal's Postgres is reached by its connection string; no other
+# project's network is attached.
+networks:
+  redactplus-portal:
+    name: redactplus-portal

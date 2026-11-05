@@ -5,7 +5,6 @@ import { featureOverview } from "@/content/features";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Breadcrumbs } from "@/components/marketing/Breadcrumbs";
-import { demoHref } from "@/content/navigation";
 import { PageHero } from "@/components/marketing/PageHero";
 import { ProofByProcess } from "@/components/marketing/ProofByProcess";
 import { StructuredData } from "@/components/marketing/StructuredData";
@@ -32,7 +31,7 @@ export default function FeaturesPage() {
       <Header />
       <main id="main-content">
         <StructuredData data={buildBreadcrumbJsonLd(breadcrumbs)} />
-        <PageHero layout="stacked" eyebrow={featureOverview.eyebrow} title={featureOverview.h1} summary={featureOverview.summary} primaryCta={{ label: "Request a Demo", href: demoHref }} secondaryCta={{ label: "See the workflow", href: "#feature-workflow" }} breadcrumbs={<Breadcrumbs items={breadcrumbs} />} media={<FormatPair />} />
+        <PageHero layout="stacked" eyebrow={featureOverview.eyebrow} title={featureOverview.h1} summary={featureOverview.summary} primaryCta={{ label: "View Pricing", href: "/pricing" }} secondaryCta={{ label: "See the workflow", href: "#feature-workflow" }} breadcrumbs={<Breadcrumbs items={breadcrumbs} />} media={<FormatPair />} />
         <ProofByProcess />
         <FeatureOverviewGrid />
         <div id="feature-workflow" data-scroll-target><FormatWorkflow steps={featureOverview.workflow} /></div>

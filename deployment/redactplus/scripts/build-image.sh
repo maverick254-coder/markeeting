@@ -13,6 +13,8 @@
 # Optional environment, fixed into the image at build time:
 #   SITE_NOINDEX=true                 review builds only; tag gets a -noindex suffix
 #   NEXT_PUBLIC_DOCUMENTATION_URL=…   documentation link in the navigation
+#   NEXT_PUBLIC_PORTAL_URL=…          portal origin (https://home.redactplus.io) for the
+#                                     Download sign-in dialog; unset keeps "Request a Demo"
 #   SITE_CANONICAL_ORIGIN=…           defaults to https://redactplus.io; commits that
 #                                     predate the setting (master) keep saferedact.io
 #
@@ -48,6 +50,8 @@ docker build \
   --build-arg RELEASE_ID="redactplus-${short}" \
   --build-arg SITE_NOINDEX="${SITE_NOINDEX:-}" \
   --build-arg NEXT_PUBLIC_DOCUMENTATION_URL="${NEXT_PUBLIC_DOCUMENTATION_URL:-}" \
+  --build-arg NEXT_PUBLIC_PORTAL_URL="${NEXT_PUBLIC_PORTAL_URL:-}" \
+  --build-arg NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH="${NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH:-}" \
   --build-arg SITE_CANONICAL_ORIGIN="${SITE_CANONICAL_ORIGIN:-https://redactplus.io}" \
   --label "io.safaridesk.redactplus.noindex=${SITE_NOINDEX:-false}" \
   --label "io.safaridesk.redactplus.retired-captures=${ALLOW_RETIRED_CAPTURES:-false}" \

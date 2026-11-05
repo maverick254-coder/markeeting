@@ -2,7 +2,6 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { whyRedactPlusPage } from "@/content/pages";
-import { demoHref } from "@/content/navigation";
 import { industryHref, liveIndustryPages } from "@/content/industries";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -35,7 +34,7 @@ export default function WhyRedactPlusPage() {
           eyebrow={whyRedactPlusPage.eyebrow}
           title={whyRedactPlusPage.h1}
           summary={whyRedactPlusPage.summary}
-          primaryCta={{ label: "Request a Demo", href: demoHref }}
+          primaryCta={{ label: "View Pricing", href: "/pricing" }}
           secondaryCta={{ label: "Explore features", href: "/features" }}
           breadcrumbs={<Breadcrumbs items={breadcrumbs} />}
         />

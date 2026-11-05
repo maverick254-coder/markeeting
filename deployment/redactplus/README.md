@@ -48,6 +48,8 @@ switching between them is an image change with no DNS or Nginx change.
 | Variable | When read | Changing it needs |
 |---|---|---|
 | `NEXT_PUBLIC_DOCUMENTATION_URL` | **Build** (inlined into the client bundle) | a new image |
+| `NEXT_PUBLIC_PORTAL_URL` | **Build**. Bare https origin of the customer portal. Set, the header, mobile menu and homepage hero's primary action become Download, opening one shared sign-in dialog that links to `<portal>/auth/start`; unset or invalid, those buttons stay "Request a Demo" exactly as before. Leave unset until the portal is live (`deployment/portal/README.md`). | a new image |
+| `NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH` | **Build**. `enabled` lets the Download dialog's account form submit to the portal, and adds the portal origin to `connect-src`. Leave unset until the backend credential API exists (`docs/portal/backend-integration-boundary.md` §6). Unset, the form validates but sends nothing and offers the RedactPlus sign-in redirect. | a new image |
 | `SITE_NOINDEX` | **Build** (`next.config.ts` headers and the static `/robots.txt`) | a new image |
 | `SITE_CANONICAL_ORIGIN` | **Build** (static `/robots.txt`) and runtime (metadata, sitemap, structured data). The image bakes the same value into both. Defaults to `https://redactplus.io` in this Dockerfile. | a new image |
 | Everything in `app.env.example` | Request time (`process.env` on the server, including middleware) | `docker compose up -d` |

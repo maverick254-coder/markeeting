@@ -3,7 +3,6 @@ import Link from "next/link";
 import type { IndustryLayout, IndustryPageContent, MediaFormat } from "@/lib/marketing/industries";
 import { featureHref, getFeaturePage } from "@/content/features";
 import { getIndustryPage, industryHref, liveIndustryPages } from "@/content/industries";
-import { demoHref } from "@/content/navigation";
 import { Breadcrumbs } from "@/components/marketing/Breadcrumbs";
 import { FaqSection } from "@/components/marketing/FaqSection";
 import { PageHero } from "@/components/marketing/PageHero";
@@ -58,7 +57,7 @@ export function IndustryPage({ page }: { page: IndustryPageContent }) {
         eyebrow={page.eyebrow}
         title={page.h1}
         summary={page.summary}
-        primaryCta={{ label: "Request a Demo", href: demoHref }}
+        primaryCta={{ label: "Contact Sales", href: "/contact" }}
         secondaryCta={primaryFeature ? { label: `Explore ${primaryFeature.label.toLowerCase()}`, href: primaryFeature.href } : { label: "All features", href: "/features" }}
         breadcrumbs={<Breadcrumbs items={industryBreadcrumbs(page)} />}
         media={<IndustrySignal page={page} />}

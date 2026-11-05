@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "product": "RedactPlus Desktop",
+  "releases": [
+    {
+      "version": "9.9.0",
+      "channel": "stable",
+      "releasedOn": "2026-01-15",
+      "supported": true,
+      "installer": {
+        "platform": "windows-x64",
+        "fileName": "RedactPlus-Desktop-9.9.0-TEST-FIXTURE-x64.exe",
+        "url": "https://downloads.example.test/fixtures/RedactPlus-Desktop-9.9.0-TEST-FIXTURE-x64.exe",
+        "sizeBytes": 1048576,
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000001",
+        "verification": { "method": "sha256-of-downloaded-file", "verifiedOn": "2026-01-15", "verifiedBy": "Test fixture (not a real release)" }
+      },
+      "systemRequirements": ["Test fixture requirement"],
+      "notes": [{ "kind": "added", "text": "Test fixture note. Not a real RedactPlus release." }]
+    },
+    {
+      "version": "9.8.0",
+      "channel": "stable",
+      "releasedOn": "2025-12-01",
+      "supported": true,
+      "installer": {
+        "platform": "windows-x64",
+        "fileName": "RedactPlus-Desktop-9.8.0-TEST-FIXTURE-x64.exe",
+        "url": "https://untrusted.example.test/RedactPlus-Desktop-9.8.0-TEST-FIXTURE-x64.exe",
+        "sizeBytes": 1048000,
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000002",
+        "verification": { "method": "sha256-of-downloaded-file", "verifiedOn": "2025-12-01", "verifiedBy": "Test fixture (not a real release)" }
+      },
+      "systemRequirements": ["Test fixture requirement"],
+      "notes": [{ "kind": "fixed", "text": "Fixture on a host that is not allowlisted." }]
+    },
+    {
+      "version": "9.7.0",
+      "channel": "stable",
+      "releasedOn": "2025-10-01",
+      "supported": false,
+      "installer": {
+        "platform": "windows-x64",
+        "fileName": "RedactPlus-Desktop-9.7.0-TEST-FIXTURE-x64.exe",
+        "url": "https://downloads.example.test/fixtures/RedactPlus-Desktop-9.7.0-TEST-FIXTURE-x64.exe",
+        "sizeBytes": 1047000,
+        "sha256": "0000000000000000000000000000000000000000000000000000000000000003",
+        "verification": { "method": "sha256-of-downloaded-file", "verifiedOn": "2025-10-01", "verifiedBy": "Test fixture (not a real release)" }
+      },
+      "systemRequirements": ["Test fixture requirement"],
+      "notes": [{ "kind": "fixed", "text": "Unsupported fixture release." }]
+    }
+  ]
+}

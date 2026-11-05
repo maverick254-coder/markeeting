@@ -1,0 +1,117 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /*
+   * The marketing site's default (light) palette and type scale, copied from src/app/globals.css
+   * at the repository root, so redactplus.io and home.redactplus.io read as one website.
+   * Brand orange #FF735C fills buttons; orange text uses --or-coral-ink (5.1:1 on white).
+   */
+  :root {
+    --or-midnight: 255 255 255; /* canvas */
+    --or-graphite: 250 250 249; /* raised surface */
+    --or-elevated: 245 245 244; /* active surface */
+    --or-coral: 255 115 92;
+    --or-coral-soft: 255 140 118;
+    --or-coral-ink: 194 65 42;
+    --or-coral-ink-hover: 163 54 35;
+    --or-signal: 194 65 42;
+    --or-fg: 28 25 23;
+    --or-fg-muted: 87 83 78;
+    --or-line: 231 229 228;
+    --or-shadow: 28 25 23;
+    --or-danger: 185 28 28;
+    --or-positive: 21 128 61;
+    --or-ease-standard: cubic-bezier(0.2, 0.7, 0.2, 1);
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply min-h-screen bg-canvas font-sans text-ink;
+  }
+
+  * {
+    @apply border-border-subtle;
+  }
+
+  ::selection {
+    background: rgb(var(--or-coral) / 0.28);
+    color: rgb(var(--or-fg));
+  }
+
+  :focus-visible {
+    outline: 2px solid rgb(var(--or-signal));
+    outline-offset: 3px;
+  }
+}
+
+@layer components {
+  .skip-link {
+    @apply fixed -top-full left-5 z-[70] rounded-b-md bg-accent-warm px-4 py-2 text-sm font-semibold text-on-accent;
+  }
+  .skip-link:focus {
+    @apply top-0;
+  }
+
+  .type-h1 {
+    font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 600;
+    font-size: clamp(1.875rem, 1.5rem + 1.2vw, 2.5rem);
+    line-height: 1.08;
+    letter-spacing: -0.036em;
+    color: rgb(var(--or-fg));
+    text-wrap: balance;
+  }
+  .type-h2 {
+    font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 600;
+    font-size: clamp(1.375rem, 1.2rem + 0.6vw, 1.75rem);
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    color: rgb(var(--or-fg));
+  }
+  .type-h3 {
+    font-family: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+    font-weight: 600;
+    font-size: 1.0625rem;
+    line-height: 1.35;
+    letter-spacing: -0.016em;
+    color: rgb(var(--or-fg));
+  }
+  .type-body {
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    color: rgb(var(--or-fg-muted));
+  }
+  .type-eyebrow {
+    font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgb(var(--or-coral-ink));
+  }
+  .type-meta {
+    font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+    line-height: 1.5;
+    letter-spacing: 0.04em;
+    color: rgb(var(--or-fg-muted));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}

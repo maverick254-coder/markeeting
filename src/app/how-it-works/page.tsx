@@ -2,7 +2,6 @@ import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { howItWorksPage } from "@/content/pages";
-import { demoHref } from "@/content/navigation";
 import { featureHref, publishedFeaturePages } from "@/content/features";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -36,7 +35,7 @@ export default function HowItWorksPage() {
           eyebrow={howItWorksPage.eyebrow}
           title={howItWorksPage.h1}
           summary={howItWorksPage.summary}
-          primaryCta={{ label: "Request a Demo", href: demoHref }}
+          primaryCta={{ label: "Explore Features", href: "/features" }}
           secondaryCta={{ label: "See the six stages", href: "#review-lifecycle" }}
           breadcrumbs={<Breadcrumbs items={breadcrumbs} />}
           media={<LifecycleSignal />}

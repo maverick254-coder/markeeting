@@ -15,10 +15,10 @@ Center (`IdentityAdministration.cs`, `ExecuteActionsEmailAsync`). So:
 - **Website:** no mail transport for onboarding. A website mailer would either duplicate the email
   or need a token it must not hold.
 
-The website already has a separate, server-only HTTPS mail adapter for sales enquiries
-(`src/lib/leads/transports/https-email.ts`, `LEAD_DELIVERY_*`). It is unrelated to identity, and
-this work leaves it unchanged. No website SMTP adapter was added, because no non-security
-onboarding email needs one today.
+The website has a separate, server-only mail path for sales and contact enquiries only
+(`src/lib/leads`, `LEAD_DELIVERY_*`). Since 6 November 2026 it can submit through SpaceMail SMTP
+(see `docs/operations/enquiry-email.md`). It is unrelated to identity: it never sends set-up or
+password email, and the registration code cannot reach it.
 
 ## What is configured today (Admin-panel `origin/main` `a5f16f8`)
 
@@ -77,7 +77,9 @@ whether SpaceMail allows a `From` that differs from the authenticated mailbox.
 
 ## Safeguards on the website side
 
-- No SMTP host, port or credential is hard-coded or configured anywhere in this repository.
+- No SMTP credential is held anywhere in this repository. The SpaceMail host and port appear
+  only as commented examples in `deployment/redactplus/app.env.example`, for the enquiry mail;
+  no code hard-codes them.
 - `scripts/onboarding/render-email-preview.mjs` renders templates to files with `example.com` and
   `.invalid` sample values. It has no mail transport and no network access.
 - `tests/registration-onboarding.test.ts` checks that the templates hold placeholders only (no

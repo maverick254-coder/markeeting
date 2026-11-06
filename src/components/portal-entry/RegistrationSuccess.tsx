@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { registrationSuccessCopy as copy, supportEmail } from "@/content/onboarding";
+import { registrationSuccessCopy as copy, supportEmail, type registrationEmailFailedCopy } from "@/content/onboarding";
 import type { RegistrationAcceptedBody } from "@/lib/onboarding/contract";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
@@ -10,35 +10,33 @@ const RESEND_COOLDOWN_SECONDS = 60;
 
 type ResendState = { kind: "idle" } | { kind: "sending" } | { kind: "done" } | { kind: "error"; message: string };
 
-function formatDate(iso: string) {
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? null : new Intl.DateTimeFormat(undefined, { dateStyle: "long" }).format(date);
-}
-
 /**
- * Replaces the registration form once the server has acknowledged the registration (202).
+ * Replaces the registration form once the server has acknowledged the registration (202), or,
+ * with `emailFailed`, once the backend has registered the trial but could not send the set-up
+ * email (which is not a success: it says so and offers "Send it again").
  *
- * It says the instructions were sent only when the backend reported it handed the email to the
- * mail server, and "are being sent" otherwise; it never claims the email arrived. It names a
- * trial end date only when the backend reports an active trial. The resend action appears only
- * when the backend supports it, with a cooldown here on top of the server's limits.
+ * It never claims the email arrived. It states the trial only as the backend implements it (the
+ * seven days start at the first desktop sign-in); it shows no dates, because registration
+ * returns none. The resend action has a cooldown here on top of the server's and backend's limits.
  */
 export function RegistrationSuccess({
   email,
   accepted,
   onClose,
   resend,
+  emailFailed,
 }: {
   email: string;
   accepted: RegistrationAcceptedBody;
   onClose?: () => void;
   /** Performs the resend; returns an error message, or null when it was requested. */
   resend: () => Promise<string | null>;
+  /** The set-up email was not sent: show this wording instead of "Check your email". */
+  emailFailed?: typeof registrationEmailFailedCopy;
 }) {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_SECONDS);
   const [resendState, setResendState] = useState<ResendState>({ kind: "idle" });
-  const endsAt = accepted.trial?.status === "active" && accepted.trial.endsAt ? formatDate(accepted.trial.endsAt) : null;
 
   useEffect(() => {
     headingRef.current?.focus();
@@ -61,13 +59,13 @@ export function RegistrationSuccess({
   return (
     <div data-registration-success>
       <span aria-hidden="true" className="flex h-12 w-12 items-center justify-center rounded-2xl bg-accent-warm/15 text-accent-ink">
-        <Icon name="mail" size={24} />
+        <Icon name={emailFailed ? "info" : "mail"} size={24} />
       </span>
       <h2 ref={headingRef} tabIndex={-1} className="mt-4 pr-10 font-heading text-[1.375rem] font-semibold leading-tight tracking-[-0.025em] text-ink focus:outline-none">
-        {copy.heading}
+        {emailFailed ? emailFailed.heading : copy.heading}
       </h2>
       <p role="status" className="mt-2 text-body text-ink-muted">
-        {accepted.setupEmail === "sent" ? copy.sent : copy.queued}
+        {emailFailed ? emailFailed.body : accepted.status === "resent" ? copy.resent : copy.accepted}
       </p>
       <p className="mt-3 rounded-xl border border-border-subtle bg-surface-raised px-3.5 py-2.5 text-body-sm text-ink">
         <span className="text-ink-muted">Registered email</span>
@@ -85,10 +83,10 @@ export function RegistrationSuccess({
           <Icon name="clock" size={16} className="text-accent-ink" />
           {copy.trialHeading}
         </h3>
-        <p className="mt-1.5 text-body-sm text-ink-muted">{endsAt ? copy.trialActive(endsAt) : copy.trialBody}</p>
+        <p className="mt-1.5 text-body-sm text-ink-muted">{copy.trialBody}</p>
       </section>
 
-      <p className="mt-4 text-body-sm text-ink-muted">{copy.notArrived}</p>
+      {emailFailed ? null : <p className="mt-4 text-body-sm text-ink-muted">{copy.notArrived}</p>}
 
       <div className="mt-5 flex flex-col gap-2.5">
         <Button type="button" variant="primary" size="md" className="w-full" onClick={onClose}>
@@ -96,7 +94,7 @@ export function RegistrationSuccess({
         </Button>
         {accepted.resendAvailable ? (
           <Button type="button" variant="ghost" size="md" className="w-full" onClick={requestResend} disabled={cooldown > 0 || resendState.kind === "sending"} aria-describedby="registration-resend-status">
-            {resendState.kind === "sending" ? copy.resendBusy : cooldown > 0 ? `${copy.resendLabel} (${cooldown}s)` : copy.resendLabel}
+            {resendState.kind === "sending" ? copy.resendBusy : cooldown > 0 ? `${emailFailed?.resendLabel ?? copy.resendLabel} (${cooldown}s)` : (emailFailed?.resendLabel ?? copy.resendLabel)}
           </Button>
         ) : null}
       </div>

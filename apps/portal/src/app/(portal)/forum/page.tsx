@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { FixtureBanner, TagChip } from "@/components/forum/bits";
 import { QuestionRow } from "@/components/forum/QuestionRow";
 import { Icon } from "@/components/Icon";
@@ -51,6 +52,9 @@ function Segmented({ items, current, href, label, live }: { items: { value: stri
 export default async function ForumPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { runtime } = await requirePortalSession();
   const forum = forumService(runtime.config);
+  // No forum engine is deployed in production yet: the forum is not offered (it is also absent
+  // from navigation) rather than shown as an empty, read-only board.
+  if (forum.kind === "unavailable") notFound();
   const live = forum.kind === "development-fixtures";
   const query: QuestionQuery = parseQuestionQuery(await searchParams, forum.categories.map((category) => category.slug));
   const [page, tags] = await Promise.all([forum.listQuestions(query), forum.popularTags(12)]);

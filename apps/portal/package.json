@@ -12,9 +12,11 @@
     "typecheck": "tsc --noEmit",
     "releases:validate": "tsx scripts/validate-releases.ts",
     "releases:verify": "tsx scripts/verify-release.ts",
+    "releases:import": "tsx scripts/import-github-release.ts",
     "test": "npm run test:unit && npm run test:routes",
     "test:unit": "tsx --test tests/*.test.ts",
-    "test:routes": "node tests/routes/run-route-tests.mjs"
+    "test:routes": "node tests/routes/run-route-tests.mjs",
+    "dev:api": "node dev/mock-customer-api/server.mjs"
   },
   "engines": {
     "node": ">=22"

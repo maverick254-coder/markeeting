@@ -1,7 +1,13 @@
 # RedactPlus customer portal: Compose template for /root/deploy/redactplus-portal/.
-# FILES ONLY — not deployed. Installed beside two files that are never committed:
+# FILES ONLY — not deployed. Installed beside files that are never committed:
 #   .env      the release pin (RELEASE_SHA, RELEASE_DIGEST), as for the marketing site
-#   app.env   runtime settings, mode 600; see app.env.example
+#   app.env   portal runtime settings, mode 600; see app.env.example
+#   db.env    the portal database's own credentials, mode 600; see db.env.example
+#   initdb/   001-portal-schema.sql, copied from apps/portal/src/lib/session/schema.sql
+#
+# Two services, one project, nothing shared with any other project on the host:
+#   redactplus-portal      the Next.js app, loopback port 127.0.0.1:6096 only
+#   redactplus-portal-db   its own PostgreSQL, no published port, durable named volume
 name: redactplus-portal
 
 services:
@@ -11,6 +17,9 @@ services:
     pull_policy: missing
     restart: unless-stopped
     init: true
+    depends_on:
+      redactplus-portal-db:
+        condition: service_healthy
     env_file:
       - path: ./app.env
         required: true
@@ -54,10 +63,71 @@ services:
       com.centurylinklabs.watchtower.enable: "false"
       io.safaridesk.service: redactplus-portal
     networks:
+      # Outbound: the identity provider's token endpoint and GitHub release redirects.
       - redactplus-portal
+      # The database only.
+      - redactplus-portal-db
 
-# Its own bridge network. The portal's Postgres is reached by its connection string; no other
-# project's network is attached.
+  redactplus-portal-db:
+    container_name: redactplus-portal-db
+    # The postgres:16-alpine image already on this host (no pull, no extra disk).
+    # Moving to a newer 16.x patch is a separate, deliberate change: update the digest.
+    image: "postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50"
+    pull_policy: missing
+    restart: unless-stopped
+    env_file:
+      - path: ./db.env
+        required: true
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      # Runs once, on an empty volume only. The schema is idempotent and can be re-applied.
+      - ./initdb:/docker-entrypoint-initdb.d:ro
+    # No ports: the database is unreachable from the host network and the internet.
+    shm_size: 64m
+    cap_drop:
+      - ALL
+    cap_add:
+      # What the postgres entrypoint needs to initialise and own its data directory.
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+          pids: 128
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\" -q"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+      io.safaridesk.service: redactplus-portal-db
+    networks:
+      - redactplus-portal-db
+
 networks:
   redactplus-portal:
     name: redactplus-portal
+  # internal: no route off the host. Only the portal and its database are attached.
+  redactplus-portal-db:
+    name: redactplus-portal-db
+    internal: true
+
+volumes:
+  db-data:
+    name: redactplus-portal-db-data

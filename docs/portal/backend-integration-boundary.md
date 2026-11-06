@@ -1,3 +1,5 @@
+> **Superseded (6 November 2026).** The Control Center implemented `GET /portal/me` instead of the endpoints proposed here. Use [../onboarding/verified-integration-contract.md](../onboarding/verified-integration-contract.md).
+
 # RedactPlus portal ↔ Control Center: integration boundary
 
 For the backend (Control Center / identity) team. Prepared 5 November 2026 from read-only

@@ -108,6 +108,35 @@ export function AuthPanel({
       />
     );
   }
+
+  // Until credential sign-in is connected, existing customers sign in on the RedactPlus sign-in
+  // page (the approved Keycloak redirect, which also offers "Forgot password"), rather than
+  // through a greyed-out form that cannot submit.
+  if (disabled) {
+    return (
+      <div>
+        <h2 ref={headingRef} tabIndex={-1} id={id("title")} className="pr-10 font-heading text-[1.375rem] font-semibold leading-tight tracking-[-0.025em] text-ink focus:outline-none">
+          Sign in to download
+        </h2>
+        <p className="mt-2 text-body text-ink-muted">
+          Continue to the secure RedactPlus sign-in page with the email address and password of your RedactPlus account. You return to RedactPlus Home to download the app.
+        </p>
+        <Button variant="primary" size="md" className="mt-5 w-full" asChild>
+          <a href={portalAuthHref(portalOrigin, "signin")} onClick={onClose}>
+            Continue to sign-in
+            <Icon name="arrow" size={16} />
+          </a>
+        </Button>
+        <p className="mt-3 text-center text-body-sm text-ink-muted">Forgot your password? Choose “Forgot password” on the sign-in page.</p>
+        <p className="mt-4 text-center text-body-sm text-ink-muted">
+          New to RedactPlus?{" "}
+          <button type="button" onClick={() => switchView("register")} className="font-semibold text-accent-ink hover:text-accent-ink-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool">
+            Get started
+          </button>
+        </p>
+      </div>
+    );
+  }
   const credentialView: CredentialView = view;
 
   function update(field: AuthField, value: string) {
@@ -195,13 +224,7 @@ export function AuthPanel({
       </h2>
       <p className="mt-2 text-body text-ink-muted">{copy.lede}</p>
 
-      {disabled ? (
-        <p id={id("disabled-note")} role="note" className="mt-4 rounded-xl border border-border-subtle bg-surface-raised px-3.5 py-2.5 text-body-sm text-ink-muted">
-          Signing in from this page isn’t connected yet. Continue on the RedactPlus sign-in page below.
-        </p>
-      ) : null}
-
-      <form ref={formRef} noValidate onSubmit={submit} aria-busy={busy} className="mt-5 space-y-4" aria-describedby={disabled ? id("disabled-note") : undefined}>
+      <form ref={formRef} noValidate onSubmit={submit} aria-busy={busy} className="mt-5 space-y-4">
         <div>
           <label htmlFor={id("email")} className="mb-1.5 block text-body-sm font-medium text-ink">
             Email
@@ -282,7 +305,7 @@ export function AuthPanel({
           ) : null}
         </div>
 
-        <Button type="submit" variant="primary" size="md" className="w-full" disabled={busy || disabled} aria-describedby={disabled ? id("disabled-note") : undefined}>
+        <Button type="submit" variant="primary" size="md" className="w-full" disabled={busy || disabled}>
           {busy ? (
             <>
               <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-on-accent/30 border-t-on-accent" />
@@ -309,22 +332,10 @@ export function AuthPanel({
         )}
       </p>
 
-      {disabled ? (
-        <div className="mt-5 border-t border-border-subtle pt-4">
-          <Button variant="ghost" size="md" className="w-full" asChild>
-            <a href={portalAuthHref(portalOrigin, "signin")} onClick={onClose}>
-              Continue on RedactPlus sign-in
-              <Icon name="arrow" size={16} />
-            </a>
-          </Button>
-          <p className="mt-2 text-center text-caption text-ink-muted">Opens the secure RedactPlus sign-in page, then returns you to RedactPlus Home.</p>
-        </div>
-      ) : (
-        <p className="mt-5 flex items-start gap-2 text-caption text-ink-muted">
-          <Icon name="lock" size={14} className="mt-0.5 shrink-0" />
-          <span>Your password is sent securely to RedactPlus sign-in and is never stored on this website.</span>
-        </p>
-      )}
+      <p className="mt-5 flex items-start gap-2 text-caption text-ink-muted">
+        <Icon name="lock" size={14} className="mt-0.5 shrink-0" />
+        <span>Your password is sent securely to RedactPlus sign-in and is never stored on this website.</span>
+      </p>
     </div>
   );
 }

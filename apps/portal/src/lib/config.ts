@@ -25,7 +25,12 @@ export class PortalConfigurationError extends Error {
 export interface OidcSettings {
   issuer: URL;
   clientId: string;
-  clientSecret: string;
+  /**
+   * Null for a public client. The production client "redactplus-portal" is public
+   * (Admin-panel 7026a19, ops/keycloak/saferedact-realm.json): PKCE S256 protects the code
+   * exchange, and the exchange still happens on this server, so no token reaches the browser.
+   */
+  clientSecret: string | null;
   scopes: string;
   /** Sent as `prompt` when the visitor chose to create an account. Empty disables it. */
   registrationPrompt: string;
@@ -114,9 +119,10 @@ function parseOidc(env: Env, environment: PortalEnvironment): OidcSettings | nul
   const clientId = read(env, "PORTAL_OIDC_CLIENT_ID");
   const clientSecret = read(env, "PORTAL_OIDC_CLIENT_SECRET");
   if (!issuerRaw && !clientId && !clientSecret) return null;
-  if (!issuerRaw || !clientId || !clientSecret) {
+  // The secret is optional (a public client); the issuer and client id always go together.
+  if (!issuerRaw || !clientId) {
     throw new PortalConfigurationError(
-      "PORTAL_OIDC_ISSUER, PORTAL_OIDC_CLIENT_ID and PORTAL_OIDC_CLIENT_SECRET must be set together."
+      "PORTAL_OIDC_ISSUER and PORTAL_OIDC_CLIENT_ID must be set together (PORTAL_OIDC_CLIENT_SECRET only for a confidential client)."
     );
   }
 
@@ -139,11 +145,10 @@ function parseOidc(env: Env, environment: PortalEnvironment): OidcSettings | nul
     throw new PortalConfigurationError("PORTAL_OIDC_SCOPES must include openid.");
   }
 
-  // Unset means "create" (OIDC prompt=create). An explicit empty value disables it, for a
-  // provider that rejects the parameter and shows its own registration link instead.
-  const registrationPrompt = env.PORTAL_OIDC_REGISTRATION_PROMPT === undefined
-    ? "create"
-    : env.PORTAL_OIDC_REGISTRATION_PROMPT.trim();
+  // Unset means none. Accounts are created by the website's trial registration and the
+  // Control Center, and the realm has self-registration switched off (registrationAllowed:
+  // false), so asking Keycloak for its registration page (prompt=create) would only fail.
+  const registrationPrompt = env.PORTAL_OIDC_REGISTRATION_PROMPT?.trim() ?? "";
   if (registrationPrompt && !/^[a-z_]+$/.test(registrationPrompt)) {
     throw new PortalConfigurationError("PORTAL_OIDC_REGISTRATION_PROMPT must be a single prompt value.");
   }

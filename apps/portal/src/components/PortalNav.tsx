@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { HeaderSearch } from "./HeaderSearch";
 import { Icon } from "./Icon";
-import { isActive, portalNav } from "./navigation";
+import { isActive, type PortalNavItem } from "./navigation";
 import { cn } from "@/lib/utils";
 
 /**
@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
  * into a disclosure panel (Escape closes it and returns focus to the button) that also holds
  * search.
  */
-export function PortalNav() {
+export function PortalNav({ items }: { items: readonly PortalNavItem[] }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -44,7 +44,7 @@ export function PortalNav() {
   return (
     <>
       <ul className="hidden items-center gap-0.5 min-[992px]:flex">
-        {portalNav.map((item) => {
+        {items.map((item) => {
           const active = isActive(pathname, item.href);
           return (
             <li key={item.href}>
@@ -76,7 +76,7 @@ export function PortalNav() {
       >
         <HeaderSearch className="mb-2" />
         <ul>
-          {portalNav.map((item) => {
+          {items.map((item) => {
             const active = isActive(pathname, item.href);
             return (
               <li key={item.href}>

@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { legalLinks } from "@/content/onboarding";
+import { registrationCopy } from "@/content/onboarding";
 import { REGISTRATION_LIMITS, validateEmail, validateRegistration } from "@/components/portal-entry/registration-validation";
 import { clientKey, createRateLimiter } from "@/lib/leads/abuse";
 import { registrationAdapter, type RegistrationAdapter } from "./adapter";
@@ -13,7 +13,7 @@ import type { RegistrationAcceptedBody, RegistrationErrorCode } from "./contract
  * Same-origin only. The browser sends name, email, optional organization and consent; this
  * server validates them, applies abuse limits and forwards them to the backend adapter. The
  * dialog shows "Check your email" only after a 202 from here, and this server answers 202 only
- * after the backend has acknowledged the registration.
+ * after the backend answered "accepted" or "resent" (docs/onboarding/verified-integration-contract.md).
  *
  * Logs carry a request id, the outcome and the adapter kind. Never a name, email or address.
  */
@@ -27,6 +27,8 @@ const registrationSchema = z
     email: z.string().max(REGISTRATION_LIMITS.email * 2),
     organization: z.string().max(REGISTRATION_LIMITS.organization * 2).optional().default(""),
     consent: z.boolean(),
+    // The Cloudflare Turnstile token; the backend verifies it. Single use, so never retried.
+    turnstileToken: z.string().max(2048).optional(),
     // Honeypot: hidden from people, so any value marks an unattended submission.
     website: z.string().max(200).optional(),
   })
@@ -54,7 +56,6 @@ export interface RegistrationHandlerDependencies {
   limits?: Partial<Record<keyof typeof defaultLimits, Limiter>>;
   /** Overrides the trusted-proxy address lookup (tests). */
   address?: (request: Request) => string;
-  now?: () => Date;
 }
 
 class PayloadTooLarge extends Error {}
@@ -137,7 +138,7 @@ function guarded(handle: (request: Request) => Promise<Response>) {
   };
 }
 
-export function createRegistrationHandler({ adapter = registrationAdapter, limits: overrides, address = (request) => clientKey(request), now = () => new Date() }: RegistrationHandlerDependencies = {}) {
+export function createRegistrationHandler({ adapter = registrationAdapter, limits: overrides, address = (request) => clientKey(request) }: RegistrationHandlerDependencies = {}) {
   const limits = { ...defaultLimits, ...overrides };
 
   return guarded(async (request) => {
@@ -165,41 +166,48 @@ export function createRegistrationHandler({ adapter = registrationAdapter, limit
       return errorResponse("rate_limited", 429, {}, emailLimit.retryAfterSeconds);
     }
 
+    const turnstileToken = parsed.data.turnstileToken?.trim() || null;
+    // The backend refuses every registration without a Turnstile token; say so without calling it.
+    if (backend.kind === "backend" && !turnstileToken) {
+      return errorResponse("invalid_input", 400, { fields: { turnstile: registrationCopy.turnstileError } });
+    }
+
     const clientAddress = address(request);
     const result = await backend.register(
       {
         fullName: values.name.trim().replace(/\s+/g, " "),
         email,
-        organization: values.organization.trim().replace(/\s+/g, " ") || null,
-        consent: { termsAndPrivacy: true, acceptedAt: now().toISOString(), termsUrl: legalLinks.terms, privacyUrl: legalLinks.privacy },
-        source: "redactplus.io/download",
-        clientAddress: clientAddress === "unattributed" ? null : clientAddress,
+        organisationName: values.organization.trim().replace(/\s+/g, " ") || null,
+        acceptedTerms: true,
+        turnstileToken,
       },
-      // One key per submission: a retry the adapter makes for this request is recognisable.
-      { requestId, idempotencyKey: randomUUID() }
+      { requestId, clientAddress: clientAddress === "unattributed" ? null : clientAddress }
     );
 
     if (!result.ok) {
       log(requestId, "register", result.code, backend.kind);
       const status: Record<RegistrationErrorCode, number> = {
         invalid_input: 400,
-        registration_closed: 403,
-        not_eligible: 422,
+        trial_used: 409,
+        existing_customer: 409,
+        too_many_from_location: 429,
+        // Registered, but the set-up email was not sent: not a success, and "Send it again" works.
+        email_failed: 503,
         rate_limited: 429,
         registration_unavailable: 503,
         registration_failed: 502,
       };
-      return errorResponse(result.code, status[result.code], result.fields ? { fields: result.fields } : {}, result.retryAfterSeconds);
+      const extra = {
+        ...(result.fields ? { fields: result.fields } : {}),
+        ...(result.code === "email_failed" ? { resendAvailable: backend.supportsResend } : {}),
+      };
+      return errorResponse(result.code, status[result.code], extra, result.retryAfterSeconds);
     }
 
-    log(requestId, "register", `accepted-${result.accepted.setupEmail}`, backend.kind);
-    const trial = result.accepted.trial;
+    log(requestId, "register", result.outcome, backend.kind);
     const body: RegistrationAcceptedBody = {
-      status: "accepted",
-      setupEmail: result.accepted.setupEmail,
-      resendAvailable: backend.supportsResend && result.accepted.resendAvailable,
-      // An end date is passed on only for a trial the backend reports as active.
-      trial: trial ? { status: trial.status, endsAt: trial.status === "active" ? (trial.endsAt ?? null) : null } : null,
+      status: result.outcome,
+      resendAvailable: backend.supportsResend,
       ...(backend.kind === "demo" ? { demo: true as const } : {}),
     };
     return NextResponse.json(body, { status: 202, headers: noStore });
@@ -223,7 +231,8 @@ export function createResendHandler({ adapter = registrationAdapter, limits: ove
     const emailLimit = limits.resendEmail(emailKey(email));
     if (!emailLimit.allowed) return errorResponse("rate_limited", 429, {}, emailLimit.retryAfterSeconds);
 
-    const result = await backend.resend(email, { requestId });
+    const clientAddress = address(request);
+    const result = await backend.resend(email, { requestId, clientAddress: clientAddress === "unattributed" ? null : clientAddress });
     log(requestId, "resend", result.ok ? "requested" : result.code, backend.kind);
     if (result.ok) return NextResponse.json({ status: "requested", ...(backend.kind === "demo" ? { demo: true } : {}) }, { status: 202, headers: noStore });
     const status = { rate_limited: 429, registration_unavailable: 503, registration_failed: 502 }[result.code];

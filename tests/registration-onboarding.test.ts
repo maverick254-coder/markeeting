@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { validateRegistration } from "../src/components/portal-entry/registration-validation";
-import { registrationSubmission, registrationSuccessCopy, passwordPolicy } from "../src/content/onboarding";
+import { passwordPolicy, registrationEmailFailedCopy, registrationSubmission, registrationSuccessCopy, trialFacts } from "../src/content/onboarding";
 import {
   createBackendRegistrationAdapter,
   demoRegistrationAdapter,
@@ -29,22 +29,31 @@ function request(body: unknown, headers: Record<string, string> = {}) {
 const open = () => ({ allowed: true, retryAfterSeconds: 0 });
 const openLimits = { address: open, unattributed: open, email: open, resendAddress: open, resendEmail: open };
 
-function fakeAdapter(overrides: Partial<RegistrationAdapter> = {}): RegistrationAdapter & { calls: unknown[] } {
+function fakeAdapter(overrides: Partial<RegistrationAdapter> = {}): RegistrationAdapter & { calls: unknown[]; contexts: unknown[] } {
   const calls: unknown[] = [];
+  const contexts: unknown[] = [];
   return {
     kind: "backend",
     supportsResend: true,
-    async register(input) {
+    async register(input, context) {
       calls.push(input);
-      return { ok: true, accepted: { status: "accepted", setupEmail: "queued", resendAvailable: true, trial: { status: "pending" } } };
+      contexts.push(context);
+      return { ok: true, outcome: "accepted" };
     },
     async resend() {
       return { ok: true };
     },
     ...overrides,
     calls,
+    contexts,
   };
 }
+
+const backendEnv = {
+  REDACTPLUS_REGISTRATION_MODE: "backend",
+  REDACTPLUS_REGISTRATION_API_URL: "https://api.example.com/public/trial-registrations",
+  NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+};
 
 // ── validation ─────────────────────────────────────────────────────────────
 
@@ -56,7 +65,7 @@ test("registration collects exactly name, email, optional organization and conse
   assert.match(validateRegistration({ ...good, name: "12345" }).name ?? "", /letters/);
   assert.match(validateRegistration({ ...good, organization: "x".repeat(121) }).organization ?? "", /120/);
   assert.match(validateRegistration({ ...good, organization: "Evil\r\nBcc: x" }).organization ?? "", /line breaks/);
-  assert.match(validateRegistration({ ...good, consent: false }).consent ?? "", /Terms and Privacy/);
+  assert.match(validateRegistration({ ...good, consent: false }).consent ?? "", /18 or older.*Terms and Privacy/);
 
   const form = read("src/components/portal-entry/RegistrationForm.tsx");
   assert.doesNotMatch(form, /type=\{?["']password|new-password|current-password|confirmPassword/, "no password input");
@@ -66,83 +75,127 @@ test("registration collects exactly name, email, optional organization and conse
   assert.match(form, /autoComplete="organization"/);
   assert.match(form, /Optional/);
   assert.match(form, /type="checkbox"/);
+  assert.match(form, /copy\.consentPrefix/, "the consent states the backend's minimum age");
 });
 
 // ── adapter selection ──────────────────────────────────────────────────────
 
-test("the adapter fails closed: unset is unavailable, demo exists only under next dev, backend needs HTTPS and a token", () => {
+test("the adapter fails closed: unset is unavailable, demo exists only under next dev, backend needs HTTPS and a Turnstile key", () => {
   assert.equal(resolveRegistrationAdapter({}).kind, "unavailable");
   assert.equal(resolveRegistrationAdapter({ REDACTPLUS_REGISTRATION_MODE: "demo", NODE_ENV: "development" }).kind, "demo");
   for (const env of [{ NODE_ENV: "production" }, { NODE_ENV: "test" }, {}]) {
     assert.throws(() => resolveRegistrationAdapter({ REDACTPLUS_REGISTRATION_MODE: "demo", ...env }), RegistrationConfigurationError, "demo is refused outside next dev");
   }
-  assert.throws(() => resolveRegistrationAdapter({ REDACTPLUS_REGISTRATION_MODE: "backend" }), /must be set together/);
-  assert.throws(() => resolveRegistrationAdapter({ REDACTPLUS_REGISTRATION_MODE: "backend", REDACTPLUS_REGISTRATION_API_URL: "http://api.example.com/r", REDACTPLUS_REGISTRATION_API_TOKEN: "t" }), /HTTPS/);
-  assert.throws(() => resolveRegistrationAdapter({ REDACTPLUS_REGISTRATION_MODE: "backend", REDACTPLUS_REGISTRATION_API_URL: "https://u:p@api.example.com/r", REDACTPLUS_REGISTRATION_API_TOKEN: "t" }), /credential-free/);
+  assert.throws(() => resolveRegistrationAdapter({ REDACTPLUS_REGISTRATION_MODE: "backend" }), /API_URL is required/);
+  assert.throws(() => resolveRegistrationAdapter({ ...backendEnv, NEXT_PUBLIC_TURNSTILE_SITE_KEY: "" }), /TURNSTILE_SITE_KEY is required/);
+  assert.throws(() => resolveRegistrationAdapter({ ...backendEnv, REDACTPLUS_REGISTRATION_API_URL: "http://api.example.com/r" }), /HTTPS/);
+  assert.throws(() => resolveRegistrationAdapter({ ...backendEnv, REDACTPLUS_REGISTRATION_API_URL: "https://u:p@api.example.com/r" }), /credential-free/);
+  assert.throws(() => resolveRegistrationAdapter({ ...backendEnv, REDACTPLUS_REGISTRATION_API_TOKEN: "t" }), /takes no service credential/, "a token implies protection the endpoint does not have");
   assert.throws(() => resolveRegistrationAdapter({ REDACTPLUS_REGISTRATION_MODE: "yes" }), /unset, backend or demo/);
-  const backend = resolveRegistrationAdapter({ REDACTPLUS_REGISTRATION_MODE: "backend", REDACTPLUS_REGISTRATION_API_URL: "https://api.example.com/r", REDACTPLUS_REGISTRATION_API_TOKEN: "token" });
+  const backend = resolveRegistrationAdapter(backendEnv);
   assert.equal(backend.kind, "backend");
-  assert.equal(backend.supportsResend, false, "no resend URL, no resend");
+  assert.equal(backend.supportsResend, true, "the backend always offers resend");
   assert.equal(registrationSubmission(undefined), "disabled");
   assert.equal(registrationSubmission("true"), "disabled");
   assert.equal(registrationSubmission("enabled"), "live");
 });
 
-test("the backend adapter sends a service token and no password, and never invents an acceptance", async () => {
+test("the backend adapter speaks the verified contract and never invents an acceptance", async () => {
   const seen: { url: string; init: RequestInit }[] = [];
-  const respond = (response: Response | Error) =>
-    createBackendRegistrationAdapter({ registerUrl: "https://api.example.com/r", resendUrl: null, token: "svc-token", timeoutMs: 1000 }, (async (url: string, init: RequestInit) => {
-      seen.push({ url, init });
-      if (response instanceof Error) throw response;
-      return response;
-    }) as unknown as typeof fetch);
-  const input = { fullName: "Ada", email: "ada@example.com", organization: null, consent: { termsAndPrivacy: true as const, acceptedAt: "2026-11-06T00:00:00.000Z", termsUrl: "t", privacyUrl: "p" }, source: "redactplus.io/download" as const, clientAddress: null };
-  const context = { requestId: "r", idempotencyKey: "k" };
+  const adapterFor = (response: Response | Error) =>
+    createBackendRegistrationAdapter(
+      { registerUrl: "https://api.example.com/public/trial-registrations", resendUrl: "https://api.example.com/public/trial-registrations/resend", timeoutMs: 1000 },
+      (async (url: string, init: RequestInit) => {
+        seen.push({ url, init });
+        if (response instanceof Error) throw response;
+        return response;
+      }) as unknown as typeof fetch
+    );
+  const input = { fullName: "Ada Lovelace", email: "ada@example.com", organisationName: null, acceptedTerms: true as const, turnstileToken: "tok" };
+  const context = { requestId: "r", clientAddress: "203.0.113.7" };
+  const result = (code: string, status: number, extra: Record<string, unknown> = {}) => Response.json({ code, message: "m", errors: null, ...extra }, { status });
 
-  const ok = await respond(Response.json({ status: "accepted", setupEmail: "sent", resendAvailable: false }, { status: 202 })).register(input, context);
-  assert.deepEqual(ok, { ok: true, accepted: { status: "accepted", setupEmail: "sent", resendAvailable: false } });
+  // Valid new registration, and the request it sends.
+  assert.deepEqual(await adapterFor(result("accepted", 200)).register(input, context), { ok: true, outcome: "accepted" });
   const headers = seen[0].init.headers as Record<string, string>;
-  assert.equal(headers.authorization, "Bearer svc-token");
-  assert.equal(headers["idempotency-key"], "k");
+  assert.equal(seen[0].url, "https://api.example.com/public/trial-registrations");
+  assert.equal(headers["cf-connecting-ip"], "203.0.113.7", "the visitor's address, for the backend's per-network rule");
+  assert.equal(headers.authorization, undefined, "no credential: the endpoint takes none");
   assert.equal(seen[0].init.redirect, "error");
+  assert.deepEqual(JSON.parse(String(seen[0].init.body)), input);
   assert.doesNotMatch(String(seen[0].init.body), /password/i);
 
-  assert.deepEqual(await respond(Response.json({ status: "ok" }, { status: 202 })).register(input, context), { ok: false, code: "registration_failed" }, "malformed success is a failure");
-  assert.deepEqual(await respond(new TypeError("fetch failed")).register(input, context), { ok: false, code: "registration_unavailable" }, "unreachable is not accepted");
-  assert.deepEqual(await respond(new Response("", { status: 429, headers: { "retry-after": "30" } })).register(input, context), { ok: false, code: "rate_limited", retryAfterSeconds: 30 });
-  assert.deepEqual(await respond(Response.json({ error: "invalid_input", fields: { fullName: "Too long", secret: "x" } }, { status: 422 })).register(input, context), { ok: false, code: "invalid_input", fields: { name: "Too long" } });
-  assert.deepEqual(await respond(Response.json({ error: "trial_not_eligible" }, { status: 422 })).register(input, context), { ok: false, code: "not_eligible" });
-  assert.deepEqual(await respond(new Response("<html>", { status: 500 })).register(input, context), { ok: false, code: "registration_failed" });
+  // Unattributed visitor: no header at all, never a guessed one.
+  await adapterFor(result("accepted", 200)).register(input, { requestId: "r", clientAddress: null });
+  assert.equal((seen.at(-1)!.init.headers as Record<string, string>)["cf-connecting-ip"], undefined);
+
+  // Duplicate email with an open trial: the backend resends and says so.
+  assert.deepEqual(await adapterFor(result("resent", 200)).register(input, context), { ok: true, outcome: "resent" });
+  // Missing fields, missing consent and a failed security check come back per field.
+  assert.deepEqual(
+    await adapterFor(result("invalid", 400, { errors: { fullName: "Enter your full name.", acceptedTerms: "Accept the terms", turnstileToken: "Complete the security check.", internal: "x" } })).register(input, context),
+    { ok: false, code: "invalid_input", fields: { name: "Enter your full name.", consent: "Accept the terms", turnstile: "Complete the security check." } }
+  );
+  assert.deepEqual(await adapterFor(result("trial_used", 409)).register(input, context), { ok: false, code: "trial_used" });
+  assert.deepEqual(await adapterFor(result("existing_customer", 409)).register(input, context), { ok: false, code: "existing_customer" });
+  assert.deepEqual(await adapterFor(result("too_many_from_location", 429)).register(input, context), { ok: false, code: "too_many_from_location" });
+  assert.deepEqual(await adapterFor(new Response("", { status: 429, headers: { "retry-after": "30" } })).register(input, context), { ok: false, code: "rate_limited", retryAfterSeconds: 30 }, "the API's own limiter sends no body");
+  assert.deepEqual(await adapterFor(result("unavailable", 503)).register(input, context), { ok: false, code: "registration_unavailable" });
+  assert.deepEqual(await adapterFor(result("email_failed", 503)).register(input, context), { ok: false, code: "email_failed" }, "registered but not emailed is not success");
+  // Backend outage and malformed answers are never acceptance.
+  assert.deepEqual(await adapterFor(new TypeError("fetch failed")).register(input, context), { ok: false, code: "registration_unavailable" });
+  assert.deepEqual(await adapterFor(Response.json({ status: "ok" }, { status: 200 })).register(input, context), { ok: false, code: "registration_failed" });
+  assert.deepEqual(await adapterFor(result("accepted", 202)).register(input, context), { ok: false, code: "registration_failed" }, "only the documented 200 counts");
+  assert.deepEqual(await adapterFor(new Response("<html>", { status: 502 })).register(input, context), { ok: false, code: "registration_failed" });
+
+  // Resend: the backend always answers "resent".
+  assert.deepEqual(await adapterFor(result("resent", 200)).resend("ada@example.com", context), { ok: true });
+  assert.equal(seen.at(-1)!.url, "https://api.example.com/public/trial-registrations/resend");
+  assert.deepEqual(await adapterFor(new TypeError("x")).resend("ada@example.com", context), { ok: false, code: "registration_unavailable" });
 });
 
 // ── route handler ──────────────────────────────────────────────────────────
 
 test("the registration route acknowledges only what the backend acknowledged", async () => {
   const adapter = fakeAdapter();
-  const handle = createRegistrationHandler({ adapter: () => adapter, limits: openLimits, address: () => "203.0.113.7", now: () => new Date("2026-11-06T09:00:00Z") });
-  const response = await handle(request({ ...good, name: "  Ada   Lovelace ", email: " Ada@Example.com ", organization: "  " }));
+  const handle = createRegistrationHandler({ adapter: () => adapter, limits: openLimits, address: () => "203.0.113.7" });
+  const response = await handle(request({ ...good, name: "  Ada   Lovelace ", email: " Ada@Example.com ", organization: "  ", turnstileToken: "tok" }));
   assert.equal(response.status, 202);
   assert.equal(response.headers.get("cache-control"), "no-store");
-  assert.deepEqual(await response.json(), { status: "accepted", setupEmail: "queued", resendAvailable: true, trial: { status: "pending", endsAt: null } });
-  const sent = adapter.calls[0] as Record<string, unknown>;
-  assert.equal(sent.fullName, "Ada Lovelace");
-  assert.equal(sent.email, "ada@example.com");
-  assert.equal(sent.organization, null);
-  assert.equal(sent.clientAddress, "203.0.113.7");
-  assert.deepEqual(Object.keys(sent).sort(), ["clientAddress", "consent", "email", "fullName", "organization", "source"]);
+  assert.deepEqual(await response.json(), { status: "accepted", resendAvailable: true });
+  assert.deepEqual(adapter.calls[0], { fullName: "Ada Lovelace", email: "ada@example.com", organisationName: null, acceptedTerms: true, turnstileToken: "tok" });
+  assert.deepEqual(adapter.contexts[0], { requestId: (adapter.contexts[0] as { requestId: string }).requestId, clientAddress: "203.0.113.7" });
 
-  const unavailable = createRegistrationHandler({ adapter: () => unavailableRegistrationAdapter, limits: openLimits });
-  const refused = await unavailable(request(good));
+  const withOrg = fakeAdapter();
+  await createRegistrationHandler({ adapter: () => withOrg, limits: openLimits })(request({ ...good, organization: " Example  Agency ", turnstileToken: "tok" }));
+  assert.equal((withOrg.calls[0] as { organisationName: string }).organisationName, "Example Agency", "optional organisation passed through");
+
+  const resent = await createRegistrationHandler({ adapter: () => fakeAdapter({ async register() { return { ok: true, outcome: "resent" }; } }), limits: openLimits })(request({ ...good, turnstileToken: "tok" }));
+  assert.deepEqual(await resent.json(), { status: "resent", resendAvailable: true });
+
+  const refused = await createRegistrationHandler({ adapter: () => unavailableRegistrationAdapter, limits: openLimits })(request(good));
   assert.equal(refused.status, 503);
   assert.deepEqual(await refused.json(), { error: "registration_unavailable" });
 
-  const pendingWithDate = fakeAdapter({ async register() { return { ok: true, accepted: { status: "accepted", setupEmail: "sent", resendAvailable: true, trial: { status: "pending", endsAt: "2026-11-13T00:00:00Z" } } }; }, supportsResend: false });
-  const body = await (await createRegistrationHandler({ adapter: () => pendingWithDate, limits: openLimits })(request(good))).json();
-  assert.equal(body.trial.endsAt, null, "no end date for a trial the backend has not activated");
-  assert.equal(body.resendAvailable, false, "resend offered only when the server can perform it");
+  const cases: [string, number][] = [
+    ["trial_used", 409],
+    ["existing_customer", 409],
+    ["too_many_from_location", 429],
+    ["email_failed", 503],
+    ["registration_failed", 502],
+  ];
+  for (const [code, status] of cases) {
+    const failing = fakeAdapter({ async register() { return { ok: false, code: code as never }; } });
+    const answer = await createRegistrationHandler({ adapter: () => failing, limits: openLimits })(request({ ...good, turnstileToken: "tok" }));
+    assert.equal(answer.status, status, code);
+    const body = await answer.json();
+    assert.equal(body.error, code);
+    assert.equal(body.status, undefined, `${code} is never reported as accepted`);
+    if (code === "email_failed") assert.equal(body.resendAvailable, true, "email_failed offers Send it again");
+  }
 });
 
-test("the registration route validates, refuses cross-site and unattended requests, and rate limits", async () => {
+test("the registration route validates, refuses cross-site and unattended requests, requires the security check, and rate limits", async () => {
   const adapter = fakeAdapter();
   const handle = createRegistrationHandler({ adapter: () => adapter, limits: openLimits });
   assert.equal((await handle(request(good, { "sec-fetch-site": "cross-site" }))).status, 403);
@@ -154,13 +207,21 @@ test("the registration route validates, refuses cross-site and unattended reques
   const invalid = await handle(request({ ...good, consent: false, email: "nope" }));
   assert.equal(invalid.status, 400);
   assert.deepEqual(Object.keys((await invalid.json()).fields).sort(), ["consent", "email"]);
+  const missing = await handle(request({ name: "", email: "", organization: "", consent: false }));
+  assert.deepEqual(Object.keys((await missing.json()).fields).sort(), ["consent", "email", "name"], "missing required fields");
   assert.equal((await handle(request({ ...good, website: "http://spam.example" }))).status, 400, "honeypot");
+  const noCheck = await handle(request(good));
+  assert.equal(noCheck.status, 400);
+  assert.ok((await noCheck.json()).fields.turnstile, "no Turnstile token, no backend call");
   assert.equal(adapter.calls.length, 0, "nothing reached the backend");
 
   const limited = createRegistrationHandler({ adapter: () => adapter, limits: { ...openLimits, email: () => ({ allowed: false, retryAfterSeconds: 120 }) } });
-  const response = await limited(request(good));
+  const response = await limited(request({ ...good, turnstileToken: "tok" }));
   assert.equal(response.status, 429);
   assert.equal(response.headers.get("retry-after"), "120");
+  const byAddress = createRegistrationHandler({ adapter: () => adapter, limits: { ...openLimits, address: () => ({ allowed: false, retryAfterSeconds: 60 }) }, address: () => "203.0.113.9" });
+  assert.equal((await byAddress(request({ ...good, turnstileToken: "tok" }))).status, 429);
+  assert.equal(adapter.calls.length, 0);
 
   assert.equal(isSameOriginRequest(new Request("https://redactplus.io/api/registration", { method: "POST", headers: { origin: "https://evil.example", host: "redactplus.io" } })), false);
   assert.equal(isSameOriginRequest(new Request("https://redactplus.io/api/registration", { method: "POST", headers: { origin: "https://redactplus.io", host: "redactplus.io" } })), true);
@@ -171,12 +232,12 @@ test("logs carry no personal data", async () => {
   const original = console.info;
   console.info = (...args: unknown[]) => void lines.push(JSON.stringify(args));
   try {
-    await createRegistrationHandler({ adapter: () => fakeAdapter(), limits: openLimits })(request({ ...good, organization: "Secret Agency" }));
+    await createRegistrationHandler({ adapter: () => fakeAdapter(), limits: openLimits })(request({ ...good, organization: "Secret Agency", turnstileToken: "secret-token" }));
   } finally {
     console.info = original;
   }
   assert.ok(lines.length > 0);
-  assert.doesNotMatch(lines.join("\n"), /ada@example\.com|Ada Lovelace|Secret Agency/);
+  assert.doesNotMatch(lines.join("\n"), /ada@example\.com|Ada Lovelace|Secret Agency|secret-token/);
 });
 
 test("resend is offered only when supported, and answers without revealing an account", async () => {
@@ -201,24 +262,39 @@ test("the dialog posts only to this site, shows success only after a 202, and st
   assert.ok(submit.indexOf('submission === "preview"') < submit.indexOf("fetch("), "preview never reaches fetch");
   assert.match(submit, /fetch\("\/api\/registration"/);
   assert.match(submit, /credentials: "same-origin"/);
-  assert.match(submit, /response\.status === 202 && body\.status === "accepted"/, "success only on an acknowledged request");
-  assert.doesNotMatch(form + read("src/components/portal-entry/RegistrationSuccess.tsx"), /localStorage|sessionStorage|document\.cookie|console\./);
+  assert.match(submit, /response\.status === 202 && \(body\.status === "accepted" \|\| body\.status === "resent"\)/, "success only on an acknowledged request");
+  assert.match(submit, /body\.error === "email_failed"/, "email_failed has its own, non-success view");
+  assert.match(submit, /turnstile\.current\?\.reset\(\)/, "a used Turnstile token is never resubmitted");
+  assert.doesNotMatch(form + read("src/components/portal-entry/RegistrationSuccess.tsx") + read("src/components/portal-entry/TurnstileField.tsx"), /localStorage|sessionStorage|document\.cookie|console\./);
   assert.match(read("src/components/portal-entry/AuthPanel.tsx"), /<RegistrationForm/);
+  // Not switched on: no greyed-out form and no redirect to a sign-in page that cannot register.
+  const unavailable = form.slice(form.indexOf("if (disabled) {"), form.indexOf("const inputClass"));
+  assert.match(unavailable, /copy\.unavailableHeading/);
+  assert.match(unavailable, /href=\{salesHref\}/, "offers the sales enquiry");
+  assert.match(unavailable, /onClick=\{onSignIn\}/, "and sign-in for existing customers");
+  assert.doesNotMatch(unavailable, /<form|<input/);
+  assert.doesNotMatch(form, /portalAuthHref|intent=register/, "never sends new customers to Keycloak registration, which is off");
   assert.match(read("src/components/portal-entry/PortalDialogProvider.tsx"), /registration=\{entry\.registration\}/);
-  assert.match(read("src/middleware.ts"), /"connect-src 'self'"/, "registration needs no new CSP origin");
+  const middleware = read("src/middleware.ts");
+  assert.match(middleware, /"connect-src 'self'"/, "the browser never calls the backend directly");
+  assert.match(middleware, /portalEntry\?\.registration === "live" && turnstileSiteKey \? TURNSTILE_ORIGIN : null/, "Turnstile's origin only for live registration with a key");
 });
 
-test("the success copy promises neither delivery nor an activated licence", () => {
+test("the success copy states only the backend's verified trial facts and promises no delivery", () => {
   assert.equal(registrationSuccessCopy.heading, "Check your email");
-  assert.match(registrationSuccessCopy.sent, /We’ve sent you instructions to set up your RedactPlus password/);
-  assert.match(registrationSuccessCopy.queued, /We’re sending you instructions/);
+  assert.match(registrationSuccessCopy.accepted, /We’ve sent you a secure link/);
+  assert.match(registrationSuccessCopy.resent, /already registered/);
   const all = Object.values(registrationSuccessCopy).filter((value) => typeof value === "string").join(" ");
   assert.doesNotMatch(all, /delivered|activated|licen[cs]e (is )?active/i);
-  assert.match(registrationSuccessCopy.trialBody, /temporary/);
-  assert.match(registrationSuccessCopy.trialBody, /seven days/);
+  assert.match(registrationSuccessCopy.trialBody, /seven days start when you first sign in to RedactPlus Desktop/);
+  assert.match(registrationSuccessCopy.trialBody, /14 days after registering/);
+  assert.match(registrationSuccessCopy.trialBody, /100 cloud credits \(40 for documents, 40 for video and images, 20 for audio\)/);
+  assert.equal(trialFacts.lengthDays, 7);
+  assert.equal(trialFacts.setupLinkHours, 72);
+  assert.match(registrationEmailFailedCopy.body, /couldn’t send the set-up email/);
   const success = read("src/components/portal-entry/RegistrationSuccess.tsx");
-  assert.match(success, /accepted\.setupEmail === "sent" \? copy\.sent : copy\.queued/);
-  assert.match(success, /accepted\.trial\?\.status === "active" && accepted\.trial\.endsAt/, "an end date only for an active trial");
+  assert.match(success, /accepted\.status === "resent" \? copy\.resent : copy\.accepted/);
+  assert.match(success, /emailFailed \? emailFailed\.heading : copy\.heading/, "email_failed never says Check your email");
   assert.match(success, /accepted\.resendAvailable \?/, "resend only when supported");
   assert.match(success, /headingRef\.current\?\.focus\(\)/, "focus moves to the new heading");
 });
@@ -251,7 +327,7 @@ test("password guidance mirrors the realm policy", () => {
 
 // ── no website-owned mail for identity ─────────────────────────────────────
 
-test("the website holds no SMTP configuration and sends no onboarding email", () => {
+test("only the enquiry notifier uses SMTP, and the website sends no onboarding email", () => {
   const files: string[] = [];
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir)) {
@@ -261,11 +337,17 @@ test("the website holds no SMTP configuration and sends no onboarding email", ()
     }
   };
   walk(path.join(process.cwd(), "src"));
+  // Sales and contact enquiry notifications (src/lib/leads) are the website's only mail.
+  // Set-up and password emails stay with Keycloak, so nothing else may hold SMTP code,
+  // and no SMTP host or port is hard-coded anywhere: they come from server environment.
+  const leadMail = path.join("src", "lib", "leads") + path.sep;
   for (const file of files) {
+    const relative = path.relative(process.cwd(), file);
     const source = readFileSync(file, "utf8");
-    assert.doesNotMatch(source, /smtp|nodemailer|spacemail|:465\b|:587\b/i, path.relative(process.cwd(), file));
+    assert.doesNotMatch(source, /spacemail|:465\b|:587\b/i, relative);
+    if (!relative.startsWith(leadMail)) assert.doesNotMatch(source, /smtp|nodemailer/i, relative);
   }
   for (const file of ["src/lib/onboarding/handler.ts", "src/lib/onboarding/adapter.ts"]) {
-    assert.doesNotMatch(read(file), /leadTransport|https-email|execute-actions-email|admin\/realms/, `${file} sends no mail and calls no identity admin API`);
+    assert.doesNotMatch(read(file), /leadTransport|https-email|smtp-email|nodemailer|execute-actions-email|admin\/realms/, `${file} sends no mail and calls no identity admin API`);
   }
 });

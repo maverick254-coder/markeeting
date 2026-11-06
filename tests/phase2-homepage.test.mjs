@@ -79,7 +79,8 @@ test("footer contains only real destinations", async () => {
   assert.match(footer, /<Container/);
   assert.doesNotMatch(footer, /href="#"/);
   assert.match(footer, /mailto:/);
-  assert.match(footer, /href={demoHref}/);
+  assert.match(footer, /fallbackHref={demoHref}/, "Get Started falls back to the sales enquiry");
+  assert.doesNotMatch(footer, /Request a Demo|Book a demo/i);
   assert.doesNotMatch(footer, /downloadUrl/);
 });
 
@@ -120,9 +121,13 @@ test("contact form states the delivery outcome instead of assuming one", async (
   // Delivery is reported from the response, never asserted by the form itself, and
   // an undelivered enquiry must say so rather than implying it reached someone.
   assert.match(section, /result\.delivered/);
-  assert.match(section, /has been delivered/i);
-  assert.match(section, /delivery is not yet switched on, so nobody has received it/i);
-  assert.doesNotMatch(content, /we will reply/i);
+  assert.match(section, /Your enquiry has been sent/);
+  assert.match(section, /could not be delivered automatically, so nobody has received it yet/i);
+  assert.match(section, /wasDelivered \? "Enquiry sent" : "Enquiry not delivered"/);
+  assert.equal((content.match(/submitLabel: "Send Enquiry"/g) ?? []).length, 1);
+  assert.doesNotMatch(content, /demo/i, "no demo wording in the form copy");
+  assert.match(section, /kind: "demo"/, "the stored enquiry kind is unchanged");
+  assert.doesNotMatch(content, /\bwe will reply\b/i, "the form copy never promises a reply before delivery");
 });
 
 test("why RedactPlus states only register-backed differentiators", async () => {

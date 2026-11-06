@@ -13,12 +13,14 @@ const signInOutcomes: { value: PreviewOutcome; label: string }[] = [
 ];
 
 const registrationOutcomes: { value: RegistrationPreviewOutcome; label: string }[] = [
-  { value: "accepted_queued", label: "Accepted, email being sent" },
-  { value: "accepted_sent", label: "Accepted, email handed to mail server" },
-  { value: "accepted_active_trial", label: "Accepted, trial reported active" },
+  { value: "accepted", label: "accepted: trial created, email sent" },
+  { value: "resent", label: "resent: already registered, email sent again" },
+  { value: "email_failed", label: "email_failed: registered, email not sent" },
+  { value: "trial_used", label: "trial_used: trial already used" },
+  { value: "existing_customer", label: "existing_customer: has an account" },
+  { value: "too_many_from_location", label: "too_many_from_location" },
   { value: "rate_limited", label: "Too many attempts" },
-  { value: "registration_unavailable", label: "Backend unavailable" },
-  { value: "not_eligible", label: "Not eligible for a trial" },
+  { value: "registration_unavailable", label: "Trials off or backend unavailable" },
   { value: "network", label: "Network failure" },
 ];
 
@@ -31,7 +33,7 @@ export function AuthDialogPreview() {
   const [view, setView] = useState<AuthView>("register");
   const [mode, setMode] = useState<"preview" | "disabled">("preview");
   const [outcome, setOutcome] = useState<PreviewOutcome>("success");
-  const [registrationOutcome, setRegistrationOutcome] = useState<RegistrationPreviewOutcome>("accepted_queued");
+  const [registrationOutcome, setRegistrationOutcome] = useState<RegistrationPreviewOutcome>("accepted");
   const [key, setKey] = useState(0);
   const reset = () => setKey((value) => value + 1);
 

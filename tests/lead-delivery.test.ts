@@ -81,7 +81,7 @@ test("a configured transport delivers over plain HTTPS and reports the provider 
   const payload = JSON.parse(String(seen[0].init.body));
   assert.deepEqual(payload.to, ["enquiries@saferedact.example"]);
   assert.equal(payload.reply_to, "visitor@example.com");
-  assert.match(payload.subject, /Demo enquiry/);
+  assert.match(payload.subject, /^Sales enquiry — /);
   assert.match(payload.text, /reference-1/);
   assert.match(payload.text, /review workflow/);
 });
@@ -108,7 +108,7 @@ test("delivery includes selected package and license count as operator context",
   const payload = JSON.parse(body);
   assert.match(payload.text, /Package interest: RedactPlus Document \+ Media\n/);
   assert.match(payload.text, /Requested licenses: 18/);
-  assert.doesNotMatch(payload.subject, /Sales enquiry/);
+  assert.doesNotMatch(payload.subject, /\(Enterprise\)/, "only an Enterprise choice is flagged in the subject");
 });
 
 test("an Enterprise enquiry reaches the operator as a sales enquiry", async () => {

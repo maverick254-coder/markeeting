@@ -1,7 +1,7 @@
 export const finalCtaContent = {
-  headline: "Request a RedactPlus Demo",
+  headline: "Talk to the RedactPlus team",
   subheadline:
-    "Tell us which source formats and review workflow you want to evaluate. You can also contact RedactPlus directly by email.",
+    "Tell us about your source formats, review workflow and licensing needs. You can also contact RedactPlus directly by email.",
   form: {
     nameLabel: "Full Name",
     namePlaceholder: "Your name",
@@ -26,8 +26,8 @@ export const finalCtaContent = {
     messagePlaceholder:
       "Tell us about your redaction needs: what type of files, approximate volume, and any specific requirements.",
     deliveryNotice:
-      "Your enquiry is validated before delivery is attempted. The confirmation after you submit states whether it was delivered; when delivery is unavailable it says so, and you can use direct contact instead.",
-    submitLabel: "Submit Demo Enquiry",
-    submittingLabel: "Submitting...",
+      "When you send the form, it tells you whether your enquiry was delivered. If it could not be, you can email us instead.",
+    submitLabel: "Send Enquiry",
+    submittingLabel: "Sending…",
   },
 };

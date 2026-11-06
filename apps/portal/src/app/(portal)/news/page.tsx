@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { NewsList } from "@/components/NewsList";
-import { PlannedModule } from "@/components/PlannedModule";
+import Link from "next/link";
 import { PageHeading } from "@/components/ui";
 import { defaultNewsDir, loadPublishedNews } from "@/lib/editorial/news";
 import { requirePortalSession } from "@/lib/session/current";
@@ -21,23 +21,20 @@ export default async function NewsPage() {
       </PageHeading>
 
       {articles.length === 0 ? (
-        <>
-          <p role="status" className="rounded-[20px] border border-dashed border-border-subtle bg-surface-raised px-5 py-8 text-center text-body-sm text-ink-muted">
-            Nothing has been published here yet.
-          </p>
-          <PlannedModule
-            id="news-planned"
-            title="Still to come"
-            description="Comments from signed-in customers and scheduled publication arrive with the editorial and forum services."
-            topics={["Comments on articles", "Scheduled publication", "Images and media in articles"]}
-          >
-            Articles about redaction practice are published on the{" "}
+        <div role="status" className="rounded-[20px] border border-border-subtle bg-surface-raised px-5 py-8 text-center text-body-sm text-ink-muted">
+          <p className="font-medium text-ink">No announcements have been published yet.</p>
+          <p className="mt-1.5">
+            What changed in each version is in the{" "}
+            <Link href="/release-notes" prefetch={false} className="font-medium text-accent-ink hover:text-accent-ink-hover">
+              release notes
+            </Link>
+            , and articles about redaction practice are on the{" "}
             <a className="font-medium text-accent-ink hover:text-accent-ink-hover" href={`${marketing}/blog`}>
               RedactPlus blog
             </a>
             .
-          </PlannedModule>
-        </>
+          </p>
+        </div>
       ) : (
         <div className="grid gap-10 lg:grid-cols-2">
           <section id="announcements" aria-labelledby="announcements-heading" className="scroll-mt-28">

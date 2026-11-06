@@ -70,15 +70,43 @@ export const releaseManifestSchema = z
         context.addIssue({ code: "custom", path: ["releases", index, "version"], message: `duplicate version ${release.version}` });
       }
       seen.add(release.version);
-      if (!release.installer.fileName.includes(release.version)) {
+      if (!installerNamesVersion(release.installer, release.version)) {
         context.addIssue({
           code: "custom",
           path: ["releases", index, "installer", "fileName"],
-          message: "the installer file name must contain the release version",
+          message: "the installer file name, or a whole segment of its URL path (such as a release tag v1.4.0), must contain the release version",
+        });
+      }
+      if (!installerUrlEndsWithFileName(release.installer)) {
+        context.addIssue({
+          code: "custom",
+          path: ["releases", index, "installer", "url"],
+          message: "the installer URL must end with the installer file name",
         });
       }
     });
   });
+
+function pathSegments(url: string) {
+  return new URL(url).pathname.split("/").filter(Boolean).map((segment) => decodeURIComponent(segment));
+}
+
+/**
+ * A manifest entry must tie its file to its version, so a stale or mismatched installer cannot
+ * be listed under a newer version. Either the file name carries the version
+ * (RedactPlus-Desktop-1.4.0-x64.exe) or a whole URL path segment does, as GitHub Releases does
+ * with its tag (/releases/download/v0.3.8/RedactPlus-Setup.exe). A substring elsewhere in the
+ * URL does not count. The size and SHA-256 still pin the exact file.
+ */
+export function installerNamesVersion(installer: { fileName: string; url: string }, version: string) {
+  if (installer.fileName.includes(version)) return true;
+  return pathSegments(installer.url).slice(0, -1).some((segment) => segment === version || segment === `v${version}`);
+}
+
+/** The file the customer receives must be the file the manifest names. */
+export function installerUrlEndsWithFileName(installer: { fileName: string; url: string }) {
+  return pathSegments(installer.url).at(-1) === installer.fileName;
+}
 
 export type ReleaseNote = z.infer<typeof releaseNoteSchema>;
 export type Release = z.infer<typeof releaseSchema>;

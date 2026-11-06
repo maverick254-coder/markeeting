@@ -17,9 +17,14 @@ export function PortalCta({
   fallbackHref,
   fallbackLabel,
   className,
+  ariaLabel,
+  fallbackAriaLabel,
   onBeforeOpen,
   children,
 }: {
+  /** Accessible names when the visible label alone is ambiguous (e.g. one per pricing card). */
+  ariaLabel?: string;
+  fallbackAriaLabel?: string;
   label: string;
   fallbackHref: string;
   fallbackLabel: string;
@@ -33,7 +38,7 @@ export function PortalCta({
 
   if (!dialog) {
     return (
-      <Link href={fallbackHref} className={className} onClick={onBeforeOpen}>
+      <Link href={fallbackHref} className={className} onClick={onBeforeOpen} aria-label={fallbackAriaLabel}>
         {fallbackLabel}
         {children}
       </Link>
@@ -44,6 +49,7 @@ export function PortalCta({
     <button
       type="button"
       aria-haspopup="dialog"
+      aria-label={ariaLabel}
       data-download-cta
       className={className}
       onClick={(event) => {

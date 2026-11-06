@@ -10,7 +10,7 @@ import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/utils";
 
 /**
- * The single demo enquiry form. /contact and /book-a-demo both render this
+ * The single sales and contact enquiry form. /contact and /book-a-demo both render this
  * component, so validation, the honeypot, and delivery feedback cannot drift between them.
  * The "panel" variant renders the form alone; the page then supplies the element with
  * id="demo-enquiry-heading" that names the form.
@@ -26,6 +26,7 @@ export function DemoEnquiry({
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [wasDelivered, setWasDelivered] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [hasError, setHasError] = useState(false);
   const successHeadingRef = useRef<HTMLHeadingElement>(null);
@@ -79,10 +80,11 @@ export function DemoEnquiry({
       }
 
       setIsSubmitted(true);
+      setWasDelivered(Boolean(result.delivered));
       setStatusMessage(
         result.delivered
-          ? "Your demo enquiry has been delivered. We will reply to the address you provided."
-          : `Your demo enquiry was validated, but delivery is not yet switched on, so nobody has received it. Please email ${publicSupportEmail} directly.`
+          ? "Thank you. Your enquiry has been sent, and we will reply to the address you provided."
+          : `Your details were accepted, but the enquiry could not be delivered automatically, so nobody has received it yet. Please email ${publicSupportEmail} directly.`
       );
     } catch {
       setHasError(true);
@@ -112,13 +114,15 @@ export function DemoEnquiry({
       {isSubmitted ? (
         <div className="flex min-h-[420px] flex-col items-center justify-center text-center">
           <span className="grid h-16 w-16 place-items-center rounded-full border border-accent-warm/30 bg-accent-warm/10 text-accent-ink">
-            <Icon name="check-circle" size={30} />
+            <Icon name={wasDelivered ? "check-circle" : "info"} size={30} />
           </span>
-          <h3 ref={successHeadingRef} tabIndex={-1} className="mt-6 font-heading text-2xl font-semibold text-ink outline-none">Enquiry validated</h3>
+          <h3 ref={successHeadingRef} tabIndex={-1} className="mt-6 font-heading text-2xl font-semibold text-ink outline-none">
+            {wasDelivered ? "Enquiry sent" : "Enquiry not delivered"}
+          </h3>
           <p className="mt-4 max-w-md text-base leading-7 text-ink-muted">{statusMessage}</p>
           <a href={`mailto:${publicSupportEmail}`} className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-accent-ink hover:text-accent-ink-hover">
             <Icon name="send" size={16} />
-            Email {publicSupportEmail} when delivery matters
+            {wasDelivered ? `Anything to add? Email ${publicSupportEmail}` : `Email ${publicSupportEmail}`}
           </a>
         </div>
       ) : (
@@ -191,11 +195,11 @@ export function DemoEnquiry({
   return (
     <div id="demo-enquiry" data-scroll-target className={cn("grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-20", className)}>
       <AnimateOnScroll>
-        <p className="type-eyebrow">Evaluate your workflow</p>
+        <p className="type-eyebrow">Contact sales</p>
         <h2 id="demo-enquiry-heading" className="type-h2 mt-4 max-w-[18ch] text-balance">{finalCtaContent.headline}</h2>
         <p className="type-body mt-5 max-w-md">{finalCtaContent.subheadline}</p>
         <ul className="mt-8 border-t border-border-subtle/60">
-          {["Describe the source formats", "Share the review steps", "Use email when delivery matters"].map((item) => (
+          {["Describe the source formats", "Share the review steps", "Ask about packages and licensing"].map((item) => (
             <li key={item} className="flex items-center gap-3 border-b border-border-subtle/60 py-3.5 text-[0.9375rem] text-ink-muted">
               <Icon name="check-circle" size={17} className="text-accent-ink" />
               {item}

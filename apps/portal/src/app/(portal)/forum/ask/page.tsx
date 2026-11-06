@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { QuestionComposer } from "@/components/forum/QuestionComposer";
 import { forumService } from "@/lib/community/source";
 import { initialsFor } from "@/lib/initials";
@@ -10,6 +11,7 @@ export const metadata: Metadata = { title: "Ask a question" };
 export default async function AskQuestionPage() {
   const { runtime, session } = await requirePortalSession();
   const forum = forumService(runtime.config);
+  if (forum.kind === "unavailable") notFound();
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <nav aria-label="Breadcrumb" className="text-body-sm text-ink-muted">

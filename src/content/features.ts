@@ -162,7 +162,7 @@ export const featurePages: readonly FeaturePageContent[] = [
     relatedFeatures: ["audio-redaction"],
     insightsHref: "/blog/understanding-document-redaction",
     availabilityNote: { status: "configuration-dependent", title: "Format support is explicit", description: "OCR, office conversion, and optional detection engines depend on the source format and configured local or per-job tooling." },
-    cta: { eyebrow: "Document workflow review", title: "Bring a representative document set to a guided demo.", description: "We can walk through source preparation, reviewer controls, and the output-checking path without assuming unsupported formats or outcomes." },
+    cta: { eyebrow: "Document workflow review", title: "Bring a representative document set to your evaluation.", description: "Our team can walk through source preparation, reviewer controls, and the output-checking path without assuming unsupported formats or outcomes." },
   },
   {
     slug: "audio-redaction",
@@ -204,13 +204,13 @@ export const featurePages: readonly FeaturePageContent[] = [
     formatNote: "Supported decoding and export depend on the FFmpeg build configured with the application. Export choices are narrower than the accepted input list and should be confirmed with representative files.",
     faq: [
       { question: "Does RedactPlus automatically find every spoken identifier?", answer: "No. The current public workflow is manual-first. Transcript and detection infrastructure exists in the product, but automated transcript analysis is not presented as a complete end-user capability." },
-      { question: "Which masking effects are available?", answer: "The implemented timeline includes mute, tone, silence, white and pink noise, filters, and reverse. This page promotes the core effects that can be demonstrated with the configured media toolchain." },
+      { question: "Which masking effects are available?", answer: "The implemented timeline includes mute, tone, silence, white and pink noise, filters, and reverse. This page describes the core effects verified with the configured media toolchain." },
       { question: "Can I review the effect before export?", answer: "Supported effects can be previewed when the source decodes correctly and the required media tools are available. The exported file should still be listened to after rendering." },
       { question: "Is transcript timing exact?", answer: "No. Transcription and timing vary with the recording, speakers, noise, and engine. Manual timeline ranges remain the final review control." },
     ],
     relatedFeatures: ["document-redaction"],
-    availabilityNote: { status: "manual-first", title: "Manual audio redaction is the shipped review path", description: "Transcript analysis controls are not marketed as a complete automatic redaction workflow. Demonstrations focus on manual ranges, effect preview, export, and inspection." },
-    cta: { eyebrow: "Audio workflow review", title: "Evaluate the timeline with a representative recording.", description: "A guided demo can confirm accepted inputs, effect availability, transcript context, and the playback checks your workflow requires." },
+    availabilityNote: { status: "manual-first", title: "Manual audio redaction is the shipped review path", description: "Transcript analysis controls are not marketed as a complete automatic redaction workflow. The supported workflow is manual ranges, effect preview, export, and inspection." },
+    cta: { eyebrow: "Audio workflow review", title: "Evaluate the timeline with a representative recording.", description: "Testing with your own files confirms accepted inputs, effect availability, transcript context, and the playback checks your workflow requires." },
   },
 ] as const;
 

@@ -1,10 +1,12 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { AccountStatus } from "@/components/AccountStatus";
 import { DownloadSection } from "@/components/DownloadSection";
 import { Icon } from "@/components/Icon";
 import { NewsList } from "@/components/NewsList";
-import { Notice, NotYetAvailable } from "@/components/ui";
+import { Notice } from "@/components/ui";
 import { forumService } from "@/lib/community/source";
+import { customerStatusFor } from "@/lib/customer-api/for-session";
 import { defaultNewsDir, loadPublishedNews } from "@/lib/editorial/news";
 import { requirePortalSession } from "@/lib/session/current";
 
@@ -28,15 +30,22 @@ function ResourceCard({ icon, title, href, linkLabel, children }: { icon: string
   );
 }
 
-function LinkList({ items }: { items: { href: string; label: string; planned?: boolean }[] }) {
+/** Links to content that exists. External links (redactplus.io) open as ordinary links. */
+function LinkList({ items }: { items: { href: string; label: string; external?: boolean }[] }) {
   return (
     <ul className="space-y-2">
       {items.map((item) => (
-        <li key={item.label} className="flex items-center justify-between gap-3">
-          <Link href={item.href} prefetch={false} className="font-medium text-ink hover:text-accent-ink">
-            {item.label}
-          </Link>
-          {item.planned ? <NotYetAvailable>Soon</NotYetAvailable> : null}
+        <li key={item.label}>
+          {item.external ? (
+            <a href={item.href} className="inline-flex items-center gap-1.5 font-medium text-ink hover:text-accent-ink">
+              {item.label}
+              <Icon name="external-link" size={13} className="text-ink-muted" />
+            </a>
+          ) : (
+            <Link href={item.href} prefetch={false} className="font-medium text-ink hover:text-accent-ink">
+              {item.label}
+            </Link>
+          )}
         </li>
       ))}
     </ul>
@@ -45,13 +54,19 @@ function LinkList({ items }: { items: { href: string; label: string; planned?: b
 
 /**
  * home.redactplus.io: the downloads and resources hub. The latest verified installer leads;
- * resources follow in a compact group. The forum lives under /forum.
+ * resources follow in a compact group, each linking only to content that exists. The Community
+ * card appears while a forum service is available; otherwise the fourth card is Support.
  */
 export default async function PortalHomePage() {
-  const { runtime, session } = await requirePortalSession();
+  const current = await requirePortalSession();
+  const { runtime, session } = current;
   const { config } = runtime;
   const [news, forum] = [await loadPublishedNews(config.newsDir ?? defaultNewsDir()), forumService(config)];
   const featured = news.filter((article) => article.featured || article.type !== "news").slice(0, 3);
+  const forumAvailable = forum.kind !== "unavailable";
+  const supportEmail = config.supportEmail;
+  // The Control Center's view of this account (GET /portal/me); nothing when not configured.
+  const account = await customerStatusFor(current);
 
   return (
     <div className="space-y-12">
@@ -71,14 +86,15 @@ export default async function PortalHomePage() {
 
       <DownloadSection config={config} />
 
+      <AccountStatus status={account} supportEmail={supportEmail} />
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <ResourceCard icon="check-circle" title="Get started" href="/docs#product-documentation" linkLabel="All guides">
+        <ResourceCard icon="check-circle" title="Get started" href="/docs" linkLabel="Getting started guide">
           <LinkList
             items={[
-              { href: "/docs#product-documentation", label: "Install RedactPlus Desktop", planned: true },
-              { href: "/docs#product-documentation", label: "Activate with your account", planned: true },
-              { href: "/docs#tutorials", label: "Redact your first document", planned: true },
-              { href: "/docs#tutorials", label: "Redact audio and video", planned: true },
+              { href: "/docs#install", label: "Install RedactPlus Desktop" },
+              { href: "/docs#sign-in", label: "Sign in to the app" },
+              { href: "/download#requirements", label: "System requirements" },
             ]}
           />
         </ResourceCard>
@@ -87,27 +103,40 @@ export default async function PortalHomePage() {
           {featured.length ? <NewsList articles={featured} compact /> : <p>Nothing has been published yet. Release announcements will appear here.</p>}
         </ResourceCard>
 
-        <ResourceCard icon="book" title="Documentation" href="/docs" linkLabel="Browse documentation">
+        <ResourceCard icon="book" title="Learn RedactPlus" href="/release-notes" linkLabel="Release notes">
           <LinkList
             items={[
-              { href: "/docs#product-documentation", label: "Product documentation", planned: true },
-              { href: "/docs#tutorials", label: "Tutorials", planned: true },
-              { href: "/release-notes", label: "Release notes" },
-              { href: "/support", label: "Support" },
+              { href: `${config.marketingOrigin}/how-it-works`, label: "How RedactPlus works", external: true },
+              { href: `${config.marketingOrigin}/features/document-redaction`, label: "Document redaction", external: true },
+              { href: `${config.marketingOrigin}/features/audio-redaction`, label: "Audio redaction", external: true },
             ]}
           />
         </ResourceCard>
 
-        <ResourceCard icon="users" title="Community" href="/forum" linkLabel="Browse questions">
-          <p>Ask questions, share workflows and find answers from other RedactPlus customers and the team.</p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Link href="/forum/ask" prefetch={false} className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border-subtle px-3.5 text-body-sm font-semibold text-ink hover:bg-surface-active">
-              <Icon name="edit" size={14} />
-              Ask a question
-            </Link>
-            {forum.kind === "unavailable" ? <NotYetAvailable>Opening soon</NotYetAvailable> : null}
-          </div>
-        </ResourceCard>
+        {forumAvailable ? (
+          <ResourceCard icon="users" title="Community" href="/forum" linkLabel="Browse questions">
+            <p>Ask questions, share workflows and find answers from other RedactPlus customers and the team.</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Link href="/forum/ask" prefetch={false} className="inline-flex min-h-9 items-center gap-1.5 rounded-full border border-border-subtle px-3.5 text-body-sm font-semibold text-ink hover:bg-surface-active">
+                <Icon name="edit" size={14} />
+                Ask a question
+              </Link>
+            </div>
+          </ResourceCard>
+        ) : (
+          <ResourceCard icon="message-circle" title="Support" href="/support" linkLabel="Get help">
+            <p>Questions about installing, signing in or licensing?</p>
+            {supportEmail ? (
+              <p className="mt-2">
+                Email{" "}
+                <a href={`mailto:${supportEmail}`} className="font-medium text-accent-ink hover:text-accent-ink-hover">
+                  {supportEmail}
+                </a>{" "}
+                with your account email address.
+              </p>
+            ) : null}
+          </ResourceCard>
+        )}
       </div>
     </div>
   );

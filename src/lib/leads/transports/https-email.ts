@@ -1,36 +1,25 @@
 import { LeadDeliveryError } from "../types";
 import type { DeliveryContext, DeliveryReceipt, LeadEnquiry, LeadTransport } from "../types";
-import { describePackageInterest } from "@/content/pricing";
+import { renderLeadNotification } from "../notification";
+import { configurationError, readAddressSettings, recipientFor } from "./shared";
+import type { LeadAddressSettings } from "./shared";
 
-export interface HttpsEmailSettings {
+export interface HttpsEmailSettings extends LeadAddressSettings {
   endpoint: string;
   token: string;
-  from: string;
-  recipient: string;
-  timeoutMs: number;
 }
-
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function exactHttpsEndpoint(value: string): string {
   let parsed;
   try {
     parsed = new URL(value);
   } catch {
-    throw new Error("Lead delivery configuration error: LEAD_DELIVERY_ENDPOINT must be an exact HTTPS URL.");
+    throw configurationError("LEAD_DELIVERY_ENDPOINT must be an exact HTTPS URL.");
   }
   if (parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.hash) {
-    throw new Error("Lead delivery configuration error: LEAD_DELIVERY_ENDPOINT must be an exact credential-free HTTPS URL.");
+    throw configurationError("LEAD_DELIVERY_ENDPOINT must be an exact credential-free HTTPS URL.");
   }
   return parsed.href;
-}
-
-function address(name: string, value: string): string {
-  const trimmed = value.trim();
-  if (!emailPattern.test(trimmed)) {
-    throw new Error(`Lead delivery configuration error: ${name} must be a single email address.`);
-  }
-  return trimmed;
 }
 
 export function readHttpsEmailSettings(
@@ -41,67 +30,23 @@ export function readHttpsEmailSettings(
   const from = environment.LEAD_DELIVERY_FROM?.trim();
   const recipient = environment.LEAD_DELIVERY_TO?.trim();
 
+  // The HTTPS provider is chosen by its endpoint or token. LEAD_DELIVERY_FROM and _TO are
+  // shared with the SMTP transport, so on their own they choose nothing (see delivery.ts).
+  if (!endpoint && !token) return null;
   // All four or none: a half-configured transport is a silent dead letter box.
-  if (!endpoint && !token && !from && !recipient) return null;
   if (!endpoint || !token || !from || !recipient) {
-    throw new Error(
-      "Lead delivery configuration error: LEAD_DELIVERY_ENDPOINT, LEAD_DELIVERY_TOKEN, LEAD_DELIVERY_FROM and LEAD_DELIVERY_TO must be set together."
+    throw configurationError(
+      "LEAD_DELIVERY_ENDPOINT, LEAD_DELIVERY_TOKEN, LEAD_DELIVERY_FROM and LEAD_DELIVERY_TO must be set together."
     );
   }
-  if (/[\r\n]/.test(token)) {
-    throw new Error("Lead delivery configuration error: LEAD_DELIVERY_TOKEN is malformed.");
-  }
+  if (/[\r\n]/.test(token)) throw configurationError("LEAD_DELIVERY_TOKEN is malformed.");
 
-  const timeoutRaw = environment.LEAD_DELIVERY_TIMEOUT_MS?.trim() || "5000";
-  const timeoutMs = Number(timeoutRaw);
-  if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 500 || timeoutMs > 15_000) {
-    throw new Error("Lead delivery configuration error: LEAD_DELIVERY_TIMEOUT_MS must be an integer from 500 to 15000.");
-  }
-
-  return {
-    endpoint: exactHttpsEndpoint(endpoint),
-    token,
-    from: address("LEAD_DELIVERY_FROM", from),
-    recipient: address("LEAD_DELIVERY_TO", recipient),
-    timeoutMs,
-  };
-}
-
-function subjectFor(enquiry: LeadEnquiry): string {
-  // An Enterprise choice is a sales conversation, so the operator sees it from the subject line.
-  const label =
-    enquiry.packageInterest === "enterprise"
-      ? "Sales enquiry (Enterprise)"
-      : enquiry.kind === "demo"
-        ? "Demo enquiry"
-        : "Contact enquiry";
-  // The organisation is operator-facing context, not a header injection vector:
-  // newlines cannot survive the schema, and the value is JSON-encoded regardless.
-  return enquiry.organization
-    ? `${label} — ${enquiry.organization}`
-    : `${label} — ${enquiry.name}`;
-}
-
-function bodyFor(enquiry: LeadEnquiry, referenceId: string): string {
-  const packageName = describePackageInterest(enquiry.legacyPackageInterest ?? enquiry.packageInterest);
-
-  return [
-    `Reference: ${referenceId}`,
-    `Kind: ${enquiry.kind}`,
-    `Name: ${enquiry.name}`,
-    `Email: ${enquiry.email}`,
-    `Organization: ${enquiry.organization || "(not provided)"}`,
-    ...(packageName ? [`Package interest: ${packageName}`] : []),
-    ...(enquiry.licenseCount ? [`Requested licenses: ${enquiry.licenseCount}`] : []),
-    `Source formats: ${enquiry.fileType}`,
-    "",
-    enquiry.message,
-  ].join("\n");
+  return { ...readAddressSettings(environment, 5_000), endpoint: exactHttpsEndpoint(endpoint), token };
 }
 
 /**
  * Delivers over plain HTTPS and JSON, with no vendor SDK. The payload shape
- * ({from, to, subject, text}) is the one transactional email APIs such as Resend
+ * ({from, to, reply_to, subject, text, html}) is the one transactional email APIs such as Resend
  * accept directly; a provider with a different shape gets its own file here rather
  * than a change anywhere else.
  */
@@ -113,6 +58,7 @@ export function createHttpsEmailTransport(
     name: "https-email",
     configured: true,
     async deliver(enquiry: LeadEnquiry, context: DeliveryContext): Promise<DeliveryReceipt> {
+      const notification = renderLeadNotification(enquiry, context.referenceId);
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), settings.timeoutMs);
       context.signal?.addEventListener("abort", () => controller.abort(), { once: true });
@@ -128,16 +74,17 @@ export function createHttpsEmailTransport(
           },
           body: JSON.stringify({
             from: settings.from,
-            to: [settings.recipient],
+            to: [recipientFor(enquiry, settings)],
             reply_to: enquiry.email,
-            subject: subjectFor(enquiry),
-            text: bodyFor(enquiry, context.referenceId),
+            subject: notification.subject,
+            text: notification.text,
+            html: notification.html,
           }),
           signal: controller.signal,
         });
       } catch {
         // The provider's message may quote the payload, so it is never surfaced.
-        throw new LeadDeliveryError("The delivery provider could not be reached.", true);
+        throw new LeadDeliveryError("The delivery provider could not be reached.", true, "https-unreachable");
       } finally {
         clearTimeout(timer);
       }
@@ -147,7 +94,8 @@ export function createHttpsEmailTransport(
         const retryable = response.status >= 500;
         throw new LeadDeliveryError(
           `The delivery provider rejected the enquiry (${response.status}).`,
-          retryable
+          retryable,
+          `https-${response.status}`
         );
       }
 

@@ -37,8 +37,8 @@ export default function ContactPage() {
 
         <section className="section-y-sm bg-canvas text-ink" aria-labelledby="contact-include">
           <Container>
-            <p className="type-eyebrow">Before the demo</p>
-            <h2 id="contact-include" className="type-h2 mt-4 max-w-[24ch] text-[clamp(1.5rem,1.25rem+0.9vw,2rem)]">What helps us prepare a useful demo</h2>
+            <p className="type-eyebrow">What to include</p>
+            <h2 id="contact-include" className="type-h2 mt-4 max-w-[24ch] text-[clamp(1.5rem,1.25rem+0.9vw,2rem)]">What helps us give a useful answer</h2>
             <ul className="mt-10 grid border-t border-border-subtle/60 md:grid-cols-3">
               {contactPage.include.map((item, index) => (
                 <li key={item.title} className="relative border-b border-border-subtle/60 py-7 md:border-b-0 md:pr-8">
@@ -50,7 +50,7 @@ export default function ContactPage() {
               ))}
             </ul>
             <p className="mt-8 max-w-3xl text-[0.9375rem] leading-7 text-ink-muted">
-              Describe your files in general terms, and please do not paste sensitive content into the form. Before the demo, you can review the <Link href="/features" className="font-semibold text-accent-ink hover:text-accent-ink-hover">feature workflows</Link> or the <Link href="/industries" className="font-semibold text-accent-ink hover:text-accent-ink-hover">industry guides</Link>.
+              Describe your files in general terms, and please do not paste sensitive content into the form. In the meantime, you can review the <Link href="/features" className="font-semibold text-accent-ink hover:text-accent-ink-hover">feature workflows</Link> or the <Link href="/industries" className="font-semibold text-accent-ink hover:text-accent-ink-hover">industry guides</Link>.
             </p>
           </Container>
         </section>

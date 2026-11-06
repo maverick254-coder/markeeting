@@ -145,10 +145,10 @@ test("favicons, manifest and structured data use the RedactPlus assets", async (
   assert.equal(manifest.theme_color, "#FF7A33");
 });
 
-test("legacy external coordinates remain explicit and pending rather than invented", () => {
+test("legacy external coordinates remain explicit; the visible support mailbox is RedactPlus", () => {
   assert.equal(siteConfig.externalCoordinates.status, "legacy-pending-migration");
-  assert.equal(siteConfig.externalCoordinates.url, "https://saferedact.io");
-  assert.equal(siteConfig.externalCoordinates.email, "support@saferedact.io");
+  assert.equal(siteConfig.externalCoordinates.url, "https://saferedact.io", "canonical fallback only; the RedactPlus image sets redactplus.io");
+  assert.equal(siteConfig.externalCoordinates.email, "support@redactplus.io");
 });
 
 test("the canonical origin defaults to the legacy coordinate and accepts only a bare HTTPS origin", () => {

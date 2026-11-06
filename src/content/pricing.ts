@@ -113,6 +113,12 @@ export interface PricingPackage {
   /** Four to six short, verified benefits. */
   features: readonly string[];
   ctaLabel: string;
+  /**
+   * register: opens the shared Download/registration dialog (the backend controls any trial; no
+   * package is assigned or purchased). Falls back to the sales enquiry when the dialog is not
+   * configured. sales: the commercial enquiry form, with the package preselected.
+   */
+  ctaAction: "register" | "sales";
   /** One short line beneath the button. */
   footnote: string;
   /** At most one package: the licence type that includes every available capability. */
@@ -136,7 +142,8 @@ export const pricingPackages = [
       "Permanent, verified redaction with metadata removed",
       "PDF, PDF/A and TIFF export with redaction reports",
     ],
-    ctaLabel: "Contact Sales",
+    ctaLabel: "Get Started",
+    ctaAction: "register",
     footnote: "Documents only. Audio and video are not included.",
   },
   {
@@ -155,7 +162,8 @@ export const pricingPackages = [
       "Video redaction: blur, pixelate or black out areas",
       "Export redacted audio, video and transcripts",
     ],
-    ctaLabel: "Contact Sales",
+    ctaLabel: "Get Started",
+    ctaAction: "register",
     footnote: "One license covers documents, audio and video.",
     highlight: "Most complete",
   },
@@ -175,6 +183,7 @@ export const pricingPackages = [
       "Set up for your organization by RedactPlus",
     ],
     ctaLabel: "Contact Sales",
+    ctaAction: "sales",
     footnote: "Commercial terms are confirmed in your agreement.",
   },
 ] as const satisfies readonly PricingPackage[];
@@ -328,10 +337,10 @@ export const pricingFaqs = [
       "Choose Enterprise when your organization needs a larger or tailored arrangement: the package capabilities, license quantity, term and price are agreed with RedactPlus and set up for your organization. Contact Sales to discuss your requirements.",
   },
   {
-    id: "demo",
-    title: "Can we request a demo before choosing a package?",
+    id: "talk-to-sales",
+    title: "Can we talk to someone before choosing a package?",
     description:
-      "Yes. Use the demo enquiry form to describe the formats and review workflow you want to evaluate, and select the package you are considering if you already know it.",
+      "Yes. Use the sales enquiry form to describe the formats and review workflow you want to evaluate, and select the package you are considering if you already know it. We reply by email.",
   },
   {
     id: "installation-activation",

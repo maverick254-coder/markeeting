@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
+import { PortalCta } from "@/components/portal-entry/PortalCta";
 import { pricingPackages, pricingSharedLicenseNote, type PricingPackage } from "@/content/pricing";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +18,7 @@ const monthlyFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
 });
 
-/** Every package CTA carries its package to the shared enquiry form, which preselects it. */
+/** The sales enquiry for a package: the shared enquiry form, with the package preselected. */
 export function packageEnquiryHref(slug: PricingPackage["slug"]) {
   return `/book-a-demo?package=${slug}`;
 }
@@ -103,10 +104,24 @@ export function PricingCards() {
 
               <div className="mt-6 flex flex-col justify-end gap-2.5">
                 <Button asChild variant={highlighted ? "primary" : "secondary"} size="md" className="w-full">
-                  <Link href={packageEnquiryHref(plan.slug)} aria-label={`${plan.ctaLabel}: ${plan.name} package`}>
-                    {plan.ctaLabel}
-                    <Icon name="arrow" size={16} />
-                  </Link>
+                  {plan.ctaAction === "register" ? (
+                    // Opens the shared Download/registration dialog. Without a configured portal the
+                    // site has no dialog, and the button stays the package's sales enquiry.
+                    <PortalCta
+                      label={plan.ctaLabel}
+                      ariaLabel={`${plan.ctaLabel} with the ${plan.name} package`}
+                      fallbackHref={packageEnquiryHref(plan.slug)}
+                      fallbackLabel="Contact Sales"
+                      fallbackAriaLabel={`Contact Sales: ${plan.name} package`}
+                    >
+                      <Icon name="arrow" size={16} />
+                    </PortalCta>
+                  ) : (
+                    <Link href={packageEnquiryHref(plan.slug)} aria-label={`${plan.ctaLabel}: ${plan.name} package`}>
+                      {plan.ctaLabel}
+                      <Icon name="arrow" size={16} />
+                    </Link>
+                  )}
                 </Button>
                 <p className="text-center text-xs leading-5 text-ink-muted">{plan.footnote}</p>
               </div>

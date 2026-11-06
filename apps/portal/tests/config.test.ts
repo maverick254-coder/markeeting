@@ -21,7 +21,7 @@ test("a complete production configuration is accepted with secure defaults", () 
   assert.equal(config.sessionStore, "postgres");
   assert.equal(config.oidc?.allowInsecureIssuer, false);
   assert.equal(config.oidc?.scopes, "openid profile email");
-  assert.equal(config.oidc?.registrationPrompt, "create");
+  assert.equal(config.oidc?.registrationPrompt, "", "no prompt=create: the realm has self-registration off");
   assert.equal(config.marketingOrigin, "https://redactplus.io");
   assert.equal(config.customerApiUrl, null);
   assert.equal(config.trustProxyHops, 0);
@@ -73,9 +73,13 @@ test("identity provider settings are all-or-nothing", () => {
   assert.equal(parsePortalConfig(withoutOidc).oidc, null);
   refuses({ ...withoutOidc, PORTAL_OIDC_ISSUER }, /must be set together/);
   refuses({ ...withoutOidc, PORTAL_OIDC_CLIENT_ID, PORTAL_OIDC_CLIENT_SECRET }, /must be set together/);
+  // The production client is public: no secret, PKCE only.
+  const publicClient = parsePortalConfig({ ...withoutOidc, PORTAL_OIDC_ISSUER, PORTAL_OIDC_CLIENT_ID });
+  assert.equal(publicClient.oidc?.clientSecret, null);
+  assert.equal(publicClient.oidc?.clientId, "redactplus-portal");
   refuses({ ...production, PORTAL_OIDC_ISSUER: "https://user:pass@id.example.com/realms/x" }, /issuer URL only/);
   refuses({ ...production, PORTAL_OIDC_SCOPES: "profile email" }, /must include openid/);
-  assert.equal(parsePortalConfig({ ...production, PORTAL_OIDC_REGISTRATION_PROMPT: "" }).oidc?.registrationPrompt, "");
+  assert.equal(parsePortalConfig({ ...production, PORTAL_OIDC_REGISTRATION_PROMPT: "create" }).oidc?.registrationPrompt, "create", "still configurable");
 });
 
 test("download hosts must be exact names", () => {

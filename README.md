@@ -112,9 +112,9 @@ pg_restore --no-owner --dbname "$TARGET_DATABASE_URL" comments-YYYY-MM-DD.dump
 
 Do not restore development data into production and do not reuse the development abuse secret. The repository contains tested retention logic for rejected comments and removed tombstones, but no scheduler; production needs an approved maintenance job and retention policy before collection is enabled.
 
-## Contact and demo enquiries
+## Sales and contact enquiries
 
-`POST /api/contact` validates and bounds JSON, applies a honeypot and in-process throttling, and logs only an opaque reference and outcome. With no provider configured it returns an honest accepted-but-not-delivered response. Real delivery requires all of `LEAD_DELIVERY_ENDPOINT`, `LEAD_DELIVERY_TOKEN`, `LEAD_DELIVERY_FROM`, and `LEAD_DELIVERY_TO`; only a successful provider acknowledgement is reported as delivered.
+`POST /api/contact` validates and bounds JSON, applies a honeypot and in-process throttling, and logs only an opaque reference, the outcome and a fixed failure reason. With no provider configured it returns an honest accepted-but-not-delivered response. Delivery uses one of two server-only transports: SMTP submission (`LEAD_DELIVERY_SMTP_HOST`, `_PORT`, `_SECURITY`, `_USER`, `_PASSWORD`; SpaceMail in production) or an HTTPS email API (`LEAD_DELIVERY_ENDPOINT`, `LEAD_DELIVERY_TOKEN`). Both also need `LEAD_DELIVERY_FROM` and `LEAD_DELIVERY_TO`. Only a provider's acceptance is reported as delivered; any failure answers 502. Configuration, local testing with `npm run leads:smtp-capture` and the live test procedure are in [docs/operations/enquiry-email.md](docs/operations/enquiry-email.md).
 
 Before production activation, approve the provider and destination, configure shared/edge abuse protection for multi-instance hosting, verify a real non-production delivery, add monitoring, and approve privacy and retention terms. The current application-level lead limiter is process-local.
 

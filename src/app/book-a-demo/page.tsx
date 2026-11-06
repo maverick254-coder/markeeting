@@ -18,14 +18,14 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = buildPageMetadata(bookDemoPage.seo);
 
-const breadcrumbs = [{ name: "Home", path: "/" as const }, { name: "Book a demo", path: "/book-a-demo" as const }];
+const breadcrumbs = [{ name: "Home", path: "/" as const }, { name: "Contact sales", path: "/book-a-demo" as const }];
 
 type BookDemoPageProps = {
   searchParams: Promise<{ package?: string | string[] }>;
 };
 
 /**
- * Book a demo: the explanation on the left and the shared enquiry form in a panel on the
+ * Contact sales: the explanation on the left and the shared enquiry form in a panel on the
  * right, over one soft coral atmosphere. The page H1 names the form, so the panel variant
  * renders without its own heading. A known ?package= value preselects the package.
  */

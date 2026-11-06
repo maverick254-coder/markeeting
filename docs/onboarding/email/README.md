@@ -1,3 +1,5 @@
+> **Superseded for trials (6 November 2026).** The Admin Panel's Keycloak theme (`executeActions.ftl`, branch `redactplus_signup == "trial"`) is the trial welcome email in use. Do not install these templates alongside it. See [../verified-integration-contract.md](../verified-integration-contract.md) §2.
+
 # Onboarding email templates
 
 "Welcome to RedactPlus — Set Up Your Account". Sent by the backend's identity system (Keycloak

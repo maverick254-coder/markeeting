@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { HeaderSearch } from "@/components/HeaderSearch";
 import { PageHeading } from "@/components/ui";
+import { forumService } from "@/lib/community/source";
 import { defaultManifestPath, loadManifest } from "@/lib/releases/manifest";
 import { normaliseQuery, searchPortal } from "@/lib/search";
 import { requirePortalSession } from "@/lib/session/current";
@@ -13,12 +14,12 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const raw = (await searchParams).q;
   const query = normaliseQuery(Array.isArray(raw) ? raw[0] : raw);
   const manifest = await loadManifest(runtime.config.releasesManifestPath ?? defaultManifestPath());
-  const results = query ? searchPortal(query, manifest.ok ? manifest.manifest.releases : []) : [];
+  const results = query ? searchPortal(query, manifest.ok ? manifest.manifest.releases : [], { forum: forumService(runtime.config).kind !== "unavailable" }) : [];
 
   return (
     <div className="space-y-6">
       <PageHeading eyebrow="Search" title={query ? `Results for “${query}”` : "Search the portal"}>
-        <p>Searches portal sections and release notes. Forum discussions and documentation articles are added as they open.</p>
+        <p>Searches the portal’s sections and RedactPlus Desktop release notes.</p>
       </PageHeading>
       <HeaderSearch defaultValue={query} className="max-w-xl" />
       {query ? (
@@ -36,7 +37,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
           </ul>
         ) : (
           <p role="status" className="text-body-sm text-ink-muted">
-            Nothing in the portal matches that yet.
+            Nothing in the portal matches that. Try a shorter search, or browse the release notes.
           </p>
         )
       ) : null}

@@ -1,3 +1,5 @@
+import { registrationCopy } from "@/content/onboarding";
+
 /**
  * Registration fields for the Download dialog: full name, email and an optional organization,
  * plus consent to the Terms and Privacy Policy. There is deliberately no password: the
@@ -17,6 +19,8 @@ export interface RegistrationValues {
 export type RegistrationField = keyof RegistrationValues;
 export type RegistrationErrors = Partial<Record<RegistrationField, string>>;
 
+// The backend allows 200 characters for the name and organisation (TrialService.Validate);
+// the organisation stays at 120 here, inside that limit.
 export const REGISTRATION_LIMITS = { name: 200, email: 254, organization: 120 } as const;
 
 /** The same shape of email check the portal's server-side schema applies. */
@@ -47,6 +51,6 @@ export function validateRegistration(values: RegistrationValues): RegistrationEr
   if (organization.length > REGISTRATION_LIMITS.organization) errors.organization = `Use ${REGISTRATION_LIMITS.organization} characters or fewer.`;
   else if (CONTROL.test(organization)) errors.organization = "Remove line breaks and special characters.";
 
-  if (!values.consent) errors.consent = "Agree to the Terms and Privacy Policy to continue.";
+  if (!values.consent) errors.consent = registrationCopy.consentError;
   return errors;
 }

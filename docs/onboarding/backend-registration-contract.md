@@ -1,3 +1,5 @@
+> **Superseded (6 November 2026).** The backend implemented a different contract. Use [verified-integration-contract.md](verified-integration-contract.md). This file is kept as the original proposal only.
+
 # RedactPlus customer registration: backend contract (PROPOSED)
 
 For the Admin Panel / Control Center team. Prepared 6 November 2026, from read-only inspection of

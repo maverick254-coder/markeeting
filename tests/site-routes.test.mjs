@@ -18,8 +18,8 @@ const routes = [
   ["/industries/media-journalism", "Protect sources in recorded interviews and obtained documents."],
   ["/how-it-works", "How RedactPlus takes a file from source to reviewed output."],
   ["/why-redactplus", "Why RedactPlus: one review-led workflow for documents and audio."],
-  ["/contact", "Contact RedactPlus or request a demo."],
-  ["/book-a-demo", "See RedactPlus on your own redaction workflow."],
+  ["/contact", "Contact RedactPlus."],
+  ["/book-a-demo", "Talk to sales about RedactPlus."],
 ];
 const drafts = ["/industries/real-estate", "/industries/ai-data-teams"];
 
@@ -98,15 +98,15 @@ test("industry pages link into features, related industries, the lifecycle page,
   assert.match(legal, /href="\/blog\/understanding-document-redaction"/);
 });
 
-test("the contact page reuses the single demo enquiry form", async () => {
+test("the contact page reuses the single enquiry form", async () => {
   const { html } = await page("/contact");
   assert.equal((html.match(/id="demo-enquiry"/g) ?? []).length, 1);
   assert.match(html, /<form[^>]+aria-labelledby="demo-enquiry-heading"/);
   assert.match(html, /id="website"[^>]*tabindex="-1"/i);
-  assert.match(html, /href="mailto:support@saferedact\.io"/);
+  assert.match(html, /href="mailto:support@redactplus.io"/);
 });
 
-test("book a demo reuses the single enquiry form without claiming a meeting is booked", async () => {
+test("the sales enquiry page reuses the single enquiry form without claiming a meeting or purchase", async () => {
   const { status, html } = await page("/book-a-demo");
   assert.equal(status, 200);
   assert.equal((html.match(/id="demo-enquiry"/g) ?? []).length, 1);
@@ -116,7 +116,10 @@ test("book a demo reuses the single enquiry form without claiming a meeting is b
   for (const field of ["name", "email", "organization", "packageInterest", "licenseCount", "fileType", "message"]) {
     assert.match(html, new RegExp(`name="${field}"`), field);
   }
-  assert.match(html, /does not schedule a meeting/);
+  assert.match(html, /does not book a meeting or purchase anything/);
+  assert.match(html, /Send Enquiry/);
+  const visibleText = html.replace(/<script[\s\S]*?<\/script>/g, " ").replace(/<[^>]+>/g, " ");
+  assert.doesNotMatch(visibleText, /\bdemo\b/i, "no demo wording in the visible page");
   // The page already is the invitation, so the footer does not repeat it.
   assert.doesNotMatch(html, /id="footer-invitation-heading"/);
   assert.doesNotMatch(html, /(?:meeting|demo) (?:is|has been) (?:booked|scheduled)/i);

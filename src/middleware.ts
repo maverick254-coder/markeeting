@@ -1,5 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { turnstileSiteKey } from "@/content/onboarding";
 import { portalEntry } from "@/content/portal";
+
+const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
 import {
   chatwootWebSocketOrigin,
   resolveChatwootPublicConfig,
@@ -80,14 +83,19 @@ export function middleware(request: NextRequest) {
     process.env.NODE_ENV === "development"
       ? `script-src 'self' 'nonce-${nonce}' 'unsafe-eval'`
       : `script-src 'self' 'nonce-${nonce}'`;
-  const scopedScriptDirective = chatwootOrigin
-    ? `${scriptDirective} ${chatwootOrigin}`
-    : scriptDirective;
+  // Cloudflare Turnstile (the registration security check) loads its script and its frame from
+  // one origin, and only when live registration is built with a site key.
+  const turnstileOrigin = portalEntry?.registration === "live" && turnstileSiteKey ? TURNSTILE_ORIGIN : null;
+  const scopedScriptDirective = [scriptDirective, chatwootOrigin, turnstileOrigin].filter(Boolean).join(" ");
   // The Download dialog submits credentials to the portal only in live mode; only then may
   // scripts on this site connect to the portal origin.
   const portalConnect = portalEntry?.submission === "live" ? portalEntry.portalOrigin : null;
   const policy = [scopedScriptDirective, ...sharedDirectives(chatwoot)]
     .map((directive) => (portalConnect && directive.startsWith("connect-src ") ? `${directive} ${portalConnect}` : directive))
+    .map((directive) => {
+      if (!turnstileOrigin || !directive.startsWith("frame-src ")) return directive;
+      return directive === "frame-src 'none'" ? `frame-src ${turnstileOrigin}` : `${directive} ${turnstileOrigin}`;
+    })
     .join("; ");
 
   // The request copy is what the renderer reads the nonce from; the response copy is

@@ -35,43 +35,72 @@ export function registrationSubmission(raw: string | undefined): RegistrationSub
   return raw?.trim() === "enabled" ? "live" : "disabled";
 }
 
-export const trialLengthDays = 7;
+/**
+ * Cloudflare Turnstile's public site key for the registration security check. Fixed into the
+ * build (NEXT_PUBLIC_). The Control Center verifies every registration's token with the matching
+ * secret (TURNSTILE_SECRET on the API), so without a key the form cannot register anyone.
+ */
+export const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim() || "";
+
+/**
+ * The trial as the backend implements it (Admin-panel 7026a19: TrialPolicy in Domain/Trials.cs,
+ * verified by TrialTests). Only these facts are stated to visitors.
+ */
+export const trialFacts = {
+  lengthDays: 7,
+  /** A trial nobody activates in the desktop app starts by itself after this many days. */
+  startsAnywayAfterDays: 14,
+  totalCredits: 100,
+  credits: "40 for documents, 40 for video and images, 20 for audio",
+  setupLinkHours: 72,
+  minimumAge: 18,
+} as const;
+export const trialLengthDays = trialFacts.lengthDays;
 /** The trial length in words, for prose. */
 export const trialLengthWords = "seven days";
 
 export const registrationCopy = {
-  heading: "Create your RedactPlus account",
-  lede: "Tell us who you are and we’ll email you a secure link to set your password. The same account signs you in to RedactPlus Desktop.",
+  heading: "Start your RedactPlus trial",
+  lede: "Tell us who you are and we’ll email you a secure link to set your password. The same account signs you in to RedactPlus Home and RedactPlus Desktop.",
   submit: "Create account",
   busy: "Creating account…",
-  disabledNote: "Registration from this page isn’t open yet. Continue on the RedactPlus sign-in page below.",
-  organizationHint: "Your company, agency or team.",
+  /** Shown instead of the form when online registration is not switched on for this build. */
+  unavailableHeading: "Get started with RedactPlus",
+  unavailableLede: "Online registration is not open yet. Contact sales and we will set up your RedactPlus account, or sign in if you already have one.",
+  organizationHint: "Your company, agency or team. For your profile only.",
   passwordNote: "No password needed yet. You’ll choose one from the link in your email.",
+  consentPrefix: `I am ${trialFacts.minimumAge} or older and agree to the`,
+  consentError: `Confirm you are ${trialFacts.minimumAge} or older and agree to the Terms and Privacy Policy to continue.`,
+  turnstileLabel: "Security check",
+  turnstileError: "Complete the security check.",
+  turnstileUnavailable: "The security check could not load. Reload the page, or turn off an extension that blocks it.",
 } as const;
 
 export const registrationSuccessCopy = {
   heading: "Check your email",
-  /** Used when the backend reports it has handed the email to the mail server. */
-  sent: "Your registration has been received. We’ve sent you instructions to set up your RedactPlus password. Check your inbox and follow the secure link to continue.",
-  /** Used when the backend sends the email asynchronously. */
-  queued: "Your registration has been received. We’re sending you instructions to set up your RedactPlus password. Check your inbox and follow the secure link to continue.",
-  notArrived: "Nothing after a few minutes? Check your spam or junk folder.",
+  /** `accepted`: the backend created the trial and handed the set-up email to its mail server. */
+  accepted: "Your registration has been received. We’ve sent you a secure link to set your RedactPlus password. Check your inbox and follow it to continue.",
+  /** `resent`: this address had already registered and its trial is still open. */
+  resent: "You had already registered with this address, so we’ve sent the secure set-up link again. Check your inbox and follow it to continue.",
+  notArrived: "Nothing after a few minutes? Check your spam or junk folder. The link works for 72 hours.",
   trialHeading: "Your seven-day trial",
-  /**
-   * General wording. It promises no activation and no dates; those are shown only when the
-   * backend reports an active trial with an end date.
-   */
-  trialBody: `RedactPlus trials are temporary. A trial lasts ${trialLengthWords} and then ends automatically. You’ll see your trial status and its end date in RedactPlus Home once your account is set up.`,
-  trialActive: (endsAt: string) => `Your trial is active until ${endsAt}. It ends automatically after that.`,
+  trialBody: `Your ${trialLengthWords} start when you first sign in to RedactPlus Desktop, or ${trialFacts.startsAnywayAfterDays} days after registering if you haven’t by then. It includes ${trialFacts.totalCredits} cloud credits (${trialFacts.credits}) and ends automatically.`,
   returnLabel: "Return to website",
   resendLabel: "Resend instructions",
   resendBusy: "Sending…",
-  resendDone: "If the registration is still waiting for a password, new instructions are on their way.",
+  resendDone: "If this address has an open trial, the set-up email is on its way again.",
   demoNote: "Local demonstration: nothing was sent and no account was created.",
 } as const;
 
+/** `email_failed`: the backend registered the trial but could not send the set-up email. */
+export const registrationEmailFailedCopy = {
+  heading: "Your email didn’t go out",
+  body: "Your trial is registered, but we couldn’t send the set-up email just now. Send it again in a few minutes.",
+  resendLabel: "Send it again",
+} as const;
+
 /**
- * The realm's password policy, as configured in Admin-panel origin/main a5f16f8
+ * The realm's password policy, as configured in Admin-panel origin/main a5f16f8 (unchanged in 7026a19)
  * (the realm export's passwordPolicy). Keycloak enforces it; this copy only explains it.
  */
 export const passwordPolicy = {

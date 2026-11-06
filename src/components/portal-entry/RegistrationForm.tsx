@@ -1,19 +1,36 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { legalLinks, registrationCopy as copy, supportEmail, type RegistrationSubmission } from "@/content/onboarding";
-import { portalAuthHref } from "@/content/portal";
+import { legalLinks, registrationCopy as copy, registrationEmailFailedCopy, supportEmail, turnstileSiteKey, type RegistrationSubmission } from "@/content/onboarding";
+import Link from "next/link";
+import { demoHref as salesHref } from "@/content/navigation";
 import type { RegistrationAcceptedBody } from "@/lib/onboarding/contract";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/utils";
 import { RegistrationSuccess } from "./RegistrationSuccess";
+import { TurnstileField, type TurnstileHandle } from "./TurnstileField";
 import { REGISTRATION_LIMITS, validateRegistration, type RegistrationErrors, type RegistrationField, type RegistrationValues } from "./registration-validation";
 
 /** Outcomes the development-only design preview can simulate. */
-export type RegistrationPreviewOutcome = "accepted_queued" | "accepted_sent" | "accepted_active_trial" | "rate_limited" | "registration_unavailable" | "not_eligible" | "network";
+export type RegistrationPreviewOutcome =
+  | "accepted"
+  | "resent"
+  | "email_failed"
+  | "trial_used"
+  | "existing_customer"
+  | "too_many_from_location"
+  | "rate_limited"
+  | "registration_unavailable"
+  | "network";
 
-type Status = { kind: "idle" } | { kind: "submitting" } | { kind: "error"; message: ReactNode } | { kind: "accepted"; body: RegistrationAcceptedBody; email: string };
+type Status =
+  | { kind: "idle" }
+  | { kind: "submitting" }
+  | { kind: "error"; message: ReactNode }
+  | { kind: "accepted"; body: RegistrationAcceptedBody; email: string }
+  // The backend registered the trial but could not send the set-up email: not a success.
+  | { kind: "email_failed"; email: string; resendAvailable: boolean };
 
 const order: RegistrationField[] = ["name", "email", "organization", "consent"];
 
@@ -27,7 +44,7 @@ const order: RegistrationField[] = ["name", "email", "organization", "consent"];
 export function RegistrationForm({
   submission,
   portalOrigin,
-  previewOutcome = "accepted_queued",
+  previewOutcome = "accepted",
   focusHeading = false,
   onSignIn,
   onClose,
@@ -45,6 +62,11 @@ export function RegistrationForm({
   const [errors, setErrors] = useState<RegistrationErrors>({});
   const [touched, setTouched] = useState<Partial<Record<RegistrationField, boolean>>>({});
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  // The security check: shown only for live registration built with a site key.
+  const turnstileEnabled = submission === "live" && Boolean(turnstileSiteKey);
+  const turnstile = useRef<TurnstileHandle>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileError, setTurnstileError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const baseId = useId();
@@ -80,6 +102,10 @@ export function RegistrationForm({
     setErrors(found);
     setTouched({ name: true, email: true, organization: true, consent: true });
     if (focusFirstInvalid(found)) return;
+    if (turnstileEnabled && !turnstileToken) {
+      setTurnstileError(copy.turnstileError);
+      return;
+    }
     setStatus({ kind: "submitting" });
     const email = values.email.trim();
 
@@ -94,24 +120,43 @@ export function RegistrationForm({
         method: "POST",
         credentials: "same-origin",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name: values.name, email, organization: values.organization, consent: values.consent, website: honeypot }),
+        body: JSON.stringify({
+          name: values.name,
+          email,
+          organization: values.organization,
+          consent: values.consent,
+          website: honeypot,
+          ...(turnstileEnabled && turnstileToken ? { turnstileToken } : {}),
+        }),
       });
     } catch {
+      turnstile.current?.reset();
       return setStatus({ kind: "error", message: errorMessage("network") });
     }
-    const body = (await response.json().catch(() => ({}))) as Partial<RegistrationAcceptedBody> & { error?: string; fields?: RegistrationErrors };
+    // A Turnstile token is good for one verification, whatever the answer was.
+    turnstile.current?.reset();
+    const body = (await response.json().catch(() => ({}))) as Partial<RegistrationAcceptedBody> & {
+      error?: string;
+      fields?: RegistrationErrors & { turnstile?: string };
+      resendAvailable?: boolean;
+    };
 
-    if (response.status === 202 && body.status === "accepted" && (body.setupEmail === "queued" || body.setupEmail === "sent")) {
+    if (response.status === 202 && (body.status === "accepted" || body.status === "resent")) {
       return setStatus({
         kind: "accepted",
         email,
-        body: { status: "accepted", setupEmail: body.setupEmail, resendAvailable: body.resendAvailable === true, trial: body.trial ?? null, ...(body.demo ? { demo: true } : {}) },
+        body: { status: body.status, resendAvailable: body.resendAvailable === true, ...(body.demo ? { demo: true } : {}) },
       });
     }
+    if (body.error === "email_failed") {
+      return setStatus({ kind: "email_failed", email, resendAvailable: body.resendAvailable === true });
+    }
     if (body.error === "invalid_input" && body.fields && Object.keys(body.fields).length) {
-      setErrors(body.fields);
+      const { turnstile: turnstileMessage, ...fieldErrors } = body.fields;
+      setErrors(fieldErrors);
+      setTurnstileError(turnstileMessage ?? null);
       setStatus({ kind: "idle" });
-      focusFirstInvalid(body.fields);
+      focusFirstInvalid(fieldErrors);
       return;
     }
     setStatus({ kind: "error", message: errorMessage(body.error, onSignIn) });
@@ -139,6 +184,42 @@ export function RegistrationForm({
   if (status.kind === "accepted") {
     return <RegistrationSuccess email={status.email} accepted={status.body} onClose={onClose} resend={() => resend(status.email)} />;
   }
+  if (status.kind === "email_failed") {
+    return (
+      <RegistrationSuccess
+        email={status.email}
+        accepted={{ status: "accepted", resendAvailable: status.resendAvailable }}
+        emailFailed={registrationEmailFailedCopy}
+        onClose={onClose}
+        resend={() => resend(status.email)}
+      />
+    );
+  }
+
+  // Online registration is not switched on for this build. Rather than a greyed-out form, or a
+  // redirect to a sign-in page that cannot register anyone, offer the two routes that work.
+  if (disabled) {
+    return (
+      <div>
+        <h2 ref={headingRef} tabIndex={-1} className="pr-10 font-heading text-[1.375rem] font-semibold leading-tight tracking-[-0.025em] text-ink focus:outline-none">
+          {copy.unavailableHeading}
+        </h2>
+        <p className="mt-2 text-body text-ink-muted">{copy.unavailableLede}</p>
+        <Button variant="primary" size="md" className="mt-5 w-full" asChild>
+          <Link href={salesHref} onClick={onClose}>
+            Contact Sales
+            <Icon name="arrow" size={16} />
+          </Link>
+        </Button>
+        <p className="mt-4 text-center text-body-sm text-ink-muted">
+          Already have an account?{" "}
+          <button type="button" onClick={onSignIn} className="font-semibold text-accent-ink hover:text-accent-ink-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool">
+            Sign in
+          </button>
+        </p>
+      </div>
+    );
+  }
 
   const inputClass = (field: RegistrationField) =>
     cn(
@@ -163,13 +244,7 @@ export function RegistrationForm({
       </h2>
       <p className="mt-2 text-body text-ink-muted">{copy.lede}</p>
 
-      {disabled ? (
-        <p id={id("disabled-note")} role="note" className="mt-4 rounded-xl border border-border-subtle bg-surface-raised px-3.5 py-2.5 text-body-sm text-ink-muted">
-          {copy.disabledNote}
-        </p>
-      ) : null}
-
-      <form ref={formRef} noValidate onSubmit={submit} aria-busy={busy} className="mt-5 space-y-4" aria-describedby={disabled ? id("disabled-note") : undefined}>
+      <form ref={formRef} noValidate onSubmit={submit} aria-busy={busy} className="mt-5 space-y-4">
         <div>
           <label htmlFor={id("name")} className="mb-1.5 block text-body-sm font-medium text-ink">
             Full name
@@ -267,7 +342,7 @@ export function RegistrationForm({
               )}
             />
             <label htmlFor={id("consent")} className="text-body-sm text-ink">
-              I agree to the{" "}
+              {copy.consentPrefix}{" "}
               <a href={legalLinks.terms} target="_blank" rel="noopener noreferrer" className="font-medium text-accent-ink underline underline-offset-4 hover:text-accent-ink-hover">
                 Terms of Use
               </a>{" "}
@@ -280,6 +355,30 @@ export function RegistrationForm({
           </div>
           {fieldError("consent")}
         </div>
+
+        {turnstileEnabled ? (
+          <div>
+            <p id={id("turnstile-label")} className="mb-1.5 text-body-sm font-medium text-ink">
+              {copy.turnstileLabel}
+            </p>
+            <TurnstileField
+              ref={turnstile}
+              siteKey={turnstileSiteKey}
+              describedBy={turnstileError ? id("turnstile-error") : id("turnstile-label")}
+              onToken={(token) => {
+                setTurnstileToken(token);
+                if (token) setTurnstileError(null);
+              }}
+              onUnavailable={() => setTurnstileError(copy.turnstileUnavailable)}
+            />
+            {turnstileError ? (
+              <p id={id("turnstile-error")} role="alert" className="mt-1.5 flex items-start gap-1.5 text-body-sm text-[#b42318]">
+                <Icon name="info" size={14} className="mt-[0.2rem]" />
+                {turnstileError}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <p className="flex items-start gap-2 text-caption text-ink-muted">
           <Icon name="lock" size={14} className="mt-0.5 shrink-0" />
@@ -295,7 +394,7 @@ export function RegistrationForm({
           ) : null}
         </div>
 
-        <Button type="submit" variant="primary" size="md" className="w-full" disabled={busy || disabled} aria-describedby={disabled ? id("disabled-note") : undefined}>
+        <Button type="submit" variant="primary" size="md" className="w-full" disabled={busy || disabled}>
           {busy ? (
             <>
               <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-on-accent/30 border-t-on-accent" />
@@ -314,82 +413,58 @@ export function RegistrationForm({
         </button>
       </p>
 
-      {disabled ? (
-        <div className="mt-5 border-t border-border-subtle pt-4">
-          <Button variant="ghost" size="md" className="w-full" asChild>
-            <a href={portalAuthHref(portalOrigin, "register")} onClick={onClose}>
-              Continue on RedactPlus sign-in
-              <Icon name="arrow" size={16} />
-            </a>
-          </Button>
-          <p className="mt-2 text-center text-caption text-ink-muted">Opens the secure RedactPlus sign-in page, then returns you to RedactPlus Home.</p>
-        </div>
-      ) : null}
     </div>
   );
 }
 
 function errorMessage(code: string | undefined, onSignIn?: () => void): ReactNode {
+  const link = "font-semibold text-accent-ink underline-offset-4 hover:underline";
+  const support = (
+    <a className={link} href={`mailto:${supportEmail}`}>
+      {supportEmail}
+    </a>
+  );
   switch (code) {
     case "network":
       return "We couldn’t reach RedactPlus. Check your connection and try again.";
     case "rate_limited":
       return "Too many attempts from this network. Please wait a few minutes and try again.";
-    case "registration_unavailable":
+    case "too_many_from_location":
+      return <>Too many trials have been started from this location. Email {support} and we’ll help.</>;
+    case "trial_used":
       return (
         <>
-          Registration isn’t available right now, and nothing was created. Please try again later or email{" "}
-          <a className="font-semibold text-accent-ink underline-offset-4 hover:underline" href={`mailto:${supportEmail}`}>
-            {supportEmail}
-          </a>
-          .
+          This email address has already used its RedactPlus trial. Email {support} or{" "}
+          <a className={link} href={salesHref}>
+            contact sales
+          </a>{" "}
+          to talk about a licence.
         </>
       );
-    case "registration_closed":
+    case "existing_customer":
       return (
         <>
-          New registrations are paused.{" "}
-          <a className="font-semibold text-accent-ink underline-offset-4 hover:underline" href="/contact">
-            Contact sales
-          </a>{" "}
-          for access.
-        </>
-      );
-    case "not_eligible":
-      return (
-        <>
-          We can’t start a trial with these details. Email{" "}
-          <a className="font-semibold text-accent-ink underline-offset-4 hover:underline" href={`mailto:${supportEmail}`}>
-            {supportEmail}
-          </a>{" "}
-          and we’ll help.
+          This email address already has a RedactPlus account.{" "}
           {onSignIn ? (
-            <>
-              {" "}
-              Already registered?{" "}
-              <button type="button" className="font-semibold text-accent-ink underline-offset-4 hover:underline" onClick={onSignIn}>
-                Sign in
-              </button>
-            </>
-          ) : null}
+            <button type="button" className={link} onClick={onSignIn}>
+              Sign in instead
+            </button>
+          ) : (
+            "Sign in instead."
+          )}
         </>
       );
+    case "registration_unavailable":
+      return <>Trials can’t be started right now, and nothing was created. Please try again later or email {support}.</>;
     default:
       return "Something went wrong and your registration wasn’t confirmed. Please try again.";
   }
 }
 
 function previewResult(outcome: RegistrationPreviewOutcome, email: string): Status {
-  const accepted = (body: Partial<RegistrationAcceptedBody>): Status => ({
-    kind: "accepted",
-    email,
-    body: { status: "accepted", setupEmail: "queued", resendAvailable: true, trial: { status: "pending", endsAt: null }, demo: true, ...body },
-  });
-  if (outcome === "accepted_queued") return accepted({});
-  if (outcome === "accepted_sent") return accepted({ setupEmail: "sent", resendAvailable: false });
-  if (outcome === "accepted_active_trial") {
-    // Illustrative only: seven days from now, as the backend would report it.
-    return accepted({ setupEmail: "sent", trial: { status: "active", endsAt: new Date(Date.now() + 7 * 86_400_000).toISOString() } });
+  if (outcome === "accepted" || outcome === "resent") {
+    return { kind: "accepted", email, body: { status: outcome, resendAvailable: true, demo: true } };
   }
+  if (outcome === "email_failed") return { kind: "email_failed", email, resendAvailable: true };
   return { kind: "error", message: errorMessage(outcome) };
 }

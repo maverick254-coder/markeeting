@@ -71,7 +71,7 @@ export function credentialSubmission(raw: string | undefined): CredentialSubmiss
   return raw?.trim() === "enabled" ? "live" : "disabled";
 }
 
-/** Null until the portal is configured; the header then keeps its approved "Request a Demo". */
+/** Null until the portal is configured; Download and Get Started buttons then fall back to "Contact Sales". */
 const configuredPortalOrigin = resolvePortalOrigin(process.env.NEXT_PUBLIC_PORTAL_URL);
 export const portalEntry: PortalEntry | null = configuredPortalOrigin
   ? {

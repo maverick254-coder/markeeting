@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
  * Route tests against the built portal (`npm run build` first). Starts:
- *   - the development identity provider (dev/mock-idp) on 127.0.0.1:3298;
+ *   - the development identity provider (dev/mock-idp) on 127.0.0.1:3298, as a public client
+ *     like production's redactplus-portal (no secret, PKCE);
+ *   - the development stand-in for the Control Center's GET /portal/me on 127.0.0.1:3295;
  *   - portal "configured"   on localhost:3299, signed in through that provider;
  *   - portal "unconfigured" on localhost:3297, with no identity provider settings;
  *   - portal "misconfigured" on localhost:3296: production mode with an http origin.
@@ -20,7 +22,6 @@ if (!existsSync(path.join(root, ".next", "BUILD_ID"))) {
 }
 
 const nextBin = path.join(root, "node_modules", "next", "dist", "bin", "next");
-const clientSecret = randomBytes(24).toString("base64url");
 const children = [];
 
 function start(name, command, args, env) {
@@ -46,7 +47,7 @@ async function waitFor(url, accept = (status) => status < 500 || status === 503)
 
 // A server already listening on a test port would silently answer in place of the one started
 // here (for example a local review instance with sample data), so refuse to run.
-for (const port of [3296, 3297, 3298, 3299]) {
+for (const port of [3295, 3296, 3297, 3298, 3299]) {
   const inUse = await fetch(`http://127.0.0.1:${port}/`, { signal: AbortSignal.timeout(1000) }).then(() => true, () => false);
   if (inUse) {
     console.error(`route tests: port ${port} is already in use. Stop the server on it and run again.`);
@@ -63,8 +64,13 @@ const shared = {
 start("mock-idp", process.execPath, ["dev/mock-idp/server.mjs"], {
   NODE_ENV: "test",
   MOCK_IDP_PORT: "3298",
-  MOCK_IDP_CLIENT_SECRET: clientSecret,
+  MOCK_IDP_PUBLIC_CLIENT: "true",
   MOCK_IDP_REDIRECT_ORIGIN: "http://localhost:3299",
+});
+start("mock-customer-api", process.execPath, ["dev/mock-customer-api/server.mjs"], {
+  NODE_ENV: "test",
+  MOCK_API_PORT: "3295",
+  MOCK_API_CLIENT_ID: "redactplus-portal-dev",
 });
 start("portal-configured", process.execPath, [nextBin, "start", "-p", "3299"], {
   ...shared,
@@ -73,7 +79,7 @@ start("portal-configured", process.execPath, [nextBin, "start", "-p", "3299"], {
   PORTAL_SESSION_STORE: "memory",
   PORTAL_OIDC_ISSUER: "http://127.0.0.1:3298",
   PORTAL_OIDC_CLIENT_ID: "redactplus-portal-dev",
-  PORTAL_OIDC_CLIENT_SECRET: clientSecret,
+  PORTAL_CUSTOMER_API_URL: "http://127.0.0.1:3295",
   PORTAL_DOWNLOAD_ALLOWED_HOSTS: "downloads.example.test",
   PORTAL_RELEASES_MANIFEST_PATH: path.join(root, "tests", "fixtures", "releases.fixture.json"),
   PORTAL_SUPPORT_EMAIL: "support@example.test",
@@ -100,6 +106,7 @@ let code = 1;
 try {
   await Promise.all([
     waitFor("http://127.0.0.1:3298/.well-known/openid-configuration"),
+    waitFor("http://127.0.0.1:3295/health"),
     waitFor("http://localhost:3299/api/health"),
     waitFor("http://localhost:3297/api/health"),
     waitFor("http://localhost:3296/api/health"),
@@ -116,6 +123,7 @@ try {
       UNCONFIGURED_PORTAL_URL: "http://localhost:3297",
       MISCONFIGURED_PORTAL_URL: "http://localhost:3296",
       IDP_URL: "http://127.0.0.1:3298",
+      CUSTOMER_API_URL: "http://127.0.0.1:3295",
     },
   });
   code = await new Promise((resolve) => tests.on("exit", (exitCode) => resolve(exitCode ?? 1)));

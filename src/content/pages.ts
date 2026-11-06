@@ -44,7 +44,7 @@ export const industriesHub = {
     {
       question: "Why isn't my industry listed?",
       answer:
-        "We publish an industry guide only when we can describe its workflows accurately. If your sector is missing, the feature pages explain each workflow, and a demo can test it against your own representative files.",
+        "We publish an industry guide only when we can describe its workflows accurately. If your sector is missing, the feature pages explain each workflow, and our team can check it against your own representative files.",
     },
   ] satisfies MarketingFaq[],
 } satisfies SupportingPageContent & Record<string, unknown>;
@@ -166,7 +166,7 @@ export const howItWorksPage = {
     {
       question: "Does every installation have the same capabilities?",
       answer:
-        "No. OCR, office conversion, audio handling, and detection depend on the tooling and engines configured. A demo with representative files confirms what your setup supports.",
+        "No. OCR, office conversion, audio handling, and detection depend on the tooling and engines configured. Testing with representative files confirms what your setup supports.",
     },
   ] satisfies MarketingFaq[],
 } satisfies SupportingPageContent & Record<string, unknown>;
@@ -244,23 +244,23 @@ export const whyRedactPlusPage = {
     {
       question: "How should we evaluate RedactPlus?",
       answer:
-        "With representative files from your own workflow. A guided demo confirms format support, detection behaviour, and the output inspection your release process needs.",
+        "With representative files from your own workflow. Testing with them confirms format support, detection behaviour, and the output inspection your release process needs.",
     },
   ] satisfies MarketingFaq[],
 } satisfies SupportingPageContent & Record<string, unknown>;
 
 export const contactPage = {
   eyebrow: "Contact",
-  h1: "Contact RedactPlus or request a demo.",
+  h1: "Contact RedactPlus.",
   summary:
-    "Tell us which formats you redact, who reviews them, and where the output goes. We will use that to plan a demo around your own workflow.",
+    "Tell us which formats you redact, who reviews them, and where the output goes. We will reply by email with answers for your own workflow.",
   seo: {
-    title: "Contact RedactPlus or Request a Redaction Demo",
+    title: "Contact RedactPlus About Document and Audio Redaction",
     description:
-      "Request a RedactPlus demo or contact the team about document and audio redaction workflows, supported formats, pricing, and evaluation with representative files.",
+      "Contact the RedactPlus team about document and audio redaction workflows, supported formats, pricing, licensing, and evaluation with representative files.",
     canonicalPath: "/contact",
-    primaryIntent: "redaction software demo",
-    secondaryThemes: ["contact RedactPlus", "redaction software evaluation", "book a redaction demo"],
+    primaryIntent: "contact redaction software team",
+    secondaryThemes: ["contact RedactPlus", "redaction software evaluation", "redaction software enquiry"],
   },
   lastReviewed: "2026-10-26",
   include: [
@@ -271,27 +271,28 @@ export const contactPage = {
 } satisfies SupportingPageContent & Record<string, unknown>;
 
 /**
- * /book-a-demo: the destination of every primary demo call to action. Submitting the
- * form sends an enquiry; the copy never implies that a meeting has been scheduled.
+ * The sales enquiry page (path /book-a-demo, kept so existing links and the pricing ?package=
+ * preselection keep working). Submitting the form sends an enquiry; the copy never implies that
+ * a meeting has been scheduled or that anything was purchased.
  */
 export const bookDemoPage = {
-  eyebrow: "Book a demo",
-  h1: "See RedactPlus on your own redaction workflow.",
+  eyebrow: "Contact sales",
+  h1: "Talk to sales about RedactPlus.",
   summary:
-    "Tell us about the documents or recordings you need to redact. We reply by email to arrange a demo around your formats, your review steps, and the package you are considering.",
+    "Tell us about the documents or recordings you need to redact and the package you are considering. We reply by email with answers on packages, licensing and next steps.",
   seo: {
-    title: "Book a RedactPlus Demo for Document and Audio Redaction",
+    title: "Contact RedactPlus Sales for Document and Audio Redaction",
     description:
-      "Request a guided RedactPlus demo. Describe your document or media workflow, the package you are considering, and how many licenses you need, and we will reply by email.",
+      "Contact RedactPlus sales. Describe your document or media workflow, the package you are considering, and how many licenses you need, and we will reply by email.",
     canonicalPath: "/book-a-demo",
-    primaryIntent: "book a redaction software demo",
-    secondaryThemes: ["redaction software demo", "document redaction demo", "audio redaction demo"],
+    primaryIntent: "redaction software sales enquiry",
+    secondaryThemes: ["redaction software pricing", "document redaction licensing", "audio redaction licensing"],
   },
   lastReviewed: "2026-10-29",
   points: [
-    "A walkthrough of document or media redaction, matched to the package you are considering",
-    "Time for licensing questions: packages, license counts, and administration in the Control Center",
+    "Answers on packages, license counts, and administration in the Control Center",
+    "A walkthrough of document or media redaction on request, matched to your package",
     "No sensitive files needed. Describe your records in general terms",
   ],
-  nextStep: "We reply by email to agree a time. Sending the form does not schedule a meeting on its own.",
+  nextStep: "We reply by email. Sending the form does not book a meeting or purchase anything.",
 } satisfies SupportingPageContent & Record<string, unknown>;

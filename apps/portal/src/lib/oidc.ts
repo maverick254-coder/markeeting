@@ -4,8 +4,9 @@ import type { SessionIdentity, SessionTokens } from "./session/types";
 
 /**
  * The portal as an OpenID Connect relying party of the shared RedactPlus identity provider
- * (Keycloak). Authorization Code flow with PKCE (S256), a state and a nonce per attempt, and a
- * confidential client: the code is exchanged server side, so no token reaches the browser.
+ * (Keycloak). Authorization Code flow with PKCE (S256), a state and a nonce per attempt. The code
+ * is exchanged server side, so no token reaches the browser. The production client is public (no
+ * secret; PKCE binds the exchange); a confidential client is still supported if one is configured.
  *
  * Passwords are entered only on the identity provider's own pages. Nothing here receives,
  * stores or forwards one.
@@ -21,7 +22,7 @@ export async function oidcConfiguration(settings: OidcSettings): Promise<client.
     settings.issuer,
     settings.clientId,
     undefined,
-    client.ClientSecretPost(settings.clientSecret),
+    settings.clientSecret ? client.ClientSecretPost(settings.clientSecret) : client.None(),
     {
       timeout: 5,
       // Reachable only for an http://localhost issuer in a loopback non-production run

@@ -1,0 +1,21 @@
+#!/bin/bash
+# Test stand-in for curl, used only by tests/release/redactplus-deploy.test.mjs.
+# Answers for whichever commit the stand-in docker says the service is running.
+state="$STUB_STATE"
+url="${@: -1}"
+code=false
+for a in "$@"; do [ "$a" = '%{http_code}' ] && code=true; done
+port=$(echo "$url" | sed -E 's|.*:([0-9]+)/.*|\1|')
+svc=redactplus-portal; [ "$port" = 6095 ] && svc=redactplus-landing
+sha=$(cat "$state/running-$svc" 2>/dev/null || echo none)
+[ -e "$state/wrong-commit-$sha" ] && sha=ffffffffffffffffffffffffffffffffffffffff
+
+if $code; then
+  case "$url" in
+    */download) printf 307 ;;
+    */api/registration/resend) printf 503 ;;
+    *) printf 200 ;;
+  esac
+else
+  printf '{"status":"ready","commitSha":"%s","authentication":"configured","sessionStore":"postgres"}' "$sha"
+fi

@@ -1,8 +1,18 @@
+# Continuous integration for the marketing site (repository root) and the customer portal
+# (apps/portal). Runs on every pull request into main, every push to main (so main shows its own
+# checks), the merge queue if it is enabled, and by hand.
+#
+# It needs no secrets and has read-only permissions: nothing here can reach production, the image
+# registry or the server. Images are built to prove they build; they are never pushed. Publishing
+# and deployment are separate, manually approved workflows (docs/ci/README.md).
 name: CI
 
 on:
   pull_request:
-    branches: [master, feat/saferedact-publishing-and-comments]
+    branches: [main]
+  push:
+    branches: [main]
+  merge_group:
   workflow_dispatch:
 
 permissions:
@@ -10,15 +20,16 @@ permissions:
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  quality:
-    name: quality / verify
+  marketing:
+    name: marketing / verify
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     env:
       CMS_ENABLED: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - name: Check out repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -34,30 +45,41 @@ jobs:
             package-lock.json
             services/cms-oauth-broker/package-lock.json
       - name: Install locked dependencies
-        run: npm ci
-      - name: Install OAuth broker locked dependencies
-        run: npm --prefix services/cms-oauth-broker ci
+        run: |
+          npm ci
+          npm --prefix services/cms-oauth-broker ci
       - name: TypeScript
         run: npm run typecheck
       - name: ESLint
         run: npm run lint
-      - name: Production build
+      # Default settings only: registration off, no portal URL, no lead delivery. The route
+      # suite serves this build, so it must be the production default.
+      - name: Production build (content is validated first, by prebuild)
         run: npm run build
-      - name: Complete regression suite
+      - name: Regression suites (static, content, routes, OAuth broker)
         run: npm test
-      - name: Changed-line whitespace validation
+      - name: Changed-line whitespace
         shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
         run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            git diff --check "${{ github.event.pull_request.base.sha }}...HEAD"
-          else
-            git diff --check HEAD^ HEAD
-          fi
+          case "$EVENT" in
+            pull_request) git diff --check "$BASE_SHA...HEAD" ;;
+            push) [[ "$BEFORE_SHA" =~ ^0+$ ]] || git diff --check "$BEFORE_SHA" HEAD ;;
+            *) git diff --check HEAD^ HEAD ;;
+          esac
 
-  production-audit:
-    name: security / production-audit
+  portal:
+    name: portal / verify
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/portal
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - name: Check out repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -68,13 +90,97 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Production dependency audit
-        run: |
-          npm audit --omit=dev --audit-level=low
-          npm --prefix services/cms-oauth-broker audit --omit=dev --audit-level=low
+          cache-dependency-path: apps/portal/package-lock.json
+      - name: Install locked dependencies
+        run: npm ci
+      - name: TypeScript
+        run: npm run typecheck
+      - name: ESLint
+        run: npm run lint
+      - name: Production build (validates content/releases.json first)
+        run: npm run build
+      # Route tests start the development identity provider (public-client mode) and the
+      # /portal/me stand-in on loopback; both refuse NODE_ENV=production.
+      - name: Unit and route tests
+        run: npm test
 
-  tracked-secret-policy:
-    name: security / tracked-secret-policy
+  images:
+    name: images / build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Node.js (smoke test)
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22
+      # Builds both production images exactly as releases do, and pushes nothing. The marketing
+      # script exports the commit with git archive and checks the runtime tree inside the image.
+      - name: Marketing image (registration off, as production defaults)
+        run: bash deployment/redactplus/scripts/build-image.sh "$GITHUB_SHA"
+      # The documented smoke test (deployment/redactplus/README.md): the read-only container on
+      # loopback with the placeholder app.env, then GET/HEAD checks only.
+      - name: Marketing image smoke test
+        run: |
+          image="registry.safaridesk.io/safari/redactplus-landing:${GITHUB_SHA}"
+          docker run --rm -d --name redactplus-smoke -p 127.0.0.1:3095:3000 --read-only \
+            --tmpfs /tmp --tmpfs /app/.next/cache:mode=1777 --tmpfs /app/.next/server/route-cache:mode=1777 \
+            --env-file deployment/redactplus/app.env.example "$image"
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:3095/api/health >/dev/null 2>&1 && break; sleep 2; done
+          EXPECT_CANONICAL_ORIGIN=https://redactplus.io node deployment/redactplus/scripts/smoke-test.mjs http://127.0.0.1:3095 "$GITHUB_SHA"
+      - name: Stop the smoke-test container
+        if: always()
+        run: docker rm -f redactplus-smoke >/dev/null 2>&1 || true
+      - name: Portal image
+        run: |
+          docker build --platform linux/amd64 \
+            -f deployment/portal/Dockerfile \
+            --build-arg GIT_COMMIT="$GITHUB_SHA" \
+            -t "registry.safaridesk.io/safari/redactplus-portal:${GITHUB_SHA}" apps/portal
+
+  secrets:
+    name: security / secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22
+      - name: Repository secret-pattern policy (tracked files)
+        run: npm run check:secrets
+      # gitleaks, pinned by version AND checksum. --redact keeps any match out of the log.
+      - name: Install gitleaks 8.30.1
+        run: |
+          curl -fsSL -o /tmp/gitleaks.tgz \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/gitleaks.tgz" | sha256sum -c -
+          tar -xzf /tmp/gitleaks.tgz -C /tmp gitleaks
+      - name: Scan the commits this change adds
+        shell: bash
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          case "$EVENT" in
+            pull_request) range="$BASE_SHA..HEAD" ;;
+            push) if [[ "$BEFORE_SHA" =~ ^0+$ ]]; then range="HEAD~1..HEAD"; else range="$BEFORE_SHA..HEAD"; fi ;;
+            *) range="HEAD~1..HEAD" ;;
+          esac
+          /tmp/gitleaks git --redact --no-banner --exit-code 1 --log-opts="$range" .
+
+  dependencies:
+    name: security / dependencies
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -86,5 +192,17 @@ jobs:
         uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: 22
-      - name: Deterministic secret-pattern check
-        run: npm run check:secrets
+      # Runtime dependencies (what ships in the images): any advisory fails.
+      - name: Production dependency audit
+        run: |
+          npm audit --omit=dev --audit-level=low
+          npm --prefix apps/portal audit --omit=dev --audit-level=low
+          npm --prefix services/cms-oauth-broker audit --omit=dev --audit-level=low
+      # Build and test tooling: high or critical fails; moderate is reported only. On 6 Nov 2026
+      # there were moderate advisories in ESLint's TypeScript plugins (minimatch) and Tailwind's
+      # postcss-selector-parser, none in runtime code.
+      - name: Full dependency audit (development tooling)
+        run: |
+          npm audit --audit-level=high
+          npm --prefix apps/portal audit --audit-level=high
+          npm --prefix services/cms-oauth-broker audit --audit-level=high

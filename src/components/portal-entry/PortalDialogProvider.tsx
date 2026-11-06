@@ -10,6 +10,12 @@ import { lockPageScroll, wrapTabFocus } from "./scroll-lock";
 interface PortalDialogApi {
   /** Opens the one shared dialog. `opener` regains focus when it closes, if still on the page. */
   open: (opener?: HTMLElement | null) => void;
+  /**
+   * Whether new customers can create an account in the dialog. False while online registration
+   * is off (the default): the dialog is then sign-in only, and new-customer actions such as
+   * Get Started keep their sales link (see PortalCta's `newCustomer`).
+   */
+  registrationOpen: boolean;
 }
 
 const PortalDialogContext = createContext<PortalDialogApi | null>(null);
@@ -22,7 +28,7 @@ export function usePortalDialog() {
 /**
  * The single Download dialog for the whole marketing site, mounted once in the root layout.
  * Every Download trigger (header, mobile menu, homepage hero) opens this same dialog with its
- * account form (AuthPanel): create an account, sign in, or reset a password.
+ * account form (AuthPanel): sign in, plus create an account once online registration is open.
  *
  * A native <dialog> opened with showModal(): the browser traps focus inside it, makes the page
  * behind it inert and closes it on Escape. While it is open the page cannot scroll (wheel, touch,
@@ -51,7 +57,8 @@ export function PortalDialogProvider({ entry, children }: { entry: PortalEntry |
     window.setTimeout(() => dialog.querySelector<HTMLInputElement>("input:not([type=hidden])")?.focus(), 0);
   }, []);
   const close = useCallback(() => dialogRef.current?.close(), []);
-  const api = useMemo(() => ({ open }), [open]);
+  const registrationOpen = Boolean(entry && entry.registration !== "disabled");
+  const api = useMemo(() => ({ open, registrationOpen }), [open, registrationOpen]);
 
   if (!entry) return <>{children}</>;
 

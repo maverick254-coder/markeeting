@@ -36,6 +36,7 @@ export function Footer({ homePage = false, invitation = true }: { homePage?: boo
               See how RedactPlus helps your team review and redact sensitive information in documents and media.
             </p>
             <PortalCta
+              newCustomer
               label="Get Started"
               fallbackHref={demoHref}
               fallbackLabel="Contact Sales"

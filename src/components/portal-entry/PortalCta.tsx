@@ -10,7 +10,9 @@ import { usePortalDialog } from "./PortalDialogProvider";
  *
  * - portal configured: a button that opens the shared Download dialog;
  * - portal not configured: the original link and label it replaces, unchanged, so a build
- *   without NEXT_PUBLIC_PORTAL_URL looks and behaves exactly as before.
+ *   without NEXT_PUBLIC_PORTAL_URL looks and behaves exactly as before;
+ * - `newCustomer` (Get Started) while online registration is closed: the same original link,
+ *   because the dialog then only signs existing customers in.
  */
 export function PortalCta({
   label,
@@ -19,9 +21,12 @@ export function PortalCta({
   className,
   ariaLabel,
   fallbackAriaLabel,
+  newCustomer = false,
   onBeforeOpen,
   children,
 }: {
+  /** An action for people without an account. It opens the dialog only while registration is open. */
+  newCustomer?: boolean;
   /** Accessible names when the visible label alone is ambiguous (e.g. one per pricing card). */
   ariaLabel?: string;
   fallbackAriaLabel?: string;
@@ -36,7 +41,7 @@ export function PortalCta({
 }) {
   const dialog = usePortalDialog();
 
-  if (!dialog) {
+  if (!dialog || (newCustomer && !dialog.registrationOpen)) {
     return (
       <Link href={fallbackHref} className={className} onClick={onBeforeOpen} aria-label={fallbackAriaLabel}>
         {fallbackLabel}

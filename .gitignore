@@ -73,3 +73,9 @@ coverage/
 # (local paths, file names). It is never tracked: only the masked masters in derived/
 # are committed. Point PRODUCT_SCREENSHOTS_SOURCE elsewhere to read them in place.
 assets/product-screenshots/source/
+
+# Local SMTP capture output (scripts/leads/smtp-capture.mjs): test messages and a throwaway key
+.smtp-capture/
+
+# Security findings with exploitable details: never commit
+*.private.md

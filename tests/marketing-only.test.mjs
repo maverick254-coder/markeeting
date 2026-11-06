@@ -73,7 +73,7 @@ test("rendered homepage exposes only marketing conversion destinations", async (
 
   assert.match(html, /href="\/book-a-demo"/);
   assert.match(html, /href="#services"/);
-  assert.match(html, /href="mailto:support@saferedact\.io"/);
+  assert.match(html, /href="mailto:support@redactplus.io"/);
   assert.doesNotMatch(html, /href="[^"]*(?:download|installer|login|portal|dashboard)[^"]*"/i);
   assert.doesNotMatch(html, /Download SafeRedact|Download for Windows/i);
 });
@@ -84,7 +84,7 @@ test("the demo anchor lands on the footer invitation, which leads to /book-a-dem
   const html = await response.text();
 
   const invitation = html.match(/<section id="demo-enquiry"[^>]*aria-labelledby="footer-invitation-heading"[\s\S]*?<\/section>/);
-  assert.ok(invitation, "the footer invitation should carry the demo anchor");
+  assert.ok(invitation, "the footer invitation should carry the enquiry anchor");
   assert.match(invitation[0], /Protect what matters\.[\s\S]*Share with confidence\./);
   assert.equal((invitation[0].match(/<a /g) ?? []).length, 1);
   assert.match(invitation[0], /href="\/book-a-demo"/);

@@ -15,22 +15,22 @@ export interface SearchResult {
 
 export const MAX_QUERY_LENGTH = 100;
 
+const forumSection: SearchResult = { kind: "section", title: "Forum", href: "/forum", excerpt: "Community discussions, categories and pinned announcements." };
+
 const sections: readonly SearchResult[] = [
   { kind: "section", title: "Download RedactPlus Desktop", href: "/download", excerpt: "The current Windows installer, its size and its release notes." },
   { kind: "section", title: "Release notes", href: "/release-notes", excerpt: "What changed in each RedactPlus Desktop release." },
-  { kind: "section", title: "Forum", href: "/forum", excerpt: "Community discussions, categories and pinned announcements." },
-  { kind: "section", title: "Documentation", href: "/docs", excerpt: "Product documentation: installation, activation, documents, audio and video, exporting, troubleshooting." },
-  { kind: "section", title: "Tutorials", href: "/docs#tutorials", excerpt: "Step-by-step guides for common redaction workflows." },
-  { kind: "section", title: "News", href: "/news", excerpt: "Product updates from the RedactPlus team." },
-  { kind: "section", title: "Announcements", href: "/news#announcements", excerpt: "Staff announcements about releases and service changes." },
-  { kind: "section", title: "Support", href: "/support", excerpt: "How to get help with installation, activation and licensing." },
+  { kind: "section", title: "Getting started", href: "/docs", excerpt: "Install RedactPlus Desktop, sign in with your account, and check system requirements." },
+  { kind: "section", title: "News", href: "/news", excerpt: "Product updates and announcements from the RedactPlus team." },
+  { kind: "section", title: "Support", href: "/support", excerpt: "How to get help with installation, sign-in and licensing." },
 ];
 
 export function normaliseQuery(raw: string | null | undefined) {
   return (raw ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_QUERY_LENGTH);
 }
 
-export function searchPortal(rawQuery: string, releases: readonly Release[]): SearchResult[] {
+/** `forum`: whether a forum service is available; the Forum section is offered only then. */
+export function searchPortal(rawQuery: string, releases: readonly Release[], { forum = false }: { forum?: boolean } = {}): SearchResult[] {
   const query = normaliseQuery(rawQuery).toLowerCase();
   if (!query) return [];
   const terms = query.split(" ");
@@ -48,5 +48,6 @@ export function searchPortal(rawQuery: string, releases: readonly Release[]): Se
       excerpt: release.notes.find((note) => matches(note.text))?.text ?? release.notes[0].text,
     }));
 
-  return [...sections.filter((section) => matches(`${section.title} ${section.excerpt}`)), ...releaseResults];
+  const offered = forum ? [...sections, forumSection] : sections;
+  return [...offered.filter((section) => matches(`${section.title} ${section.excerpt}`)), ...releaseResults];
 }

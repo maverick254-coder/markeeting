@@ -2,6 +2,7 @@ import Link from "next/link";
 import { demoHref, footerGroups } from "@/content/navigation";
 import { publicSupportEmail, siteConfig } from "@/content/site";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { PortalCta } from "@/components/portal-entry/PortalCta";
 import { Container } from "@/components/ui/Container";
 
 const linkClass =
@@ -9,15 +10,16 @@ const linkClass =
 
 /**
  * Site footer, the same on every page. One continuous pale surface carries a centered
- * demo invitation, the link groups, the legal line, and a quiet wordmark. Pages that
- * already contain the enquiry form (/book-a-demo, /contact) pass invitation={false}.
+ * invitation (Get Started opens the shared Download/registration dialog; without a configured
+ * portal it is the sales enquiry), the link groups, the legal line, and a quiet wordmark. Pages
+ * that already contain the enquiry form (/book-a-demo, /contact) pass invitation={false}.
  */
 export function Footer({ homePage = false, invitation = true }: { homePage?: boolean; invitation?: boolean }) {
   return (
     <footer className="footer-canvas text-ink">
       <Container>
         {invitation ? (
-          // id="demo-enquiry" keeps older in-page and inbound demo links landing here.
+          // id="demo-enquiry" keeps older in-page and inbound enquiry links landing here.
           <section
             id="demo-enquiry"
             aria-labelledby="footer-invitation-heading"
@@ -33,12 +35,12 @@ export function Footer({ homePage = false, invitation = true }: { homePage?: boo
             <p className="mx-auto mt-6 max-w-[33rem] text-[1.0625rem] leading-7 text-ink-muted">
               See how RedactPlus helps your team review and redact sensitive information in documents and media.
             </p>
-            <Link
-              href={demoHref}
+            <PortalCta
+              label="Get Started"
+              fallbackHref={demoHref}
+              fallbackLabel="Contact Sales"
               className="mt-9 inline-flex min-h-12 items-center justify-center rounded-full bg-accent-warm px-7 text-[0.9375rem] font-semibold text-on-accent shadow-action transition-colors hover:bg-accent-warm-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool focus-visible:ring-offset-2 motion-reduce:transition-none"
-            >
-              Request a Demo
-            </Link>
+            />
           </section>
         ) : (
           <div aria-hidden="true" className="h-20 sm:h-24" />

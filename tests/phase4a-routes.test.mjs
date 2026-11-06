@@ -72,7 +72,7 @@ test("filtered Insights results use a chronological archive with semantic month 
   assert.match(html, /href="\/blog\/understanding-document-redaction"/);
 });
 
-test("a long-form article exposes breadcrumbs, matching heading anchors, TOC, and a demo-only side CTA", async () => {
+test("a long-form article exposes breadcrumbs, matching heading anchors, TOC, and a sales side CTA", async () => {
   const response = await get("/blog/understanding-document-redaction");
   const html = await response.text();
 
@@ -83,7 +83,7 @@ test("a long-form article exposes breadcrumbs, matching heading anchors, TOC, an
   assert.match(html, /href="#what-is-document-redaction"/);
   assert.match(html, /<h2[^>]*id="what-is-document-redaction"/);
   assert.match(html, /alt="RedactPlus document review workspace"/);
-  assert.match(html, /aria-label="Discuss your redaction workflow"/);
+  assert.match(html, /aria-label="Talk to the RedactPlus team"/);
   assert.match(html, /href="\/book-a-demo"/);
   // The shared footer invitation closes the article; there is no second closing CTA.
   assert.doesNotMatch(html, /id="article-closing-cta"/);

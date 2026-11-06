@@ -1,6 +1,10 @@
 # Deploying the RedactPlus portal (`home.redactplus.io`)
 
-**Status: files only. Nothing here has been built, installed or deployed.**
+**Status: files only. Nothing here has been built, installed or deployed.** The validated,
+step-by-step sequence with approval gates, the recorded server state and the rollback table are
+in [DEPLOYMENT.md](DEPLOYMENT.md). That file supersedes the prerequisites below where they
+differ. In particular, the database is now its own `redactplus-portal-db` service in
+`compose.yaml`, and DNS is proxied by Cloudflare.
 
 The portal runs as its own container next to the marketing site, on the same pattern:
 - an image pinned by tag and digest;

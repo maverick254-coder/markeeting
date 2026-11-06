@@ -1,5 +1,29 @@
 {
   "schemaVersion": 1,
   "product": "RedactPlus Desktop",
-  "releases": []
+  "releases": [
+    {
+      "version": "0.3.8",
+      "channel": "stable",
+      "releasedOn": "2026-11-05",
+      "supported": true,
+      "installer": {
+        "platform": "windows-x64",
+        "fileName": "RedactPlus-Setup.exe",
+        "url": "https://github.com/Safe-Redact/redactplus-downloads/releases/download/v0.3.8/RedactPlus-Setup.exe",
+        "sizeBytes": 321387989,
+        "sha256": "6034ac3ceff0294c6285badfcfbb28b3a6b4c289d6892e4bb68c6ce04f519ea2",
+        "verification": {
+          "method": "sha256-of-downloaded-file",
+          "verifiedOn": "2026-11-06",
+          "verifiedBy": "Portal maintainers (npm run releases:verify)"
+        }
+      },
+      "systemRequirements": ["Windows 10 or Windows 11, 64-bit (x64)"],
+      "notes": [
+        { "kind": "improved", "text": "New RedactPlus branding throughout the desktop application." },
+        { "kind": "improved", "text": "Includes the integrated tracking and licensing updates." }
+      ]
+    }
+  ]
 }

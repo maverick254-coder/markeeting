@@ -92,7 +92,7 @@ test("the custom support launcher exposes accessible loading and fallback states
     createElement(SupportChatLauncher, {
       status: "idle",
       onActivate: () => undefined,
-      fallbackEmail: "support@saferedact.io",
+      fallbackEmail: "support@redactplus.io",
     })
   );
   assert.match(idle, /aria-label="Open RedactPlus support chat"/);
@@ -102,7 +102,7 @@ test("the custom support launcher exposes accessible loading and fallback states
     createElement(SupportChatLauncher, {
       status: "loading",
       onActivate: () => undefined,
-      fallbackEmail: "support@saferedact.io",
+      fallbackEmail: "support@redactplus.io",
     })
   );
   assert.match(loading, /aria-busy="true"/);
@@ -112,12 +112,12 @@ test("the custom support launcher exposes accessible loading and fallback states
     createElement(SupportChatLauncher, {
       status: "error",
       onActivate: () => undefined,
-      fallbackEmail: "support@saferedact.io",
+      fallbackEmail: "support@redactplus.io",
     })
   );
   assert.match(error, /role="status"/);
   assert.match(error, /Chat is unavailable/);
-  assert.match(error, /mailto:support@saferedact\.io/);
+  assert.match(error, /mailto:support@redactplus.io/);
 });
 
 test("the Insights launcher cannot cover editorial controls on tablet or mobile", () => {

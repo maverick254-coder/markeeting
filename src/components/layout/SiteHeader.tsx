@@ -135,13 +135,13 @@ export function SiteHeader({ items, demoHref }: { items: readonly PrimaryNavItem
 
             <div className="hidden items-center justify-self-end min-[992px]:flex">
               <Button variant="primary" size="sm" asChild>
-                <PortalCta label="Download" fallbackHref={ctaHref} fallbackLabel="Request a Demo" />
+                <PortalCta label="Download" fallbackHref={ctaHref} fallbackLabel="Contact Sales" />
               </Button>
             </div>
 
             <div className="flex items-center gap-2 justify-self-end min-[992px]:hidden">
               <Button variant="primary" size="sm" className="hidden sm:inline-flex" asChild>
-                <PortalCta label="Download" fallbackHref={ctaHref} fallbackLabel="Request a Demo" />
+                <PortalCta label="Download" fallbackHref={ctaHref} fallbackLabel="Contact Sales" />
               </Button>
               <button
                 ref={menuButtonRef}

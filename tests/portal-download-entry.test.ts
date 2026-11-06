@@ -46,18 +46,12 @@ test("credential submission is off unless explicitly enabled, and only portal re
   }
 });
 
-test("form validation: required fields, email shape, password length and confirmation", () => {
-  const empty = { name: "", email: "", password: "", confirmPassword: "" };
-  assert.deepEqual(Object.keys(validateAuthForm("register", empty)).sort(), ["confirmPassword", "email", "name", "password"]);
+test("sign-in and reset validation: required fields and email shape", () => {
+  const empty = { email: "", password: "" };
   assert.deepEqual(Object.keys(validateAuthForm("signin", empty)).sort(), ["email", "password"]);
   assert.deepEqual(Object.keys(validateAuthForm("reset", empty)), ["email"]);
-  const good = { name: "Ada Lovelace", email: "ada@example.com", password: "correct horse", confirmPassword: "correct horse" };
-  assert.deepEqual(validateAuthForm("register", good), {});
-  assert.match(validateAuthForm("register", { ...good, email: "ada@" }).email ?? "", /valid email/);
-  assert.match(validateAuthForm("register", { ...good, password: "short", confirmPassword: "short" }).password ?? "", /at least 8/);
-  assert.match(validateAuthForm("register", { ...good, confirmPassword: "different" }).confirmPassword ?? "", /don.t match/);
-  assert.match(validateAuthForm("register", { ...good, name: "   " }).name ?? "", /full name/);
-  assert.deepEqual(validateAuthForm("signin", { ...empty, email: "ada@example.com", password: "x" }), {}, "sign-in does not impose the registration length rule");
+  assert.match(validateAuthForm("signin", { email: "ada@", password: "x" }).email ?? "", /valid email/);
+  assert.deepEqual(validateAuthForm("signin", { email: "ada@example.com", password: "x" }), {}, "sign-in imposes no length rule");
 });
 
 test("one shared dialog, mounted once in the root layout, holds the account form", () => {
@@ -76,12 +70,13 @@ test("one shared dialog, mounted once in the root layout, holds the account form
   );
 });
 
-test("the account form is accessible and never sends credentials unless live", () => {
+test("the sign-in form is accessible and never sends credentials unless live", () => {
   const panel = read("src/components/portal-entry/AuthPanel.tsx");
-  for (const field of ["name", "email", "password", "confirmPassword"]) {
+  for (const field of ["email", "password"]) {
     assert.ok(panel.includes(`htmlFor={id("${field}")}`), `${field} has a label`);
   }
-  assert.match(panel, /autoComplete=\{view === "register" \? "new-password" : "current-password"\}/);
+  assert.doesNotMatch(panel, /confirmPassword|new-password/, "registration collects no password");
+  assert.match(panel, /autoComplete="current-password"/);
   assert.match(panel, /aria-invalid=\{Boolean\(errors\.password\)\}/);
   assert.match(panel, /aria-pressed=\{showPassword\}/);
   assert.match(panel, /aria-label=\{showPassword \? "Hide password" : "Show password"\}/);
@@ -96,9 +91,15 @@ test("the account form is accessible and never sends credentials unless live", (
   assert.match(submit, /credentials: "include"/);
   assert.match(submit, /\$\{portalOrigin\}\/api\/auth\/credentials\/\$\{action\}/);
   assert.match(submit, /isPortalRedirect\(body\.redirect, portalOrigin\)/, "only a portal URL is followed");
-  assert.match(submit, /password: "", confirmPassword: ""/, "passwords are cleared after every attempt");
+  assert.match(submit, /password: ""/, "passwords are cleared after every attempt");
+  assert.doesNotMatch(submit, /credentials\/register|credentials\/\$\{view\}/, "registration never goes to the portal's password endpoint");
   assert.match(panel, /disabled=\{busy \|\| disabled\}/, "the submit button is disabled when not connected");
-  assert.match(panel, /Continue on RedactPlus sign-in/, "the existing sign-in redirect stays as the labelled fallback");
+  // Not connected: no greyed-out form; the approved Keycloak redirect is the sign-in action.
+  const notConnected = panel.slice(panel.indexOf("if (disabled) {"), panel.indexOf("const credentialView"));
+  assert.match(notConnected, /portalAuthHref\(portalOrigin, "signin"\)/, "existing customers sign in through the RedactPlus sign-in page");
+  assert.match(notConnected, /Continue to sign-in/);
+  assert.match(notConnected, /Forgot password/);
+  assert.doesNotMatch(panel, /isn’t connected yet|disabled-note/, "no development-looking notice");
   assert.doesNotMatch(panel, /localStorage|sessionStorage|document\.cookie|console\./, "nothing is stored or logged in the browser");
   assert.doesNotMatch(panel, /trial/i, "no trial promise the backend cannot keep yet");
 });
@@ -116,10 +117,10 @@ test("the simulated design preview exists only as a development page", () => {
 
 test("header, tablet bar, mobile menu and homepage hero all use the same Download trigger", () => {
   const header = read("src/components/layout/SiteHeader.tsx");
-  assert.equal((header.match(/<PortalCta label="Download" fallbackHref=\{ctaHref\} fallbackLabel="Request a Demo" \/>/g) ?? []).length, 2);
-  assert.doesNotMatch(header, />Request a Demo</, "the header has no separate demo button");
+  assert.equal((header.match(/<PortalCta label="Download" fallbackHref=\{ctaHref\} fallbackLabel="Contact Sales" \/>/g) ?? []).length, 2);
+  assert.doesNotMatch(header, /Request a Demo/, "no demo wording in the header");
   const mobile = read("src/components/layout/MobileNav.tsx");
-  assert.match(mobile, /<PortalCta label="Download" fallbackHref=\{ctaHref\} fallbackLabel="Request a Demo" onBeforeOpen=\{\(\) => onClose\(false\)\} \/>/);
+  assert.match(mobile, /<PortalCta label="Download" fallbackHref=\{ctaHref\} fallbackLabel="Contact Sales" onBeforeOpen=\{\(\) => onClose\(false\)\} \/>/);
   assert.match(mobile, /closest\("dialog\[open\]"\)/);
   const hero = read("src/components/sections/Hero.tsx");
   assert.match(hero, /<PortalCta\s+label=\{heroContent\.downloadCta\.label\}/);
@@ -132,7 +133,7 @@ test("without a portal every trigger renders its original link, so the live site
   const cta = read("src/components/portal-entry/PortalCta.tsx");
   assert.match(cta, /if \(!dialog\) \{\s+return \(\s+<Link href=\{fallbackHref\}/);
   assert.match(read("src/components/portal-entry/PortalDialogProvider.tsx"), /if \(!entry\) return <>\{children\}<\/>;/);
-  assert.equal(heroContent.primaryCta.label, "Request a Demo");
+  assert.equal(heroContent.primaryCta.label, "Contact Sales", "without a portal the hero leads to sales, not a demo");
   assert.equal(heroContent.primaryCta.href, "/book-a-demo");
   assert.match(read("deployment/redactplus/Dockerfile"), /ARG NEXT_PUBLIC_PORTAL_URL=""/);
 });
@@ -151,16 +152,29 @@ test("section CTAs are consolidated by purpose instead of repeating demo or down
     assert.match(source, pattern, file);
     assert.doesNotMatch(source, /Request a Demo|PortalCta/, `${file} carries neither a repeated demo nor a Download button`);
   }
-  // The meaningful sales journeys stay: the footer invitation, the article aside and both pages.
-  assert.match(read("src/components/layout/Footer.tsx"), /href=\{demoHref\}[\s\S]*Request a Demo/);
-  assert.match(read("src/components/blog/ArticleAsideCta.tsx"), /href="\/book-a-demo"/);
+  // The meaningful sales journeys stay: the footer invitation (Get Started, or Contact Sales
+  // without a portal), the article aside and both enquiry pages.
+  assert.match(read("src/components/layout/Footer.tsx"), /<PortalCta\s+label="Get Started"\s+fallbackHref=\{demoHref\}\s+fallbackLabel="Contact Sales"/);
+  const aside = read("src/components/blog/ArticleAsideCta.tsx");
+  assert.match(aside, /href="\/book-a-demo"/);
+  assert.match(aside, /Contact sales/);
 });
 
-test("pricing cards lead to sales, never to a checkout or a download", () => {
+test("standard packages open the shared registration dialog; Enterprise keeps Contact Sales; nothing is a checkout", () => {
+  const actions = Object.fromEntries(pricingPackages.map((plan) => [plan.slug, [plan.ctaLabel, plan.ctaAction]]));
+  assert.deepEqual(actions, {
+    document: ["Get Started", "register"],
+    "document-media": ["Get Started", "register"],
+    enterprise: ["Contact Sales", "sales"],
+  });
   for (const plan of pricingPackages) {
-    assert.equal(plan.ctaLabel, "Contact Sales", plan.slug);
     assert.doesNotMatch(`${plan.ctaLabel} ${plan.footnote}`, /buy|checkout|purchase now|download|trial/i, plan.slug);
   }
+  const cards = read("src/components/pricing/PricingCards.tsx");
+  assert.match(cards, /plan\.ctaAction === "register" \? \(/);
+  assert.match(cards, /<PortalCta\s+label=\{plan\.ctaLabel\}/, "Get Started uses the one shared dialog trigger");
+  assert.match(cards, /fallbackHref=\{packageEnquiryHref\(plan\.slug\)\}\s+fallbackLabel="Contact Sales"/, "without a portal it stays the package's sales enquiry");
+  assert.doesNotMatch(cards, /<dialog|fetch\(|\/api\//, "no new registration or purchase path");
   assert.match(read("src/components/pricing/PricingCards.tsx"), /\/book-a-demo\?package=\$\{slug\}/, "the package still preselects the enquiry form");
 });
 

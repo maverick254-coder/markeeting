@@ -44,7 +44,11 @@ export interface LeadTransport {
 
 /** Thrown when a configured transport was reached and refused or failed. */
 export class LeadDeliveryError extends Error {
-  constructor(message: string, readonly retryable: boolean = true) {
+  /**
+   * `reason` is a short fixed code such as "smtp-auth" for the operator log. It never
+   * carries provider wording, addresses or enquiry content.
+   */
+  constructor(message: string, readonly retryable: boolean = true, readonly reason: string = "unspecified") {
     super(message);
     this.name = "LeadDeliveryError";
   }

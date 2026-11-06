@@ -137,20 +137,26 @@ test("portal search matches sections and release notes, and bounds the query", (
   const manifest = parseManifest(JSON.parse(read("tests/fixtures/releases.fixture.json")));
   assert.ok(manifest.ok);
   const releases = manifest.ok ? manifest.manifest.releases : [];
-  assert.deepEqual(searchPortal("tutorials", releases).map((result) => result.href), ["/docs#tutorials"]);
+  assert.deepEqual(searchPortal("getting started", releases).map((result) => result.href), ["/docs"]);
+  assert.deepEqual(searchPortal("tutorials", releases), [], "no unwritten guides are advertised");
+  assert.deepEqual(searchPortal("forum", releases), [], "the forum is offered only with a forum service");
+  assert.deepEqual(searchPortal("forum", releases, { forum: true }).map((result) => result.href), ["/forum"]);
   assert.ok(searchPortal("fixture note", releases).some((result) => result.href === "/release-notes#v9.9.0"));
   assert.deepEqual(searchPortal("   ", releases), []);
   assert.equal(normaliseQuery("a\u0000b\nc"), "a b c");
   assert.equal(normaliseQuery("x".repeat(500)).length, MAX_QUERY_LENGTH);
 });
 
+test("primary navigation offers the forum only when a forum service is available", async () => {
+  const { portalNavFor, portalFooterNav } = await import("../src/components/navigation");
+  assert.deepEqual(portalNavFor({ forum: false }).map((item) => item.href), ["/docs", "/news", "/release-notes", "/support"]);
+  assert.deepEqual(portalNavFor({ forum: true }).map((item) => item.href), ["/forum", "/docs", "/news", "/release-notes", "/support"]);
+  assert.ok(portalFooterNav.every((item) => !item.href.includes("#")), "the footer links whole pages, not unwritten sections");
+});
+
 test("the portal has no sign-in, registration or account navigation of its own", () => {
   const header = read("src/components/PortalHeader.tsx") + read("src/components/PortalNav.tsx") + read("src/components/navigation.ts");
   assert.doesNotMatch(header, /signInPath|Sign in|Create account|\/account/);
-  assert.match(
-    read("src/components/navigation.ts"),
-    /\{ href: "\/forum", label: "Forum" \},\s+\{ href: "\/docs", label: "Documentation" \},\s+\{ href: "\/news", label: "News" \},\s+\{ href: "\/release-notes", label: "Release Notes" \}/
-  );
   const menu = read("src/components/AccountMenu.tsx");
   assert.equal((menu.match(/role="menuitem"/g) ?? []).length, 1);
   assert.match(menu, /action="\/auth\/logout"/);

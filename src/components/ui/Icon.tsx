@@ -481,6 +481,12 @@ const icons: Record<string, ReactElement> = {
       <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18" strokeWidth="1.5" strokeLinecap="round" />
     </>
   ),
+  mail: (
+    <>
+      <rect x="2.5" y="4.5" width="19" height="15" rx="2.5" strokeWidth="1.5" />
+      <path d="m3.5 6.5 8.5 6.5 8.5-6.5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </>
+  ),
   info: (
     <>
       <circle cx="12" cy="12" r="10" strokeWidth="1.5" />

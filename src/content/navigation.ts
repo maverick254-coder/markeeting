@@ -1,7 +1,7 @@
 import { featuredIndustries, industryHref, liveIndustryPages } from "@/content/industries";
 import { featureHref, publishedFeaturePages } from "@/content/features";
 
-/** Every primary demo call to action leads here; /contact stays for general enquiries. */
+/** The sales enquiry page (path kept for existing links); /contact stays for general enquiries. */
 export const demoHref = "/book-a-demo";
 
 export type NavMenuLink = {
@@ -116,7 +116,7 @@ export const footerGroups: readonly FooterGroup[] = [
   {
     title: "Company",
     links: [
-      { label: "Book a demo", href: demoHref },
+      { label: "Contact sales", href: demoHref },
       { label: "Contact", href: "/contact" },
     ],
   },

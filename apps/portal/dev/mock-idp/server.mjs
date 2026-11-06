@@ -15,7 +15,12 @@
  *     never asks for a password.
  *
  * Env: MOCK_IDP_PORT (3201), MOCK_IDP_CLIENT_ID (redactplus-portal-dev), MOCK_IDP_CLIENT_SECRET
- * (required), MOCK_IDP_REDIRECT_ORIGIN (http://localhost:3200; the portal's PORTAL_PUBLIC_ORIGIN).
+ * (required unless MOCK_IDP_PUBLIC_CLIENT=true), MOCK_IDP_REDIRECT_ORIGIN (http://localhost:3200;
+ * the portal's PORTAL_PUBLIC_ORIGIN).
+ *
+ * MOCK_IDP_PUBLIC_CLIENT=true behaves like the production "redactplus-portal" client: public, no
+ * secret, PKCE S256 required. Access tokens are signed JWTs carrying sub, email and azp, so a
+ * local stand-in for the Control Center's GET /portal/me can read who is asking.
  */
 import { createHash, createSign, generateKeyPairSync, randomBytes, timingSafeEqual } from "node:crypto";
 import { createServer } from "node:http";
@@ -30,8 +35,9 @@ const host = "127.0.0.1";
 const issuer = `http://${host}:${port}`;
 const clientId = process.env.MOCK_IDP_CLIENT_ID ?? "redactplus-portal-dev";
 const clientSecret = process.env.MOCK_IDP_CLIENT_SECRET;
+const publicClient = process.env.MOCK_IDP_PUBLIC_CLIENT === "true";
 const portalOrigin = (process.env.MOCK_IDP_REDIRECT_ORIGIN ?? "http://localhost:3200").replace(/\/$/, "");
-if (!clientSecret || clientSecret.length < 16) {
+if (!publicClient && (!clientSecret || clientSecret.length < 16)) {
   console.error("mock-idp: set MOCK_IDP_CLIENT_SECRET (16+ characters) to the same value as PORTAL_OIDC_CLIENT_SECRET.");
   process.exit(1);
 }
@@ -78,6 +84,8 @@ function safeEqual(a, b) {
 }
 
 function clientAuthenticated(request, form) {
+  // A public client sends its id and no secret; PKCE is what binds the code to it.
+  if (publicClient) return !request.headers.authorization && form.get("client_id") === clientId && !form.get("client_secret");
   const basic = request.headers.authorization?.match(/^Basic (.+)$/i);
   if (basic) {
     const [id, secret] = Buffer.from(basic[1], "base64").toString("utf8").split(":").map(decodeURIComponent);
@@ -136,7 +144,7 @@ const server = createServer(async (request, response) => {
         subject_types_supported: ["public"],
         id_token_signing_alg_values_supported: ["RS256"],
         code_challenge_methods_supported: ["S256"],
-        token_endpoint_auth_methods_supported: ["client_secret_post", "client_secret_basic"],
+        token_endpoint_auth_methods_supported: publicClient ? ["none"] : ["client_secret_post", "client_secret_basic"],
         authorization_response_iss_parameter_supported: true,
         scopes_supported: ["openid", "profile", "email"],
       });
@@ -199,7 +207,7 @@ const server = createServer(async (request, response) => {
         refreshTokens.set(refresh, entry.identity);
         return json(response, 200, {
           token_type: "Bearer",
-          access_token: randomBytes(24).toString("base64url"),
+          access_token: signJwt({ iss: issuer, azp: clientId, typ: "Bearer", iat: now, exp: now + 300, jti: randomBytes(8).toString("hex"), ...entry.identity }),
           expires_in: 300,
           refresh_token: refresh,
           id_token: signJwt({ iss: issuer, aud: clientId, iat: now, exp: now + 300, nonce: entry.nonce, ...entry.identity }),
@@ -212,7 +220,12 @@ const server = createServer(async (request, response) => {
         refreshTokens.delete(form.get("refresh_token"));
         const refresh = randomBytes(24).toString("base64url");
         refreshTokens.set(refresh, identity);
-        return json(response, 200, { token_type: "Bearer", access_token: randomBytes(24).toString("base64url"), expires_in: 300, refresh_token: refresh });
+        return json(response, 200, {
+          token_type: "Bearer",
+          access_token: signJwt({ iss: issuer, azp: clientId, typ: "Bearer", iat: now, exp: now + 300, jti: randomBytes(8).toString("hex"), ...identity }),
+          expires_in: 300,
+          refresh_token: refresh,
+        });
       }
 
       return json(response, 400, { error: "unsupported_grant_type" });

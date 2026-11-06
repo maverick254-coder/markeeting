@@ -1,62 +1,71 @@
 import { z } from "zod";
 
 /**
- * PROPOSED customer API contract — NOT YET VERIFIED against the Control Center.
+ * The customer portal API of the Control Center.
  *
- * None of these endpoints exist today (Admin-panel origin/main 59a34dc). They are the
- * integration boundary the portal is built against, documented for the backend team in
- * docs/portal/backend-integration-boundary.md. Until PORTAL_CUSTOMER_API_URL is set the
- * portal calls nothing and reports licence status as unavailable.
+ * VERIFIED in backend source: Admin-panel origin/main 7026a19 (6 Nov 2026),
+ * src/SafeRedact.ControlCenter.Api/TrialApi.cs (PortalProfile, PortalLicence, PortalTrial,
+ * PortalCredit) and Docs/TRIAL-INTEGRATION.md. Evidence and status:
+ * docs/onboarding/verified-integration-contract.md in the marketing repository.
  *
- * Authentication: `Authorization: Bearer <access token>` issued by the shared Keycloak realm
- * to the portal client. The backend identifies the customer from the token's `sub` and must
- * never accept an account identifier from the request.
+ *   GET   {api}/portal/me     -> portalProfileSchema, or 404 { code: "account_not_found" }
+ *   PATCH {api}/portal/me     { displayName }   (not called by the portal yet)
  *
- *   GET  /v1/api/customer/me      -> customerProfileSchema
- *   POST /v1/api/customer/trial   -> trialProvisioningSchema   (not called by the portal yet)
+ * Authentication: `Authorization: Bearer <access token>` issued by realm `saferedact` to the
+ * `redactplus-portal` client. The API validates the issuer and requires `azp` to be that client,
+ * and finds the account by the token's `sub` (or, once, by a verified email). It never takes an
+ * account identifier from the request.
  *
- * Every response is validated here. The portal displays licence state only as the backend
+ * Every response is validated here. The portal shows licence and trial state only as the backend
  * reported it and never derives, extends or caches entitlement decisions of its own.
  */
 
-export const LICENCE_STATUSES = ["none", "trial", "active", "expired", "suspended"] as const;
+const isoDate = z.string().datetime({ offset: true });
 
-export const customerProfileSchema = z.object({
-  subject: z.string().min(1),
+export const portalCreditSchema = z.object({
+  bucket: z.enum(["documents", "video_and_images", "audio"]),
+  name: z.string().min(1).max(100),
+  granted: z.number().nonnegative(),
+  used: z.number().nonnegative(),
+  remaining: z.number().nonnegative(),
+});
+
+export const portalProfileSchema = z.object({
   email: z.string().email(),
-  emailVerified: z.boolean(),
-  displayName: z.string().nullable(),
-  organisation: z
+  displayName: z.string().max(200),
+  /** The organisation, or for a trial the name the person typed (never the shared trial organisation). */
+  organisation: z.string().max(200),
+  provisioned: z.boolean(),
+  /** Null for someone without a licence. */
+  licence: z
     .object({
-      id: z.string().min(1),
-      name: z.string().min(1),
-      role: z.enum(["owner", "admin", "member"]),
+      code: z.string().max(64).nullable(),
+      type: z.string().max(100),
+      package: z.string().max(200),
+      active: z.boolean(),
+      validUntil: isoDate,
     })
     .nullable(),
-  licence: z.object({
-    status: z.enum(LICENCE_STATUSES),
-    /** Control Center licence type codes (LicenceTypes.cs). */
-    licenceTypeCode: z.enum(["document", "document_media"]).nullable(),
-    entitlements: z.array(z.enum(["Document", "Image", "Audio", "Video"])),
-    termEndsAt: z.string().datetime({ offset: true }).nullable(),
-    isTrial: z.boolean(),
-  }),
-  devices: z.object({ used: z.number().int().min(0), allowed: z.number().int().min(0) }).nullable(),
+  /** Null for a paying customer. */
+  trial: z
+    .object({
+      status: z.enum(["not_started", "active", "ended", "blocked"]),
+      /** True once the desktop application has been signed in to, which starts the term. */
+      activated: z.boolean(),
+      registeredAt: isoDate,
+      /** Before the first desktop sign-in: the date the trial will start by itself. */
+      startsAt: isoDate,
+      endsAt: isoDate,
+      credits: z.array(portalCreditSchema).max(10),
+    })
+    .nullable(),
 });
 
-export const trialProvisioningSchema = z.object({
-  status: z.enum(["provisioned", "pending", "existing"]),
-  tenantId: z.string().nullable(),
-  licenceTypeCode: z.enum(["document", "document_media"]).nullable(),
-  startsAt: z.string().datetime({ offset: true }).nullable(),
-  endsAt: z.string().datetime({ offset: true }).nullable(),
+/** The API's error body (PortalError). */
+export const portalErrorSchema = z.object({
+  code: z.string().min(1).max(64),
+  message: z.string().max(500).optional(),
 });
 
-/** Error body the backend is asked to return with every 4xx/5xx. */
-export const customerApiErrorSchema = z.object({
-  error: z.string().min(1),
-  message: z.string().optional(),
-});
-
-export type CustomerProfile = z.infer<typeof customerProfileSchema>;
-export type TrialProvisioning = z.infer<typeof trialProvisioningSchema>;
+export type PortalProfile = z.infer<typeof portalProfileSchema>;
+export type PortalCredit = z.infer<typeof portalCreditSchema>;

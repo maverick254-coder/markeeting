@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { PortalFooter } from "@/components/PortalFooter";
 import { PortalHeader } from "@/components/PortalHeader";
+import { forumService } from "@/lib/community/source";
 import { requirePortalSession } from "@/lib/session/current";
 
 /**
@@ -12,7 +13,7 @@ export default async function PortalLayout({ children }: { children: ReactNode }
   const { runtime, session } = await requirePortalSession();
   return (
     <>
-      <PortalHeader session={session} />
+      <PortalHeader session={session} forum={forumService(runtime.config).kind !== "unavailable"} />
       <main id="main-content" className="mx-auto max-w-content px-4 pb-8 pt-28 sm:px-6">
         {children}
       </main>

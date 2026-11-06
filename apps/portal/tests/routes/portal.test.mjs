@@ -83,7 +83,7 @@ test("health reports a ready, configured portal without values", async () => {
   const body = await response.json();
   assert.equal(body.status, "ready");
   assert.equal(body.authentication, "configured");
-  assert.equal(body.customerApi, "pending-backend");
+  assert.equal(body.customerApi, "configured");
   assert.ok(!JSON.stringify(body).includes("127.0.0.1"), "health does not reveal configuration values");
 });
 
@@ -109,7 +109,7 @@ test("signed-in pages carry a nonce CSP, anti-framing, no-store and the identity
 
 test("the portal shows no sign-in or registration actions, and no account tab", async () => {
   const { browser } = await signIn();
-  for (const path of PORTAL_PAGES) {
+  for (const path of PORTAL_PAGES.filter((page) => !page.startsWith("/forum"))) {
     const response = await browser.request(`${PORTAL}${path}`);
     assert.equal(response.status, 200, path);
     const html = await response.text();
@@ -122,14 +122,15 @@ test("the portal shows no sign-in or registration actions, and no account tab", 
   assert.equal(account.status, 404, "there is no separate account page");
 });
 
-test("the header has Forum, Documentation, News and Release Notes, search, and an initials avatar with only Sign out", async () => {
+test("without a forum service the header offers Documentation, News, Release Notes and Support, search, and an initials avatar with only Sign out", async () => {
   const { browser } = await signIn({ name: "Ada Lovelace", email: "ada@example.test" });
-  const html = await (await browser.request(`${PORTAL}/forum`)).text();
+  const html = await (await browser.request(`${PORTAL}/docs`)).text();
   const nav = html.match(/<nav aria-label="Portal"[\s\S]*?<\/nav>/)?.[0] ?? "";
-  for (const [href, label] of [["/forum", "Forum"], ["/docs", "Documentation"], ["/news", "News"], ["/release-notes", "Release Notes"]]) {
+  for (const [href, label] of [["/docs", "Documentation"], ["/news", "News"], ["/release-notes", "Release Notes"], ["/support", "Support"]]) {
     assert.match(nav, new RegExp(`href="${href}"[^>]*>${label}<`), label);
   }
-  assert.match(nav, /aria-current="page"[^>]*href="\/forum"/, "the current section is marked");
+  assert.doesNotMatch(nav, /href="\/forum"/, "no forum engine is deployed, so the forum is not offered");
+  assert.match(nav, /aria-current="page"[^>]*href="\/docs"/, "the current section is marked");
   assert.match(nav, /<form role="search"[^>]*action="\/search" method="get"/);
   assert.match(nav, /aria-haspopup="menu"/);
   assert.match(nav, /aria-label="Account menu for Ada Lovelace"/);
@@ -147,21 +148,22 @@ test("initials fall back to the email address when the identity has no name", as
   assert.match(html, /<span aria-hidden="true">Z<\/span>/);
 });
 
-test("the home page is a downloads and resources hub: download first, resources after, no forum board", async () => {
+test("the home page is a downloads and resources hub: download first, then resources that exist", async () => {
   const { browser } = await signIn();
   const html = await (await browser.request(`${PORTAL}/`)).text();
   const download = html.indexOf('id="download-heading"');
   assert.ok(download > 0, "the download section is present");
-  for (const resource of ["resource-check-circle", "resource-news", "resource-book", "resource-users"]) {
+  for (const resource of ["resource-check-circle", "resource-news", "resource-book", "resource-message-circle"]) {
     const at = html.indexOf(`id="${resource}"`);
     assert.ok(at > download, `${resource} follows the download`);
   }
   assert.match(html, /href="\/api\/downloads\/9\.9\.0"/);
   assert.match(html, /Download RedactPlus Desktop/);
   assert.match(html, /href="\/release-notes#v9\.9\.0"/, "links to the full release notes");
-  assert.match(html, /href="\/forum"/, "links to the community");
-  assert.match(html, /href="\/forum\/ask"/);
-  assert.doesNotMatch(html, /id="community-heading"|data-question=|New discussion/, "the discussion board lives under /forum");
+  for (const href of ["/docs#install", "/docs#sign-in", "/download#requirements", "/support"]) assert.match(html, new RegExp(`href="${href}"`), href);
+  assert.match(html, /href="http:\/\/localhost:3000\/how-it-works"/, "workflow guides are the published overview pages");
+  assert.doesNotMatch(html, /href="\/forum/, "no forum engine is deployed, so no community link");
+  assert.doesNotMatch(html, />\s*(Soon|Opening soon|Not available yet|Coming soon)\s*</i, "no unfinished-looking labels");
   assert.doesNotMatch(html, /Your home for RedactPlus Desktop|Welcome,|type-display/, "no marketing hero");
   assert.match(html, /Nothing has been published yet/, "no news is invented");
 });
@@ -192,52 +194,40 @@ test("the dialog's credential endpoint accepts only the marketing site and authe
   assert.equal(fromElsewhere.headers.get("access-control-allow-origin"), null);
 });
 
-test("without a forum service the forum is honestly empty, its controls disabled, and no question page exists", async () => {
+test("without a forum service the forum is not offered: its pages do not exist", async () => {
   const { browser } = await signIn();
-  const html = await (await browser.request(`${PORTAL}/forum`)).text();
-  assert.match(html, /All Questions/);
-  assert.match(html, /The forum is not open yet/);
-  assert.doesNotMatch(html, /\[Sample\]|Development sample data|Sample Customer|data-question=/, "fixtures never appear outside development");
-  assert.match(html, /placeholder="Search opens with the forum"/);
-  assert.match(html, /<input[^>]*disabled=""[^>]*placeholder="Search opens with the forum"|placeholder="Search opens with the forum"[^>]*disabled=""/);
-  assert.match(html, /aria-disabled="true"[^>]*>Answered</, "filters are inert");
-  assert.match(html, /href="\/forum\/ask"[^>]*>[\s\S]*?Ask Question/);
-  for (const category of ["Announcements", "Getting started", "Document redaction", "Audio and video"]) assert.match(html, new RegExp(category));
-  for (const slug of ["sample-verify-installer-before-running", "anything"]) {
-    const question = await browser.request(`${PORTAL}/forum/questions/${slug}`);
-    assert.equal(question.status, 404, slug);
+  for (const path of ["/forum", "/forum/ask", "/forum?filter=answered&q=checksum", "/forum/questions/sample-verify-installer-before-running", "/forum/questions/anything"]) {
+    const response = await browser.request(`${PORTAL}${path}`);
+    assert.equal(response.status, 404, path);
+    assert.doesNotMatch(await response.text(), /\[Sample\]|Development sample data|Sample Customer|data-question=/, "fixtures never appear outside development");
   }
-  const filtered = await (await browser.request(`${PORTAL}/forum?filter=answered&sort=newest&tag=audio&q=checksum`)).text();
-  assert.doesNotMatch(filtered, /data-question=/);
 });
 
-test("Ask Question opens the composer as the signed-in identity, and says posting is not connected", async () => {
-  const { browser } = await signIn({ name: "Ada Lovelace" });
-  const html = await (await browser.request(`${PORTAL}/forum/ask`)).text();
-  assert.match(html, /<h1[^>]*>Ask a question<\/h1>/);
-  assert.match(html, /Posting as <!-- -->?<span[^>]*>Ada Lovelace<\/span>|Posting as <span[^>]*>Ada Lovelace/);
-  assert.match(html, /Posting is not connected yet/);
-  for (const label of ["Title", "Category", "Tags", "Question details", "Images"]) assert.match(html, new RegExp(`>${label}<`), label);
-  assert.match(html, /role="toolbar" aria-label="Formatting"/);
-  assert.match(html, /role="tablist" aria-label="Editor mode"/);
-  assert.match(html, /accept="image\/png,image\/jpeg,image\/gif,image\/webp"/);
-  assert.doesNotMatch(html, /Sign in|Create account|Register/, "no separate forum login");
-});
 
-test("news shows only published articles, and nothing when none exist", async () => {
+test("news shows only published articles, and a clean empty state when none exist", async () => {
   const { browser } = await signIn();
   const html = await (await browser.request(`${PORTAL}/news`)).text();
-  assert.match(html, /Nothing has been published here yet/);
+  assert.match(html, /No announcements have been published yet\./);
+  assert.match(html, /href="\/release-notes"/);
+  assert.match(html, /href="http:\/\/localhost:3000\/blog"/);
   assert.equal((await browser.request(`${PORTAL}/news/sample-release-9-9-0`)).status, 404);
 });
 
-test("unfinished modules are clearly marked as not available", async () => {
+test("no unfinished module is advertised: documentation is a real guide and support is email", async () => {
   const { browser } = await signIn();
-  for (const [path, sections] of [["/docs", ["Product documentation", "Tutorials"]], ["/news", ["Still to come"]], ["/support", ["Support tickets"]]]) {
+  for (const path of ["/", "/docs", "/news", "/support", "/download", "/release-notes", "/search?q=release"]) {
     const html = await (await browser.request(`${PORTAL}${path}`)).text();
-    for (const section of sections) assert.match(html, new RegExp(`${section}</h2>`), `${path} ${section}`);
-    assert.match(html, /Not available yet/, path);
+    assert.doesNotMatch(html, /Not available yet|Opening soon|>\s*Soon\s*<|Coming soon|Still to come|Support tickets|Tutorials<\/h2>|being written/i, path);
   }
+  const docs = (await (await browser.request(`${PORTAL}/docs`)).text()).replaceAll("<!-- -->", "");
+  assert.match(docs, /id="install"/);
+  assert.match(docs, /id="sign-in"/);
+  assert.match(docs, /RedactPlus Desktop 9\.9\.0 runs on Test fixture requirement/, "system requirements come from the manifest");
+  assert.match(docs, /RedactPlus-Desktop-9\.9\.0-TEST-FIXTURE-x64\.exe \(1\.0 MB\)/, "the installer name and size come from the manifest");
+  assert.match(docs, /Forgot password/);
+  const support = await (await browser.request(`${PORTAL}/support`)).text();
+  assert.match(support, /href="mailto:support@example\.test"/);
+  for (const href of ["/docs#install", "/docs#sign-in", "/release-notes"]) assert.match(support, new RegExp(`href="${href}"`), href);
 });
 
 test("release notes come only from the validated manifest", async () => {
@@ -254,10 +244,14 @@ test("search covers portal sections and release notes, and treats the query as t
   const { browser } = await signIn();
   const found = await (await browser.request(`${PORTAL}/search?q=fixture%20note`)).text();
   assert.match(found, /href="\/release-notes#v9\.9\.0"/);
-  const sections = await (await browser.request(`${PORTAL}/search?q=tutorials`)).text();
-  assert.match(sections, /href="\/docs#tutorials"/);
+  const sections = await (await browser.request(`${PORTAL}/search?q=getting%20started`)).text();
+  assert.match(sections, /href="\/docs"/);
+  const forum = await (await browser.request(`${PORTAL}/search?q=forum`)).text();
+  assert.doesNotMatch(forum, /href="\/forum"/, "the forum is not offered in search while it is unavailable");
+  const tutorials = await (await browser.request(`${PORTAL}/search?q=tutorials`)).text();
+  assert.doesNotMatch(tutorials, /href="\/docs#tutorials"/, "no unwritten guides are advertised");
   const none = await (await browser.request(`${PORTAL}/search?q=zzzz-nothing`)).text();
-  assert.match(none, /Nothing in the portal matches that yet/);
+  assert.match(none, /Nothing in the portal matches that\./);
   const hostile = await (await browser.request(`${PORTAL}/search?q=%3Cscript%3Ealert(1)%3C/script%3E`)).text();
   assert.doesNotMatch(hostile, /<script>alert\(1\)<\/script>/);
 });
@@ -298,10 +292,73 @@ test("router prefetches and RSC fetches never start a sign-in transaction", asyn
   assert.equal(navigation.status, 302);
 });
 
-test("the registration entry point asks the provider for its create-account page", async () => {
+test("the portal never asks the provider for a registration page: accounts come from the website's trial registration", async () => {
   const response = await fetch(`${PORTAL}/auth/start?intent=register&return=/download`, { redirect: "manual" });
   const location = new URL(response.headers.get("location"));
-  assert.equal(location.searchParams.get("prompt"), "create");
+  assert.equal(location.searchParams.has("prompt"), false, "no prompt=create: the realm has self-registration off");
+  assert.equal(location.searchParams.get("code_challenge_method"), "S256");
+  assert.equal(location.searchParams.has("client_secret"), false);
+});
+
+test("a public client completes sign-in with PKCE alone, as production's redactplus-portal does", async () => {
+  const { finished } = await signIn({ returnTo: "/" });
+  assert.equal(finished.status, 303, "the code was exchanged without a client secret");
+  assert.equal(new URL(finished.headers.get("location")).pathname, "/");
+});
+
+test("/welcome, where the set-password email lands, signs the person in through OIDC and never assumes a session", async () => {
+  const anonymous = await fetch(`${PORTAL}/welcome`, { redirect: "manual" });
+  assert.equal(anonymous.status, 303);
+  const location = new URL(anonymous.headers.get("location"), PORTAL);
+  assert.equal(location.pathname, "/auth/start");
+  assert.equal(location.searchParams.get("intent"), "signin");
+  assert.equal(location.searchParams.get("return"), "/");
+  assert.equal(anonymous.headers.getSetCookie().length, 0, "no session is created by arriving here");
+  assert.doesNotMatch(anonymous.headers.get("location"), /token|code=|password/i, "nothing sensitive in the redirect");
+
+  const { browser } = await signIn({ returnTo: "/" });
+  const signedIn = await browser.request(`${PORTAL}/welcome`);
+  assert.equal(signedIn.status, 303);
+  assert.equal(new URL(signedIn.headers.get("location")).pathname, "/", "already signed in: straight to home");
+});
+
+test("the home page shows the trial exactly as the Control Center reports it", async () => {
+  const { browser } = await signIn({ email: "trial-new@example.test", returnTo: "/" });
+  const html = (await (await browser.request(`${PORTAL}/`)).text()).replace(/<!-- -->/g, "");
+  assert.match(html, /Your trial/);
+  assert.match(html, /data-trial-status="not_started"/);
+  assert.match(html, /Your seven days start when you first sign in to RedactPlus Desktop, or by themselves on /);
+  assert.match(html, /Documents cloud credits/);
+  assert.match(html, /40 <span[^>]*>of 40 left/);
+  assert.match(html, /Audio cloud credits/);
+  assert.ok(html.indexOf("RedactPlus Desktop") < html.indexOf("Your trial"), "downloads stay first");
+});
+
+test("individual trial states, paid customers, missing licences and outages are shown as reported", async () => {
+  const page = async (email) => {
+    const { browser } = await signIn({ email, returnTo: "/" });
+    return (await (await browser.request(`${PORTAL}/`)).text()).replace(/<!-- -->/g, "");
+  };
+  const active = await page("active@example.test");
+  assert.match(active, /data-trial-status="active"/);
+  assert.match(active, /Your trial is active until /);
+  assert.match(active, /34 <span[^>]*>of 40 left/, "credits used are the backend's");
+
+  const ended = await page("ended@example.test");
+  assert.match(ended, /data-trial-status="ended"/);
+  assert.match(ended, /Your trial ended on .*Your files stay on your computer/);
+  assert.doesNotMatch(ended, /cloud credits/, "no allowance offered after the end");
+
+  const paid = await page("paid@example.test");
+  assert.match(paid, /Your licence/);
+  assert.match(paid, /Document \+ Media · active until /);
+  assert.doesNotMatch(paid, /Your trial|data-trial-status/);
+
+  assert.match(await page("unlicensed@example.test"), /No licence is assigned to this account yet/);
+  assert.match(await page("no-account@example.test"), /No RedactPlus account matches this sign-in yet/);
+  const outage = await page("outage@example.test");
+  assert.match(outage, /Licence details aren’t available right now\. Downloads still work/);
+  assert.match(outage, /RedactPlus Desktop/, "an outage never hides the download");
 });
 
 test("a signed-in visitor arriving from the marketing Download dialog is not sent through sign-in again", async () => {
@@ -374,11 +431,11 @@ test("downloads require a session, redirect only to allowlisted verified release
   }
 });
 
-test("an unverified email is flagged on the home page, and no trial or licence is ever claimed", async () => {
+test("an unverified email is flagged on the home page, and nothing is claimed beyond what the backend reports", async () => {
   const { browser } = await signIn({ email: "unverified@example.test", verified: false });
   const html = await (await browser.request(`${PORTAL}/`)).text();
   assert.match(html, /Verify your email address/);
-  assert.doesNotMatch(html, /trial (has been|is) (provisioned|active)|days? remaining|licence is active/i);
+  assert.doesNotMatch(html, /trial (has been|is) provisioned|days? remaining|licence is active/i);
 });
 
 test("callback rejects a missing transaction, a replayed code and a tampered state", async () => {

@@ -11,7 +11,8 @@ export const metadata: Metadata = {
 const prototypes = [
   { href: "/prototypes/hero-a", name: "Hero A: native canvas", note: "Canvas 2D redaction bar moving between document, audio and video motifs. Asset-independent." },
   { href: "/prototypes/hero-b", name: "Hero B: layered media", note: "Real document capture with lighting, plus audio and video diagrams. CSS-only motion." },
-  { href: "/prototypes/auth-dialog", name: "Download dialog: account form", note: "Create account, sign in and password reset, with simulated outcomes. Sends nothing." },
+  { href: "/prototypes/auth-dialog", name: "Download dialog: account form", note: "Create account (no password), Check your email, sign in and password reset, with simulated outcomes. Sends nothing." },
+  { href: "/prototypes/set-password", name: "Password set-up form", note: "New and confirm password, policy guidance, and invalid, expired, used and success states. Simulated; sends nothing." },
 ];
 
 export default function PrototypeIndex() {

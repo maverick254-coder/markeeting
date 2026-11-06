@@ -12,9 +12,9 @@ export const heroContent = {
   downloadCta: {
     label: "Download RedactPlus",
   },
-  /** The approved action, kept for builds without the portal (NEXT_PUBLIC_PORTAL_URL unset). */
+  /** The action for builds without the portal (NEXT_PUBLIC_PORTAL_URL unset): the sales enquiry. */
   primaryCta: {
-    label: "Request a Demo",
+    label: "Contact Sales",
     href: "/book-a-demo",
   },
   secondaryCta: {

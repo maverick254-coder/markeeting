@@ -17,6 +17,11 @@
 #                                     Download sign-in dialog; unset keeps "Request a Demo"
 #   SITE_CANONICAL_ORIGIN=…           defaults to https://redactplus.io; commits that
 #                                     predate the setting (master) keep saferedact.io
+#   NEXT_PUBLIC_REDACTPLUS_REGISTRATION=enabled
+#                                     shows the trial registration form (needs the site key
+#                                     below); the tag gets a -registration suffix so the image
+#                                     never replaces the registration-off build of the commit
+#   NEXT_PUBLIC_TURNSTILE_SITE_KEY=…  public Cloudflare Turnstile site key for that form
 #
 # ALLOW_RETIRED_CAPTURES=true lets a commit that still publishes audit-retired product
 # captures (Design A on master) pass the runtime check. Use it only with a recorded
@@ -33,6 +38,18 @@ commit="$(git -C "$repository_root" rev-parse --verify "${ref}^{commit}")"
 short="${commit:0:12}"
 tag="$commit"
 if [[ "${SITE_NOINDEX:-}" == "true" ]]; then tag="${commit}-noindex"; fi
+registration="${NEXT_PUBLIC_REDACTPLUS_REGISTRATION:-}"
+if [[ -n "$registration" && "$registration" != "enabled" ]]; then
+  echo "NEXT_PUBLIC_REDACTPLUS_REGISTRATION must be unset or \"enabled\"" >&2
+  exit 1
+fi
+if [[ "$registration" == "enabled" ]]; then
+  if [[ -z "${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}" ]]; then
+    echo "NEXT_PUBLIC_TURNSTILE_SITE_KEY is required with registration enabled: the backend refuses every registration without a Turnstile token" >&2
+    exit 1
+  fi
+  tag="${tag}-registration"
+fi
 
 context="$(mktemp -d)"
 trap 'rm -rf "$context"' EXIT
@@ -52,9 +69,12 @@ docker build \
   --build-arg NEXT_PUBLIC_DOCUMENTATION_URL="${NEXT_PUBLIC_DOCUMENTATION_URL:-}" \
   --build-arg NEXT_PUBLIC_PORTAL_URL="${NEXT_PUBLIC_PORTAL_URL:-}" \
   --build-arg NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH="${NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH:-}" \
+  --build-arg NEXT_PUBLIC_REDACTPLUS_REGISTRATION="$registration" \
+  --build-arg NEXT_PUBLIC_TURNSTILE_SITE_KEY="${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}" \
   --build-arg SITE_CANONICAL_ORIGIN="${SITE_CANONICAL_ORIGIN:-https://redactplus.io}" \
   --label "io.safaridesk.redactplus.noindex=${SITE_NOINDEX:-false}" \
   --label "io.safaridesk.redactplus.retired-captures=${ALLOW_RETIRED_CAPTURES:-false}" \
+  --label "io.safaridesk.redactplus.registration=${registration:-disabled}" \
   --tag "${image_repository}:${tag}" \
   "$context"
 

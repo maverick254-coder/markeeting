@@ -54,8 +54,8 @@ const noStore = { "Cache-Control": "no-store" } as const;
  * data and never reaches an ordinary log line, so a reference is the only way to tie
  * a support question back to a request.
  */
-function logOutcome(referenceId: string, outcome: string, transport: string) {
-  console.info("Contact enquiry", { referenceId, outcome, transport });
+function logOutcome(referenceId: string, outcome: string, transport: string, reason?: string) {
+  console.info("Contact enquiry", { referenceId, outcome, transport, ...(reason ? { reason } : {}) });
 }
 
 async function readBoundedJson(request: Request): Promise<unknown> {
@@ -157,7 +157,9 @@ export function createContactHandler({
         // A configured transport that failed is an outage, not an accepted enquiry:
         // answering 202 here would tell the visitor their message is on its way.
         const retryable = error instanceof LeadDeliveryError ? error.retryable : true;
-        logOutcome(referenceId, retryable ? "delivery-failed" : "delivery-refused", transport.name);
+        // The reason is a fixed code (for example "smtp-auth"), never provider wording.
+        const reason = error instanceof LeadDeliveryError ? error.reason : "unexpected";
+        logOutcome(referenceId, retryable ? "delivery-failed" : "delivery-refused", transport.name, reason);
         return NextResponse.json(
           {
             accepted: false,

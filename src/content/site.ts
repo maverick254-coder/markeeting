@@ -3,12 +3,12 @@ export const siteConfig = {
   tagline: "AI-powered redaction software",
   description:
     "Windows redaction software with AI-assisted workflows for documents and media.",
-  // The support mailbox and download host still run on the earlier domain. They work today,
-  // so they stay explicit rather than being replaced with unprovisioned redactplus.io addresses.
+  // `url` is only the canonical fallback for builds without SITE_CANONICAL_ORIGIN (the RedactPlus
+  // image sets https://redactplus.io). The support mailbox is the RedactPlus support address.
   externalCoordinates: {
     status: "legacy-pending-migration" as const,
     url: "https://saferedact.io",
-    email: "support@saferedact.io",
+    email: "support@redactplus.io",
   },
 };
 

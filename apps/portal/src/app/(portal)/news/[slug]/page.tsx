@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Markdown } from "@/components/forum/Markdown";
-import { PlannedModule } from "@/components/PlannedModule";
 import { formatReleaseDate } from "@/lib/releases/format";
 import { defaultNewsDir, loadPublishedNews, NEWS_TYPE_LABELS } from "@/lib/editorial/news";
 import { requirePortalSession } from "@/lib/session/current";
@@ -40,9 +39,6 @@ export default async function NewsArticlePage({ params }: { params: Promise<{ sl
           ))}
         </ul>
       ) : null}
-      <div className="mt-10">
-        <PlannedModule id="comments" title="Comments" description="Comments from signed-in customers, moderated by the RedactPlus team." topics={["Threaded replies", "Reporting", "Staff moderation"]} />
-      </div>
     </article>
   );
 }

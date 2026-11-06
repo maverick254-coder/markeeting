@@ -40,7 +40,8 @@ Phase status:
 
 ```text
 apps/portal/
-  content/releases.json          release manifest (validated; empty until a real release is verified)
+  content/releases.json          release manifest (validated; RedactPlus Desktop 0.3.8)
+  content/release-sources/<tag>/ the GitHub release’s own release.json and SHA256SUMS.txt (provenance)
   dev/mock-idp/server.mjs        DEVELOPMENT identity provider (loopback only, refuses production)
   scripts/validate-releases.ts   manifest check, run before every build
   scripts/verify-release.ts      downloads an installer and checks its size and SHA-256
@@ -103,7 +104,7 @@ Development settings cannot reach production:
 | `PORTAL_OIDC_ISSUER`, `PORTAL_OIDC_CLIENT_ID`, `PORTAL_OIDC_CLIENT_SECRET` | all or none | Keycloak realm and the portal's confidential client. Unset: sign-in reports itself unavailable. |
 | `PORTAL_OIDC_SCOPES` | no | Default `openid profile email`. |
 | `PORTAL_OIDC_REGISTRATION_PROMPT` | no | Default `create` (OIDC `prompt=create`). Set to empty if the realm rejects it. |
-| `PORTAL_DOWNLOAD_ALLOWED_HOSTS` | no | Exact host names that installer URLs may use. Empty: nothing is downloadable. |
+| `PORTAL_DOWNLOAD_ALLOWED_HOSTS` | no | Exact host names that installer URLs may use. Empty: nothing is downloadable. Use `github.com` for the GitHub Releases installer. |
 | `PORTAL_RELEASES_MANIFEST_PATH` | no | Overrides `content/releases.json` (tests use a fixture). |
 | `PORTAL_NEWS_DIR` | no | Overrides `content/news` (local previews use `tests/fixtures/news`). |
 | `PORTAL_CUSTOMER_API_URL` | no | Proposed backend customer API. **Not yet available.** |
@@ -177,12 +178,55 @@ To publish a release:
    checks the size and SHA-256.
 4. Only when that passes, add the `verification` block and merge.
 
-The portal links a release only when it is `supported`, its host is in
-`PORTAL_DOWNLOAD_ALLOWED_HOSTS` and the whole manifest validates. Downloads go through
-`/api/downloads/<version>`. That route requires a session, records the download in the
-customer's history, and redirects to the verified URL with `Referrer-Policy: no-referrer`.
+The file name or a whole URL path segment (such as the GitHub tag `v0.3.8`) must contain the
+version, and the URL must end with the file name.
 
-The shipped manifest is empty on purpose: no verified installer source exists yet.
+The portal links a release only when:
+- it is `supported`;
+- its host is in `PORTAL_DOWNLOAD_ALLOWED_HOSTS`;
+- the whole manifest validates.
+
+Downloads go through `/api/downloads/<version>`. That route:
+1. requires a session;
+2. records the download in the customer's history;
+3. redirects to the verified asset URL, with `Referrer-Policy: no-referrer`.
+
+For GitHub Releases, GitHub answers that URL with a short-lived signed redirect to
+`release-assets.githubusercontent.com`, served as `Content-Disposition: attachment`. The browser
+downloads the file and stays on the portal page. It never shows the release overview page.
+
+### Publishing a release from GitHub Releases
+
+Installers are published at `Safe-Redact/redactplus-downloads`. Each release carries the
+installer, plus `release.json` and `SHA256SUMS.txt`. Never type a version, size or checksum by
+hand.
+
+1. **Import.** Run `npm --prefix apps/portal run releases:import -- v<version>`.
+   - It downloads the release's `release.json` and `SHA256SUMS.txt`.
+   - It refuses to continue unless they agree with each other and with the tag.
+   - It saves both unchanged under `content/release-sources/v<version>/`.
+   - It prints a candidate manifest entry with **no** verification block. It does not edit the
+     manifest or download the installer.
+2. **Review and add.** Review the entry before adding it to `content/releases.json`:
+   - the note kinds (`release.json` notes have no category);
+   - the system requirements;
+   - whether older entries stay `supported`.
+
+   The note text must stay exactly as published.
+3. **Verify.** Run `npm --prefix apps/portal run releases:verify -- <version>`. It downloads the
+   real installer through GitHub's redirect and checks the exact size and SHA-256. Do not continue
+   if either differs.
+4. **Record.** Only after step 3 passes, add
+   `"verification": { "method": "sha256-of-downloaded-file", "verifiedOn": "<today>", "verifiedBy": "<role>" }`.
+
+Until step 4, the manifest fails validation and `npm run build` refuses to ship it.
+
+`tests/releases-and-customer-api.test.ts` cross-checks every shipped entry against its saved
+`release.json` and `SHA256SUMS.txt`: URL, size, SHA-256, date and note text. An edited value fails
+the tests.
+
+For other hosts, the same rules apply: upload, add the entry without verification, run
+`releases:verify`, then record the verification.
 
 ## Pending backend dependencies
 
@@ -191,7 +235,6 @@ The shipped manifest is empty on purpose: no verified installer source exists ye
 - `GET /v1/api/customer/me` for licence status and `POST /v1/api/customer/trial` for trial
   provisioning. Both are proposed, not verified.
 - A 7-day term and a trial plan in the Control Center.
-- A verified installer host.
 
 Until the customer API exists:
 - the portal never claims a trial;

@@ -44,6 +44,6 @@ export const faqItems: FaqItem[] = [
   {
     question: "How do I get started?",
     answer:
-      "Request a demo through the enquiry form, or use the current support email if you want to evaluate RedactPlus for your workflow.",
+      "Contact sales through the enquiry form to discuss packages and licensing, or email support@redactplus.io with questions about evaluating RedactPlus for your workflow.",
   },
 ];

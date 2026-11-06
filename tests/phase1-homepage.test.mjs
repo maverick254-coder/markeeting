@@ -43,7 +43,7 @@ test("homepage keeps the approved marketing navigation and conversion destinatio
   assert.match(html, /id="how-it-works"/);
   assert.match(html, /href="#faq"/);
   assert.match(html, /href="\/book-a-demo"/);
-  assert.match(html, /href="mailto:support@saferedact\.io"/);
+  assert.match(html, /href="mailto:support@redactplus.io"/);
   assert.doesNotMatch(html, /https:\/\/saferedact\.io\/download/);
   assert.match(html, /aria-controls="mobile-navigation"/);
   assert.match(html, /aria-expanded="false"/);

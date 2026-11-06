@@ -1,7 +1,8 @@
-# RedactPlus community portal (`home.redactplus.io`)
+# RedactPlus Home, the customer portal (`home.redactplus.io`)
 
-The signed-in half of the RedactPlus website: downloads, the community forum, documentation,
-news, release notes and support. It is a separate Next.js application in the marketing
+The signed-in half of the RedactPlus website: downloads, getting-started documentation, news,
+release notes and support, plus a community forum that stays hidden until a forum service
+exists. It is a separate Next.js application in the marketing
 repository, with its own `package.json`, lockfile, image and deployment. The marketing site does
 not depend on it.
 

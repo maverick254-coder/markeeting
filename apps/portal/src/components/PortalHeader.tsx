@@ -20,7 +20,7 @@ export function PortalHeader({ session, forum }: { session: SessionRecord; forum
           <Link
             href="/"
             prefetch={false}
-            aria-label="RedactPlus home"
+            aria-label="RedactPlus Home"
             className="-ml-1.5 inline-flex shrink-0 items-center rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool"
           >
             <BrandLogo height={40} decorative />

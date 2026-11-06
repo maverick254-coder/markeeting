@@ -10,8 +10,9 @@ const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono"
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: { default: "RedactPlus Community", template: "%s · RedactPlus" },
-  description: "Downloads, community, documentation and news for RedactPlus customers.",
+  // The customer portal is "RedactPlus Home" everywhere a customer reads its name.
+  title: { default: "RedactPlus Home", template: "%s · RedactPlus Home" },
+  description: "Downloads, getting-started guides, release notes and support for RedactPlus customers.",
   // Signed-in customer pages; nothing here is for search engines.
   robots: { index: false, follow: false },
   icons: {

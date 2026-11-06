@@ -166,6 +166,17 @@ test("the home page is a downloads and resources hub: download first, then resou
   assert.doesNotMatch(html, />\s*(Soon|Opening soon|Not available yet|Coming soon)\s*</i, "no unfinished-looking labels");
   assert.doesNotMatch(html, /Your home for RedactPlus Desktop|Welcome,|type-display/, "no marketing hero");
   assert.match(html, /Nothing has been published yet/, "no news is invented");
+  // The customer-facing name is RedactPlus Home; nothing still calls the portal a community.
+  assert.match(html, /<title>RedactPlus Home<\/title>/);
+  assert.match(html, /aria-label="RedactPlus Home"/);
+  assert.doesNotMatch(html.replace(/<script[\s\S]*?<\/script>/g, ""), /communit/i);
+  const docs = await (await browser.request(`${PORTAL}/docs`)).text();
+  assert.match(docs, /<title>Getting started · RedactPlus Home<\/title>/);
+  const missing = await browser.request(`${PORTAL}/no-such-page`);
+  assert.equal(missing.status, 404);
+  const missingHtml = (await missing.text()).replace(/<!-- -->/g, "");
+  assert.match(missingHtml, /Go to RedactPlus Home/);
+  assert.doesNotMatch(missingHtml.replace(/<script[\s\S]*?<\/script>/g, ""), /communit/i);
 });
 
 test("the download interface stays simple: no visible checksum, copy button or PowerShell steps", async () => {
@@ -355,7 +366,16 @@ test("individual trial states, paid customers, missing licences and outages are 
   assert.doesNotMatch(paid, /Your trial|data-trial-status/);
 
   assert.match(await page("unlicensed@example.test"), /No licence is assigned to this account yet/);
-  assert.match(await page("no-account@example.test"), /No RedactPlus account matches this sign-in yet/);
+  // Signed in, but no Control Center customer record: an accurate empty state with no invented
+  // licence, and no suggestion to set a password the person evidently already has.
+  const noAccount = await page("no-account@example.test");
+  assert.match(noAccount, /This sign-in isn’t linked to a RedactPlus customer account, so there’s no licence to show/);
+  assert.doesNotMatch(noAccount, /setting up your password|Your trial|data-trial-status|active until/);
+  assert.match(noAccount, /Download RedactPlus Desktop/, "downloads stay available without a customer record");
+  for (const [label, html] of [["active", active], ["ended", ended], ["paid", paid], ["no account", noAccount]]) {
+    const states = [/data-trial-status="active"/, /data-trial-status="ended"/, /Document \+ Media · active until/, /isn’t linked to a RedactPlus customer account/].filter((state) => state.test(html));
+    assert.equal(states.length, 1, `${label}: exactly one licence state is shown`);
+  }
   const outage = await page("outage@example.test");
   assert.match(outage, /Licence details aren’t available right now\. Downloads still work/);
   assert.match(outage, /RedactPlus Desktop/, "an outage never hides the download");
@@ -526,7 +546,9 @@ test("sign-out requires the portal origin and the session's CSRF token, then end
   redirectsToSignIn(await browser.request(`${PORTAL}/`), "/");
 
   const signedOut = await (await fetch(`${PORTAL}/signed-out`)).text();
-  assert.match(signedOut, /signed out/i);
+  assert.match(signedOut, /<h1[^>]*>You’ve signed out of RedactPlus\.<\/h1>/);
+  assert.match(signedOut, /<title>Signed out · RedactPlus Home<\/title>/);
+  assert.doesNotMatch(signedOut, /communit/i);
   assert.doesNotMatch(signedOut, /href="\/auth\/start|Sign in again|Create (an )?account/i, "the signed-out page offers no portal login");
 });
 

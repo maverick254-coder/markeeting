@@ -9,7 +9,7 @@ export default function NotFound() {
       <p className="type-body mt-3">
         The link may be out of date.{" "}
         <Link href="/" prefetch={false} className="font-medium text-accent-ink hover:text-accent-ink-hover">
-          Go to the community home
+          Go to RedactPlus Home
         </Link>
         .
       </p>

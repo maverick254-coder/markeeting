@@ -94,7 +94,12 @@ export function AccountStatus({ status, supportEmail }: { status: CustomerStatus
     case "no-account":
       return (
         <Shell title="Your licence">
-          <p>No RedactPlus account matches this sign-in yet. If you registered for a trial, finish setting up your password from the email we sent.{supportEmail ? <> Need help? Email {supportEmail}.</> : null}</p>
+          {/* Signed in (so the password is already set), but the Control Center has no customer
+              record for this identity: GET /portal/me answered 404 account_not_found. */}
+          <p>
+            This sign-in isn’t linked to a RedactPlus customer account, so there’s no licence to show. Downloads and guides are still available. If your organisation uses RedactPlus, ask its administrator to add you.
+            {supportEmail ? <> For a trial or a licence, email {supportEmail}.</> : null}
+          </p>
         </Shell>
       );
     case "forbidden":

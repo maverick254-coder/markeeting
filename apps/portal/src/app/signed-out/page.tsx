@@ -11,7 +11,7 @@ export default function SignedOutPage() {
     <MinimalShell>
       <div className="max-w-2xl">
         <p className="type-eyebrow">Signed out</p>
-        <h1 className="type-h1 mt-2">You’re signed out of the RedactPlus community.</h1>
+        <h1 className="type-h1 mt-2">You’ve signed out of RedactPlus.</h1>
         <p className="type-body mt-3">RedactPlus Desktop keeps its own sign-in, so signing out here doesn’t sign out the app.</p>
       </div>
       <a

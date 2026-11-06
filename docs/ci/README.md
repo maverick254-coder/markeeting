@@ -26,13 +26,14 @@ CMS disabled. That is also what the route suites expect.
 ## Safety properties
 
 - **Permissions:** `contents: read` only. Every checkout uses `persist-credentials: false`.
-- **No secrets:** the workflow references no secrets or credentials at all. It never logs in to a
-  registry, never pushes an image, never uses SSH, and cannot reach the production server. It
-  runs the same way for forks and Dependabot pull requests.
+- **No secrets in the checks:** the five check jobs reference no secrets or credentials. They
+  never log in to a registry, never push an image, never use SSH, and run the same way for forks
+  and Dependabot pull requests. Only the separate deployment workflow, called after the checks
+  on `main`, uses the `production` environment's secrets.
 - **Pinned actions:** only `actions/checkout` and `actions/setup-node` (v6.0.0), pinned by commit
   SHA.
-- **Guard test:** `tests/release-pipeline.test.mjs` enforces these rules (triggers, permissions,
-  job names, pins, no publish or deploy path).
+- **Guard tests:** `tests/release-pipeline.test.mjs` enforces these rules (triggers, permissions,
+  job names, pins, the single gated deployment path); `tests/release/` covers the deployment.
 
 ## Retired: `release.yml`
 
@@ -46,8 +47,14 @@ It was removed in this change and **not** replaced. The `release:package` and `r
 npm scripts remain for anyone who still needs the bundle locally. The old `ci.yml` triggers
 (`master` and `feat/saferedact-publishing-and-comments`) are gone too.
 
-Image publishing and production deployment will be separate, manually started and approved
-workflows, added in their own pull requests once this CI is stable. CI will never deploy.
+## Automatic deployment
+
+CI's checks never deploy. A sixth job, `deploy / production`, runs only for a push to `main` in
+this repository and only after all five checks above succeeded for that commit. It calls
+`.github/workflows/deploy-production.yml`, whose secret-bearing jobs run in the GitHub
+Environment `production` (main only). It does nothing until the environment variable
+`CD_ENABLED` is `true`. Settings, the server-side forced command, security review, rollout and
+rollback: `deployment/cd/README.md`.
 
 ## Expected first-run adjustments
 

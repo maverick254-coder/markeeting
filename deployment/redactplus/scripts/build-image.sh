@@ -75,6 +75,7 @@ docker build \
   --label "io.safaridesk.redactplus.noindex=${SITE_NOINDEX:-false}" \
   --label "io.safaridesk.redactplus.retired-captures=${ALLOW_RETIRED_CAPTURES:-false}" \
   --label "io.safaridesk.redactplus.registration=${registration:-disabled}" \
+  --label "io.safaridesk.redactplus.portal-url=${NEXT_PUBLIC_PORTAL_URL:-}" \
   --tag "${image_repository}:${tag}" \
   "$context"
 

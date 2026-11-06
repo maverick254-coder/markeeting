@@ -2,9 +2,13 @@
 # (apps/portal). Runs on every pull request into main, every push to main (so main shows its own
 # checks), the merge queue if it is enabled, and by hand.
 #
-# It needs no secrets and has read-only permissions: nothing here can reach production, the image
-# registry or the server. Images are built to prove they build; they are never pushed. Publishing
-# and deployment are separate, manually approved workflows (docs/ci/README.md).
+# The five checks need no secrets and have read-only permissions: nothing in them can reach
+# production, the image registry or the server, and the images they build are never pushed.
+#
+# Deployment is the separate workflow .github/workflows/deploy-production.yml. The last job below
+# calls it ONLY for a push to main, and only after every check passed for that exact commit. Its
+# secrets live in the "production" environment (main branch only), and it does nothing until
+# CD_ENABLED is "true" (docs/ci/README.md, "Automatic deployment").
 name: CI
 
 on:
@@ -206,3 +210,11 @@ jobs:
           npm audit --audit-level=high
           npm --prefix apps/portal audit --audit-level=high
           npm --prefix services/cms-oauth-broker audit --audit-level=high
+
+  deploy:
+    name: deploy / production
+    needs: [marketing, portal, images, secrets, dependencies]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'Safe-Redact/Marketing-Site'
+    permissions:
+      contents: read
+    uses: ./.github/workflows/deploy-production.yml

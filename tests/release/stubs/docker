@@ -1,0 +1,38 @@
+#!/bin/bash
+# Test stand-in for docker, used only by tests/release/redactplus-deploy.test.mjs.
+# State lives in $STUB_STATE: running-<service> holds the commit a service is "running".
+state="$STUB_STATE"
+running_sha() { cat "$state/running-$1" 2>/dev/null || echo none; }
+
+case "$1 $2" in
+  "pull "*|"pull --quiet") [ -e "$state/pull-fails" ] && exit 1; exit 0 ;;
+  "compose config") exit 0 ;;
+  "compose up")
+    svc="${@: -1}"
+    sha=$(grep '^RELEASE_SHA=' .env | cut -d= -f2-)
+    echo "${sha%-registration}" > "$state/running-$svc"
+    echo "compose up $svc $sha" >> "$state/calls"
+    exit 0 ;;
+esac
+
+if [ "$1" = inspect ]; then
+  svc="$2"; fmt="$4"; sha=$(running_sha "$svc")
+  case "$fmt" in
+    *State.Status*) echo "running/healthy" ;;
+    *Health.Status*) if [ -e "$state/unhealthy-$sha" ]; then echo unhealthy; else echo healthy; fi ;;
+    *Config.Image*) echo "registry.example/x:$sha" ;;
+  esac
+  exit 0
+fi
+
+if [ "$1 $2" = "image inspect" ]; then
+  image="$3"; fmt="$5"
+  case "$fmt" in
+    *revision*)
+      if [ -e "$state/bad-revision" ]; then echo deadbeef; exit 0; fi
+      name="${image%%@*}"; tag="${name##*:}"; echo "${tag%-registration}" ;;
+    *registration*) echo "disabled|" ;;
+  esac
+  exit 0
+fi
+exit 0

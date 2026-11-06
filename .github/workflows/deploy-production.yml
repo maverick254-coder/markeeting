@@ -1,0 +1,269 @@
+# Automatic production deployment, called ONLY by the CI workflow's final job (ci.yml, job
+# "deploy / production") after all five checks passed for this exact commit on main.
+#
+# Safety, in order:
+#   1. ci.yml calls this only for a push to refs/heads/main, and `needs:` all five CI checks, so
+#      a failed or skipped check means no deployment. The commit is always ${{ github.sha }}.
+#   2. Every job that receives a secret runs in the GitHub Environment "production", restricted
+#      to the main branch: a pull-request run that edited the workflows still gets no secrets.
+#   3. Off by default: nothing is built or deployed until the environment variable CD_ENABLED is
+#      "true", and only the components listed in CD_COMPONENTS.
+#   4. A run deploys only if its commit is still the head of main; a newer commit's own run
+#      deploys that one. The server also refuses any run number not newer than the last deployed.
+#   5. The SSH key can run one forced command on the server (deployment/cd/redactplus-deploy):
+#      no shell, no file access, no nginx, Keycloak, database or Cloudflare changes.
+#   6. Health and smoke checks run on the server after each deployment; on failure the previous
+#      image digest is restored automatically.
+#
+# Environment "production" (Settings → Environments):
+#   deployment branches: main only;  required reviewers: none (automatic) or as agreed
+#   secrets:   REGISTRY_USERNAME, REGISTRY_PASSWORD   push account for registry.safaridesk.io
+#              DEPLOY_SSH_KEY, DEPLOY_SSH_KNOWN_HOSTS  forced-command key, pinned host key
+#              DEPLOY_NOTIFY_WEBHOOK                   optional, Slack-compatible incoming webhook
+#   variables: CD_ENABLED ("true" to deploy), CD_COMPONENTS ("portal" or "marketing,portal"),
+#              DEPLOY_HOST, PORTAL_EXPECTED_ACCESS (default "staff-preview"),
+#              MARKETING_PORTAL_URL (default empty), MARKETING_REGISTRATION (default "disabled"),
+#              TURNSTILE_SITE_KEY (public; only used when registration is enabled)
+name: Deploy production
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    name: deploy / plan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: production
+    outputs:
+      enabled: ${{ steps.gate.outputs.enabled }}
+      marketing: ${{ steps.decide.outputs.marketing }}
+      portal: ${{ steps.decide.outputs.portal }}
+      marketing_registration: ${{ steps.decide.outputs.marketing_registration }}
+      marketing_portal_url: ${{ steps.decide.outputs.marketing_portal_url }}
+    steps:
+      - name: Gate (main push, switch, current head)
+        id: gate
+        env:
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+          SHA: ${{ github.sha }}
+          CD_ENABLED: ${{ vars.CD_ENABLED }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          [ "$EVENT" = push ] && [ "$REF" = refs/heads/main ] || { echo "::error::deployment is only for pushes to main"; exit 1; }
+          [[ "$SHA" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::bad commit"; exit 1; }
+          if [ "$CD_ENABLED" != "true" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Automatic deployment is switched off (CD_ENABLED is not \"true\"). Nothing was deployed." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          head=$(gh api "repos/${GITHUB_REPOSITORY}/commits/main" --jq .sha)
+          if [ "$head" != "$SHA" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "main has moved on to ${head}; that commit's own run deploys it. ${SHA} was not deployed." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+
+      - name: Check out the exact commit
+        if: steps.gate.outputs.enabled == 'true'
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Ask the server what is deployed
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+          HOST: ${{ vars.DEPLOY_HOST }}
+        run: |
+          umask 077
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$RUNNER_TEMP/deploy_key"
+          printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" > "$RUNNER_TEMP/known_hosts"
+          for c in marketing portal; do
+            ssh -i "$RUNNER_TEMP/deploy_key" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes \
+                -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" -o ConnectTimeout=20 "root@${HOST}" "status $c" > "$RUNNER_TEMP/status-$c"
+          done
+          rm -f "$RUNNER_TEMP/deploy_key" "$RUNNER_TEMP/known_hosts"
+          { echo "### Deployed before this run"; echo '```'; cat "$RUNNER_TEMP/status-marketing" "$RUNNER_TEMP/status-portal"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Decide which images this commit needs
+        if: steps.gate.outputs.enabled == 'true'
+        id: decide
+        env:
+          SHA: ${{ github.sha }}
+          CD_COMPONENTS: ${{ vars.CD_COMPONENTS }}
+          WANT_PORTAL_URL: ${{ vars.MARKETING_PORTAL_URL }}
+          WANT_REGISTRATION: ${{ vars.MARKETING_REGISTRATION || 'disabled' }}
+        run: |
+          field() { grep -E "^$2=" "$RUNNER_TEMP/status-$1" | head -1 | cut -d= -f2-; }
+          [[ "$WANT_REGISTRATION" =~ ^(disabled|enabled)$ ]] || { echo "::error::MARKETING_REGISTRATION must be disabled or enabled"; exit 1; }
+          [[ -z "$WANT_PORTAL_URL" || "$WANT_PORTAL_URL" == "https://home.redactplus.io" ]] || { echo "::error::MARKETING_PORTAL_URL must be empty or https://home.redactplus.io"; exit 1; }
+          have_registration=$(field marketing image_registration); have_registration=${have_registration:-disabled}
+          have_portal_url=$(field marketing image_portal_url)
+          flags_changed=false
+          [ "$have_registration" = "$WANT_REGISTRATION" ] && [ "$have_portal_url" = "$WANT_PORTAL_URL" ] || flags_changed=true
+          node scripts/release/changed-components.mjs --head "$SHA" \
+            --marketing-base "$(field marketing release_sha)" --portal-base "$(field portal release_sha)" \
+            --marketing-flags-changed "$flags_changed" > "$RUNNER_TEMP/decision.json"
+          decision() { node -e "const d=require(process.argv[1]);console.log($1)" "$RUNNER_TEMP/decision.json"; }
+          enabled_for() { [[ ",${CD_COMPONENTS// /}," == *",$1,"* ]]; }
+          for c in marketing portal; do
+            want=$(decision "d.${c}.deploy")
+            enabled_for "$c" || want=false
+            echo "${c}=${want}" >> "$GITHUB_OUTPUT"
+          done
+          echo "marketing_registration=${WANT_REGISTRATION}" >> "$GITHUB_OUTPUT"
+          echo "marketing_portal_url=${WANT_PORTAL_URL}" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Plan for ${SHA}"
+            echo "- automation enabled for: \`${CD_COMPONENTS:-none}\`"
+            echo "- marketing: $(decision 'd.marketing.deploy+" ("+d.marketing.reason+")"')"
+            echo "- portal: $(decision 'd.portal.deploy+" ("+d.portal.reason+")"')"
+          } >> "$GITHUB_STEP_SUMMARY"
+          server=$(decision 'd.serverConfig.join(", ")')
+          if [ -n "$server" ]; then
+            echo "::warning::Server configuration changed and is NOT applied automatically: ${server}"
+            echo "- **manual server change pending review:** ${server}" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+  marketing:
+    name: deploy / marketing
+    needs: plan
+    if: needs.plan.outputs.enabled == 'true' && needs.plan.outputs.marketing == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment:
+      name: production
+      url: https://redactplus.io
+    concurrency:
+      group: production-marketing
+      cancel-in-progress: false
+    steps:
+      - name: Check out the exact commit
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22
+      - name: Build the marketing image (build-image.sh, current production flags)
+        env:
+          SHA: ${{ github.sha }}
+          NEXT_PUBLIC_PORTAL_URL: ${{ needs.plan.outputs.marketing_portal_url }}
+          NEXT_PUBLIC_REDACTPLUS_REGISTRATION: ${{ needs.plan.outputs.marketing_registration == 'enabled' && 'enabled' || '' }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ needs.plan.outputs.marketing_registration == 'enabled' && vars.TURNSTILE_SITE_KEY || '' }}
+        run: |
+          bash deployment/redactplus/scripts/build-image.sh "$SHA"
+          tag="$SHA"; [ "$NEXT_PUBLIC_REDACTPLUS_REGISTRATION" = enabled ] && tag="${SHA}-registration"
+          echo "TAG=$tag" >> "$GITHUB_ENV"
+          echo "IMAGE=registry.safaridesk.io/safari/redactplus-landing:$tag" >> "$GITHUB_ENV"
+      - name: Smoke-test the image before publishing
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          docker run --rm -d --name redactplus-smoke -p 127.0.0.1:3095:3000 --read-only \
+            --tmpfs /tmp --tmpfs /app/.next/cache:mode=1777 --tmpfs /app/.next/server/route-cache:mode=1777 \
+            --env-file deployment/redactplus/app.env.example "$IMAGE"
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:3095/api/health >/dev/null 2>&1 && break; sleep 2; done
+          EXPECT_CANONICAL_ORIGIN=https://redactplus.io node deployment/redactplus/scripts/smoke-test.mjs http://127.0.0.1:3095 "$SHA"
+          docker rm -f redactplus-smoke >/dev/null
+      - name: Publish (digest-addressed)
+        env:
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        run: bash .github/scripts/publish-image.sh
+      - name: Deploy on the server (forced command; rolls back by itself on failure)
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+          HOST: ${{ vars.DEPLOY_HOST }}
+          COMPONENT: marketing
+          RUN: ${{ github.run_number }}
+          EXPECT_REGISTRATION: ${{ needs.plan.outputs.marketing_registration }}
+        run: bash .github/scripts/remote-deploy.sh
+      - name: Public check
+        run: |
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 https://redactplus.io/)
+          echo "public https://redactplus.io/: ${code}" | tee -a "$GITHUB_STEP_SUMMARY"
+          [ "$code" = 200 ]
+
+  portal:
+    name: deploy / portal
+    needs: plan
+    if: needs.plan.outputs.enabled == 'true' && needs.plan.outputs.portal == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment:
+      name: production
+      url: https://home.redactplus.io
+    concurrency:
+      group: production-portal
+      cancel-in-progress: false
+    steps:
+      - name: Check out the exact commit
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Build the portal image
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          image="registry.safaridesk.io/safari/redactplus-portal:${SHA}"
+          docker build --platform linux/amd64 -f deployment/portal/Dockerfile --build-arg GIT_COMMIT="$SHA" -t "$image" apps/portal
+          # No development tooling or fixtures may ship.
+          docker run --rm --network none --entrypoint sh "$image" -c \
+            'for p in dev public/dev-fixtures tests .env .env.local; do [ -e "/app/$p" ] && { echo "unexpected /app/$p"; exit 1; }; done; exit 0'
+          echo "TAG=$SHA" >> "$GITHUB_ENV"
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+      - name: Publish (digest-addressed)
+        env:
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        run: bash .github/scripts/publish-image.sh
+      - name: Deploy on the server (forced command; rolls back by itself on failure)
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+          HOST: ${{ vars.DEPLOY_HOST }}
+          COMPONENT: portal
+          RUN: ${{ github.run_number }}
+          EXPECT_ACCESS: ${{ vars.PORTAL_EXPECTED_ACCESS || 'staff-preview' }}
+        run: bash .github/scripts/remote-deploy.sh
+
+  notify:
+    name: deploy / notify
+    needs: [plan, marketing, portal]
+    if: always() && needs.plan.outputs.enabled == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production
+    steps:
+      - name: Report the outcome
+        env:
+          WEBHOOK: ${{ secrets.DEPLOY_NOTIFY_WEBHOOK }}
+          SHA: ${{ github.sha }}
+          MARKETING: ${{ needs.marketing.result }}
+          PORTAL: ${{ needs.portal.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          status="succeeded"
+          case "$MARKETING $PORTAL" in *failure*|*cancelled*) status="FAILED" ;; esac
+          text="RedactPlus production deployment ${status} for ${SHA:0:12}: marketing=${MARKETING:-skipped}, portal=${PORTAL:-skipped}. ${RUN_URL}"
+          echo "$text" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$WEBHOOK" ]; then
+            payload=$(node -e 'console.log(JSON.stringify({ text: process.argv[1] }))' "$text")
+            curl -fsS --max-time 15 -H 'content-type: application/json' --data "$payload" "$WEBHOOK" >/dev/null || echo "::warning::notification could not be delivered"
+          fi
+          [ "$status" = succeeded ]

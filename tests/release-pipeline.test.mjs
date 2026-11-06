@@ -12,7 +12,7 @@ async function read(relativePath) {
   return readFile(path.join(repositoryRoot, relativePath), "utf8");
 }
 
-test("CI runs for main (PRs, pushes, merge queue, manual), stays read-only and can never publish or deploy", async () => {
+test("CI runs for main (PRs, pushes, merge queue, manual), stays read-only, and reaches production only through the gated deploy job", async () => {
   const workflowsDir = path.join(repositoryRoot, ".github", "workflows");
   // release.yml packaged a provider-neutral bundle on pushes to master; master no longer exists
   // and production ships as digest-pinned Docker images. It is retired, not replaced.
@@ -35,11 +35,24 @@ test("CI runs for main (PRs, pushes, merge queue, manual), stays read-only and c
     "images / build",
     "security / secrets",
     "security / dependencies",
+    "deploy / production",
   ]);
+
+  // The only path to production: after ALL checks, only for a push to main in this repository,
+  // through the separate deployment workflow. CI's own jobs never deploy.
+  const deploy = ci.jobs.deploy;
+  assert.deepEqual([...deploy.needs].sort(), ["dependencies", "images", "marketing", "portal", "secrets"]);
+  assert.equal(deploy.if, "github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'Safe-Redact/Marketing-Site'");
+  assert.equal(deploy.uses, "./.github/workflows/deploy-production.yml");
+  assert.deepEqual(deploy.permissions, { contents: "read" });
+  assert.equal(deploy.secrets, undefined, "no secrets are handed down; they live in the production environment");
+  for (const [id, job] of Object.entries(ci.jobs)) {
+    if (id !== "deploy") assert.ok(job.steps, `${id} runs steps, not a deployment`);
+  }
 
   // The push-only before SHA is read only inside the push branch of each script.
   for (const job of Object.values(ci.jobs)) {
-    for (const step of job.steps) {
+    for (const step of job.steps ?? []) {
       if (step.env?.BEFORE_SHA) assert.match(step.run, /push\)/, `${step.name}: before SHA outside the push case`);
       if (step.uses) {
         assert.match(step.uses, /^[\w.-]+\/[\w.-]+@[0-9a-f]{40}$/, `${step.uses} is pinned to a commit`);

@@ -10,14 +10,36 @@ The owner approves the whole sequence once (section 3), after every item in sect
 
 ## 1. Release contents
 
-| Component | Source | Pull request | Production today | After launch |
-|---|---|---|---|---|
-| Marketing site | Marketing-Site `feat/redactplus-customer-launch` (includes `fix/redactplus-sign-in-only-download`) | new | `7c1ff6b` image `sha256:4a52ff7e…` (4 Nov) | merge commit, tag `<sha>-registration` |
-| Customer portal | Marketing-Site `main` (PR #13 wording) | merged | `e5e7954` `sha256:a855304b…` (staff preview) | `main` merge commit, public |
-| Control Center API | Admin-panel `fix/trial-trusted-client-address` | new | `:prod` built 6 Nov 16:28 UTC (unlabelled, after `7026a19`) | merge commit |
-| Keycloak customer theme | Admin-panel `feat/redactplus-customer-login-theme` | new | staff theme for every client | `redactplus` theme on `redactplus-portal` |
-| Keycloak SMTP script | Admin-panel `fix/smtp-script-spacemail` | new | unknown (owner to confirm) | SpaceMail, implicit TLS 465 |
-| Automatic deployment | Marketing-Site `main` (PR #14) + the sticky-flag fix on the launch branch | merged / new | off | stays off until after the launch |
+The release is exactly two pull requests, one per repository, both from a branch named
+`feat/redactplus-customer-launch`:
+
+| PR | Repository | Contains |
+|---|---|---|
+| **Marketing** | Safe-Redact/Marketing-Site | Sign-in fallback for the Download dialog, the forwarder secret, sticky deployment flags, this document |
+| **Backend** | Safe-Redact/Admin-panel | Trusted visitor address (forwarder secret) and staff-address guard, RedactPlus customer login theme, SpaceMail SMTP script |
+
+| Component | In | Production today | After launch |
+|---|---|---|---|
+| Marketing site | Marketing PR | `7c1ff6b` image `sha256:4a52ff7e…` (4 Nov) | merge commit, tag `<sha>-registration` |
+| Customer portal | Marketing-Site `main` already (PR #13 wording) | `e5e7954` `sha256:a855304b…` (staff preview) | `main` merge commit, public |
+| Control Center API | Backend PR | `:prod` built 6 Nov 16:28 UTC (unlabelled, after `7026a19`) | `:prod` from the merge commit |
+| Keycloak customer theme | Backend PR | staff theme for every client | `redactplus` theme on `redactplus-portal` |
+| Keycloak SMTP script | Backend PR | unknown (owner to confirm) | SpaceMail, implicit TLS 465 |
+| Automatic deployment | Marketing-Site `main` (PR #14) + the sticky-flag fix in the Marketing PR | off | stays off until after the launch |
+
+**Merging the backend PR deploys it.** A push to Admin-panel `main` publishes
+`saferedact-control-center-api:prod` and `-web:prod` (`.github/workflows/production.yml`), and
+Watchtower on the server (`--label-enable --interval 60 --cleanup`) replaces `saferedact_api` and
+`saferedact_admin` within about a minute. With no new settings this is safe: without
+`TRIAL_FORWARDER_TOKEN` the API ignores forwarded visitor addresses, registration is still off on
+the website, and the theme and realm change only take effect through phase 2's manual steps. Merge
+it at the start of the launch window (phase 1), not earlier. Rollback: the previous image is in
+the registry as `:sha-7026a19…` (Watchtower's `--cleanup` removes it from the server, so it is
+pulled again).
+
+The original per-change branches (`fix/redactplus-sign-in-only-download`;
+`fix/trial-trusted-client-address`, `feat/redactplus-customer-login-theme`,
+`fix/smtp-script-spacemail`) stay until both PRs are verified and merged, then can be deleted.
 
 ### What the branches change
 - **Website, sign-in fallback:** while registration is off, the Download dialog is sign-in only (no unusable form,
@@ -72,7 +94,7 @@ the server file or console named.
 
 | # | Item | Who | Exact action | Validation |
 |---|---|---|---|---|
-| H1 | Merge the pull requests | Product owner, backend developer | Review and merge the four branches in section 1 after CI is green | `main` contains each branch's head |
+| H1 | Review the two pull requests | Product owner, backend developer | Review both PRs and get CI green. Merge the Marketing PR before the window; merge the Backend PR at the start of phase 1 (it deploys itself) | `main` of each repository contains its `feat/redactplus-customer-launch` head |
 | H2 | Forwarder secret | Operator on the server | `openssl rand -hex 32` once; put it in the API `.env` as `TRIAL_FORWARDER_TOKEN` and in `/root/deploy/redactplus-landing/app.env` as `REDACTPLUS_REGISTRATION_FORWARDER_TOKEN` (both mode 600) | API starts; the marketing route answers 503 `registration_unavailable` until its own config is complete, never a configuration error in its log |
 | H3 | SpaceMail SMTP for Keycloak | Owner with the `no-reply@redactplus.io` mailbox password; backend developer | On the server in the Control Center checkout: `SMTP_HOST=mail.spacemail.com SMTP_PORT=465 SMTP_SSL=true SMTP_REPLY_TO=support@redactplus.io bash scripts/set-smtp.sh no-reply@redactplus.io` (password at the prompt) | Keycloak admin → Realm settings → Email → **Test connection** succeeds; a test email arrives with DKIM `d=redactplus.io` pass and SPF pass. DNS already verified 7 Nov: SPF includes SpaceMail, DKIM selector `spacemail` exists, MX is SpaceMail, DMARC `p=none` |
 | H4 | Cloudflare Turnstile | Owner (Cloudflare dashboard) | Create or confirm a widget for `redactplus.io` and `www.redactplus.io` (Managed). Give the **site key** to the marketing build and put the **secret** in the API `.env` as `TURNSTILE_SECRET` | The candidate page loads the widget without a "testing only" banner; a registration with a deliberately missing token is refused with the security-check message |
@@ -98,7 +120,7 @@ switch. Stop at the first failed check and roll that phase back.
 | Phase | Action | Checks | Rollback |
 |---|---|---|---|
 | 0 | Snapshot: `docker ps`, `nginx -t`, `df -h /` (≥ 8 GB free), back up the API `.env`, the marketing `app.env` and the portal nginx site | — | — |
-| 1 | **API**: deploy the merged API with `TRIAL_FORWARDER_TOKEN` and `TURNSTILE_SECRET` (H2, H4) | `/health` ok; `POST /public/trial-registrations` with `CF-Connecting-IP` but no secret is rate-limited against the caller's own address (send 11 from one host: 429) | Previous API image tag and `.env` backup |
+| 1 | **API**: merge the Backend PR (Watchtower deploys `:prod`), then add `TRIAL_FORWARDER_TOKEN` and `TURNSTILE_SECRET` (H2, H4) and recreate the API container | `/health` ok; `POST /public/trial-registrations` with `CF-Connecting-IP` but no secret is rate-limited against the caller's own address (send 11 from one host: 429) | Pin the API to `:sha-7026a19…` (or the previous `sha-` tag) and restore the `.env` backup |
 | 2 | **Keycloak**: SMTP (H3), customer theme (H8) | Test connection; portal sign-in page wording; Admin Panel sign-in unchanged | Clear the client's login theme; restore the previous SMTP from the backup |
 | 3 | **Portal**: deploy `main`, then stage I (public site) | Health `ready` and commit; non-staff `/` redirects to sign-in; direct origin 403; `/forum` 404 | `.env.previous`; reinstall the preview site |
 | 4 | **Stage M** (H7) | Marketing health and real visitor addresses in the log | Restore the nginx backup and reload |

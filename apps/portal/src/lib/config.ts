@@ -58,6 +58,11 @@ export interface PortalConfig {
   trustProxyHops: number;
   /** Development only: show sample community discussions, clearly labelled. */
   devCommunityFixtures: boolean;
+  /**
+   * Development only (NodeBB feasibility trial): a local NodeBB the forum reads from, with a
+   * server-side master token. Refused outside development; production keeps the forum off.
+   */
+  devForumNodebb: { url: URL; token: string } | null;
 }
 
 type Env = Record<string, string | undefined>;
@@ -219,6 +224,17 @@ export function parsePortalConfig(env: Env): PortalConfig {
     throw new PortalConfigurationError("PORTAL_DEV_COMMUNITY_FIXTURES is for local development only.");
   }
 
+  const nodebbUrlRaw = read(env, "PORTAL_DEV_FORUM_NODEBB_URL");
+  const nodebbToken = read(env, "PORTAL_DEV_FORUM_NODEBB_TOKEN");
+  let devForumNodebb: PortalConfig["devForumNodebb"] = null;
+  if (nodebbUrlRaw || nodebbToken) {
+    if (!nonProduction) throw new PortalConfigurationError("PORTAL_DEV_FORUM_NODEBB_URL is for the local NodeBB trial only.");
+    if (!nodebbUrlRaw || !nodebbToken) throw new PortalConfigurationError("Set both PORTAL_DEV_FORUM_NODEBB_URL and PORTAL_DEV_FORUM_NODEBB_TOKEN, or neither.");
+    const url = new URL(nodebbUrlRaw);
+    if (!isLoopbackHost(url.hostname)) throw new PortalConfigurationError("PORTAL_DEV_FORUM_NODEBB_URL must be a local (loopback) NodeBB.");
+    devForumNodebb = { url, token: nodebbToken };
+  }
+
   const hopsRaw = read(env, "TRUST_PROXY_HOPS");
   const hops = hopsRaw ? Number(hopsRaw) : 0;
 
@@ -239,6 +255,7 @@ export function parsePortalConfig(env: Env): PortalConfig {
     supportEmail,
     trustProxyHops: Number.isSafeInteger(hops) && hops >= 0 && hops <= 10 ? hops : 0,
     devCommunityFixtures,
+    devForumNodebb,
   };
 }
 

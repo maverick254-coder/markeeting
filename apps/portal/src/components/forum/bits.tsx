@@ -74,4 +74,13 @@ export function FixtureBanner() {
   );
 }
 
+/** Local NodeBB feasibility trial: real NodeBB data on this machine, never production. */
+export function NodebbTrialBanner() {
+  return (
+    <p role="note" className="rounded-xl border border-dashed border-accent-warm/50 bg-accent-warm/[0.06] px-4 py-2.5 text-body-sm text-ink">
+      <strong>NodeBB trial.</strong> These questions come from a local NodeBB used to evaluate the forum engine. Production never shows them.
+    </p>
+  );
+}
+
 export const NOT_LIVE = "Opens when the forum service is connected";

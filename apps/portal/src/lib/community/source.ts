@@ -1,6 +1,7 @@
 import type { PortalConfig } from "../config";
 import { plannedCategories } from "./categories";
 import { devFixtureQuestions } from "./dev-fixtures";
+import { nodebbForum } from "./nodebb";
 import { queryQuestions, tagCounts } from "./query";
 import type { ForumService, Question, QuestionSummary } from "./types";
 
@@ -69,5 +70,7 @@ const fixtureForum: ForumService = {
 };
 
 export function forumService(config: PortalConfig): ForumService {
+  // Local NodeBB feasibility trial only; config refuses it outside development.
+  if (config.devForumNodebb && config.environment !== "production") return nodebbForum(config.devForumNodebb);
   return config.devCommunityFixtures && config.environment !== "production" ? fixtureForum : unavailableForum;
 }

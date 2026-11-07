@@ -93,7 +93,7 @@ export interface QuestionPage {
  * until an engine is deployed; `development-fixtures` serves sample content locally only.
  */
 export interface ForumService {
-  readonly kind: "unavailable" | "development-fixtures";
+  readonly kind: "unavailable" | "development-fixtures" | "nodebb-trial";
   readonly categories: readonly CommunityCategory[];
   listQuestions(query: QuestionQuery): Promise<QuestionPage>;
   getQuestion(slug: string): Promise<Question | null>;

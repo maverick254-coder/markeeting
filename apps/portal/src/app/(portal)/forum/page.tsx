@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FixtureBanner, TagChip } from "@/components/forum/bits";
+import { FixtureBanner, NodebbTrialBanner, TagChip } from "@/components/forum/bits";
 import { QuestionRow } from "@/components/forum/QuestionRow";
 import { Icon } from "@/components/Icon";
 import { forumService } from "@/lib/community/source";
@@ -55,7 +55,7 @@ export default async function ForumPage({ searchParams }: { searchParams: Promis
   // No forum engine is deployed in production yet: the forum is not offered (it is also absent
   // from navigation) rather than shown as an empty, read-only board.
   if (forum.kind === "unavailable") notFound();
-  const live = forum.kind === "development-fixtures";
+  const live = forum.kind === "development-fixtures" || forum.kind === "nodebb-trial";
   const query: QuestionQuery = parseQuestionQuery(await searchParams, forum.categories.map((category) => category.slug));
   const [page, tags] = await Promise.all([forum.listQuestions(query), forum.popularTags(12)]);
   const categoryName = (slug: string) => forum.categories.find((category) => category.slug === slug)?.name ?? slug;
@@ -82,7 +82,7 @@ export default async function ForumPage({ searchParams }: { searchParams: Promis
         </Link>
       </div>
 
-      {live ? <FixtureBanner /> : null}
+      {forum.kind === "development-fixtures" ? <FixtureBanner /> : forum.kind === "nodebb-trial" ? <NodebbTrialBanner /> : null}
 
       <div className="grid gap-8 lg:grid-cols-[1fr_15.5rem]">
         <div className="min-w-0 space-y-4">

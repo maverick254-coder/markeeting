@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AuthorLine, FixtureBanner, formatForumDate, NOT_LIVE, PendingAction, TagChip } from "@/components/forum/bits";
+import { AuthorLine, FixtureBanner, formatForumDate, NodebbTrialBanner, NOT_LIVE, PendingAction, TagChip } from "@/components/forum/bits";
 import { Markdown } from "@/components/forum/Markdown";
 import { Attachments, CommentsBlock, PostActions, VoteColumn } from "@/components/forum/Thread";
 import { Icon } from "@/components/Icon";
@@ -29,7 +29,7 @@ export default async function QuestionPage({ params }: { params: Promise<{ slug:
 
   return (
     <div className="space-y-6">
-      {forum.kind === "development-fixtures" ? <FixtureBanner /> : null}
+      {forum.kind === "development-fixtures" ? <FixtureBanner /> : forum.kind === "nodebb-trial" ? <NodebbTrialBanner /> : null}
 
       <nav aria-label="Breadcrumb" className="text-body-sm text-ink-muted">
         <ol className="flex flex-wrap items-center gap-1.5">

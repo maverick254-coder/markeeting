@@ -13,7 +13,7 @@ sha=$(cat "$state/running-$svc" 2>/dev/null || echo none)
 if $code; then
   case "$url" in
     */download) printf 307 ;;
-    */api/registration/resend) printf 503 ;;
+    */api/registration/resend) if [ -e "$state/registration-unconfigured-$sha" ]; then printf 503; else printf 400; fi ;;
     *) printf 200 ;;
   esac
 else

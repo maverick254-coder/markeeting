@@ -1,5 +1,10 @@
 # RedactPlus production rollout checklist
 
+> **Superseded for the launch** by `docs/releases/2026-11-redactplus-customer-launch.md`
+> (7 November 2026). Registration is no longer a switch: every production marketing build has the
+> Download dialog with Create account and Sign in, and there is no registration-off build. The
+> readiness evidence below is kept as the 6 November record.
+
 Covers the customer portal (`home.redactplus.io`), the marketing site's Download entry and trial
 registration (`redactplus.io`). Prepared 6 November 2026. **Nothing here has been applied.**
 
@@ -77,7 +82,7 @@ E2, the registry clean-up (about 92 GB), is not part of this rollout. It needs t
 | **H** | `.env` pin; `docker compose up -d redactplus-portal`; health on loopback | None (holding page still served) | `docker compose rm -sf redactplus-portal` |
 | **H2** | Staff preview: list the staff addresses, install `home.redactplus.io.preview.conf`, then `nginx -t` and reload. Run test steps 5–8 with an **existing** staff account | Staff reach the portal; everyone else sees the holding page | Reinstall the holding site and reload |
 | **I** | Public launch: install `home.redactplus.io.conf`, then `nginx -t` and reload. Run the public checks in DEPLOYMENT.md stage I | Portal live | Reinstall the preview or holding site and reload |
-| **J** | Marketing release with `NEXT_PUBLIC_PORTAL_URL=https://home.redactplus.io` and **registration still off**: the Download dialog offers Sign in and Contact Sales | Download buttons open the dialog | Redeploy the previous marketing digest (`.env.previous`) |
+| **J** | Marketing release with `NEXT_PUBLIC_PORTAL_URL=https://home.redactplus.io` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY`: the Download dialog offers Create account and Sign in. Needs track 3's R0–R2 first | Download buttons open the dialog | Redeploy the previous marketing digest (`.env.previous`) |
 
 ## 5. Track 3: marketing registration activation
 
@@ -85,8 +90,8 @@ E2, the registry clean-up (about 92 GB), is not part of this rollout. It needs t
 |---|---|---|
 | **R0** | Backend and operations confirm in writing:<br>• `TURNSTILE_SECRET` is set on the API;<br>• the Turnstile widget lists `redactplus.io` and `www.redactplus.io`;<br>• the trial organisation and Trial subscription are active;<br>• realm SMTP goes through SpaceMail;<br>• `CF-Connecting-IP` handling is agreed;<br>• the Terms page states 18+.<br>Stage M must be live | Backend team |
 | **R1** | Choose the staff test mailbox and the tester's network (see the controlled test). A platform Owner may set the trial limit window | Backend / you |
-| **R2** | Marketing `app.env`: `REDACTPLUS_REGISTRATION_MODE=backend` and `REDACTPLUS_REGISTRATION_API_URL=https://api.saferedact.io/public/trial-registrations`. Takes effect with R3's deploy | **Yours** |
-| **R3** | Build the marketing image with `NEXT_PUBLIC_PORTAL_URL`, `NEXT_PUBLIC_REDACTPLUS_REGISTRATION=enabled` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (tag `<sha>-registration`). Before deploying, add the controlled-window WAF rule below. Deploy | **Yours** |
+| **R2** | Marketing `app.env`: `REDACTPLUS_REGISTRATION_API_URL=https://api.saferedact.io/public/trial-registrations` and `REDACTPLUS_REGISTRATION_FORWARDER_TOKEN` (same as the API's `TRIAL_FORWARDER_TOKEN`). Takes effect with R3's deploy | **Yours** |
+| **R3** | Build the marketing image with `NEXT_PUBLIC_PORTAL_URL` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY` (stage J). Before deploying, add the controlled-window WAF rule below. Deploy | **Yours** |
 | **R4** | Run the controlled end-to-end test (all steps) | — |
 | **R5** | Remove the WAF rule: registration is public | **Yours** |
 
@@ -98,12 +103,12 @@ E2, the registry clean-up (about 92 GB), is not part of this rollout. It needs t
   nothing is created.
 - Without dashboard access, deploy R3 at a quiet hour and run R4 immediately.
 
-**Rollback for track 3, fastest first:**
-1. Remove `REDACTPLUS_REGISTRATION_MODE` from `app.env` and run `docker compose up -d`. The form
-   still shows but answers "registration unavailable"; nothing is created.
-2. Redeploy the previous (registration-off) marketing digest: the form disappears and Contact Sales
-   returns.
-3. Backend: unset the trial organisation, which makes the API answer `unavailable`.
+**Stopping registration in an emergency** (there is no website switch), fastest first:
+1. Re-add the Cloudflare WAF rule above: submissions are blocked at the edge; the form says the
+   registration wasn't confirmed and nothing is created.
+2. Backend: unset the trial organisation, which makes the API answer `unavailable`; the form says
+   trials can't be started right now and nothing was created.
+3. Redeploy the previous marketing digest (`.env.previous`).
 
 ## 6. Controlled end-to-end test (staff mailbox)
 

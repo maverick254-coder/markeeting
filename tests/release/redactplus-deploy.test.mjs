@@ -79,8 +79,9 @@ test("status reports the pin, the last run and the reported modes", { skip }, ()
   assert.equal(portal.fields.last_run, "0");
   assert.equal(portal.fields.portal_access, "staff-preview");
   const marketing = run("status marketing");
-  assert.equal(marketing.fields.registration, "disabled");
-  assert.equal(marketing.fields.image_registration, "disabled");
+  assert.equal(marketing.fields.image_portal_url, "https://home.redactplus.io");
+  assert.equal(marketing.fields.registration, undefined, "registration is not a mode to report");
+  assert.equal(marketing.fields.image_registration, undefined);
 });
 
 test("a newer run deploys the exact tag and digest, keeps the previous pin and records history", { skip }, () => {
@@ -155,6 +156,7 @@ test("malformed or unexpected requests are refused", { skip }, () => {
     `deploy portal ${NEW} sha256:xyz 5`,
     `deploy portal ${NEW} ${DIG("2")} -1`,
     `deploy portal ${NEW}-registration ${DIG("2")} 5`,
+    `deploy marketing ${NEW}-registration ${DIG("2")} 5`,
     `deploy portal ${NEW};id ${DIG("2")} 5`,
     "status portal; cat app.env",
     "rollback portal",
@@ -166,11 +168,26 @@ test("malformed or unexpected requests are refused", { skip }, () => {
   assert.match(read("portal", ".env"), new RegExp(`RELEASE_SHA=${OLD}`));
 });
 
-test("a registration-on marketing tag is accepted for marketing only", { skip }, () => {
-  const { run, read } = setup();
-  const r = run(`deploy marketing ${NEW}-registration ${DIG("2")} 2`);
-  assert.equal(r.fields.result, "deployed", r.out);
-  assert.match(read("marketing", ".env"), new RegExp(`RELEASE_SHA=${NEW}-registration`));
+test("a marketing release that cannot register customers is rolled back", { skip }, () => {
+  const { run, read, flag } = setup();
+  flag(`registration-unconfigured-${NEW}`);
+  const r = run(`deploy marketing ${NEW} ${DIG("2")} 2`);
+  assert.equal(r.code, 1);
+  assert.equal(r.fields.result, "failed");
+  assert.match(r.out, /check=registration-not-configured-503/);
+  assert.equal(r.fields.rollback, "healthy");
+  assert.match(read("marketing", ".env"), new RegExp(`RELEASE_SHA=${OLD}`), "the previous release is back");
+  // A configured release deploys.
+  assert.equal(run(`deploy marketing ${NEWER} ${DIG("3")} 3`).fields.result, "deployed");
+});
+
+test("a rollback to an older release does not require registration", { skip }, () => {
+  const { run, read, flag } = setup();
+  flag(`registration-unconfigured-${OLD}`);
+  assert.equal(run(`deploy marketing ${NEW} ${DIG("2")} 4`).fields.result, "deployed");
+  const r = run("rollback marketing 5");
+  assert.equal(r.fields.result, "rolled-back", r.out);
+  assert.match(read("marketing", ".env"), new RegExp(`RELEASE_SHA=${OLD}`));
 });
 
 test("rollback restores the previous release on request", { skip }, () => {

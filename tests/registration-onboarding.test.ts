@@ -3,7 +3,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { validateRegistration } from "../src/components/portal-entry/registration-validation";
-import { passwordPolicy, registrationEmailFailedCopy, registrationSubmission, registrationSuccessCopy, trialFacts } from "../src/content/onboarding";
+import { passwordPolicy, registrationCopy, registrationEmailFailedCopy, registrationSuccessCopy, trialFacts } from "../src/content/onboarding";
 import {
   createBackendRegistrationAdapter,
   demoRegistrationAdapter,
@@ -49,10 +49,12 @@ function fakeAdapter(overrides: Partial<RegistrationAdapter> = {}): Registration
   };
 }
 
+const forwarderToken = "f".repeat(64);
 const backendEnv = {
   REDACTPLUS_REGISTRATION_MODE: "backend",
   REDACTPLUS_REGISTRATION_API_URL: "https://api.example.com/public/trial-registrations",
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+  REDACTPLUS_REGISTRATION_FORWARDER_TOKEN: forwarderToken,
 };
 
 // ── validation ─────────────────────────────────────────────────────────────
@@ -80,8 +82,12 @@ test("registration collects exactly name, email, optional organization and conse
 
 // ── adapter selection ──────────────────────────────────────────────────────
 
-test("the adapter fails closed: unset is unavailable, demo exists only under next dev, backend needs HTTPS and a Turnstile key", () => {
-  assert.equal(resolveRegistrationAdapter({}).kind, "unavailable");
+test("registration always goes to the Control Center and fails closed when it is not fully configured", () => {
+  // There is no "off": an unset mode is the backend, and an incomplete backend is a configuration error
+  // (the route then answers 503 registration_unavailable and creates nothing).
+  assert.throws(() => resolveRegistrationAdapter({}), /API_URL is required/);
+  const { REDACTPLUS_REGISTRATION_MODE: _mode, ...withoutMode } = backendEnv;
+  assert.equal(resolveRegistrationAdapter(withoutMode).kind, "backend", "unset mode means the Control Center");
   assert.equal(resolveRegistrationAdapter({ REDACTPLUS_REGISTRATION_MODE: "demo", NODE_ENV: "development" }).kind, "demo");
   for (const env of [{ NODE_ENV: "production" }, { NODE_ENV: "test" }, {}]) {
     assert.throws(() => resolveRegistrationAdapter({ REDACTPLUS_REGISTRATION_MODE: "demo", ...env }), RegistrationConfigurationError, "demo is refused outside next dev");
@@ -91,20 +97,22 @@ test("the adapter fails closed: unset is unavailable, demo exists only under nex
   assert.throws(() => resolveRegistrationAdapter({ ...backendEnv, REDACTPLUS_REGISTRATION_API_URL: "http://api.example.com/r" }), /HTTPS/);
   assert.throws(() => resolveRegistrationAdapter({ ...backendEnv, REDACTPLUS_REGISTRATION_API_URL: "https://u:p@api.example.com/r" }), /credential-free/);
   assert.throws(() => resolveRegistrationAdapter({ ...backendEnv, REDACTPLUS_REGISTRATION_API_TOKEN: "t" }), /takes no service credential/, "a token implies protection the endpoint does not have");
-  assert.throws(() => resolveRegistrationAdapter({ REDACTPLUS_REGISTRATION_MODE: "yes" }), /unset, backend or demo/);
+  assert.throws(() => resolveRegistrationAdapter({ REDACTPLUS_REGISTRATION_MODE: "yes" }), /must be unset \(the Control Center\), backend or demo/);
+  assert.throws(() => resolveRegistrationAdapter({ REDACTPLUS_REGISTRATION_MODE: "off" }), RegistrationConfigurationError, "there is no off switch");
+  // The forwarder secret is what makes the backend believe the forwarded visitor address.
+  assert.throws(() => resolveRegistrationAdapter({ ...backendEnv, REDACTPLUS_REGISTRATION_FORWARDER_TOKEN: "" }), /FORWARDER_TOKEN is required/);
+  assert.throws(() => resolveRegistrationAdapter({ ...backendEnv, REDACTPLUS_REGISTRATION_FORWARDER_TOKEN: "x".repeat(31) }), /at least 32/);
+  assert.throws(() => resolveRegistrationAdapter({ ...backendEnv, REDACTPLUS_REGISTRATION_FORWARDER_TOKEN: `${"x".repeat(20)} ${"y".repeat(20)}` }), /FORWARDER_TOKEN/);
   const backend = resolveRegistrationAdapter(backendEnv);
   assert.equal(backend.kind, "backend");
   assert.equal(backend.supportsResend, true, "the backend always offers resend");
-  assert.equal(registrationSubmission(undefined), "disabled");
-  assert.equal(registrationSubmission("true"), "disabled");
-  assert.equal(registrationSubmission("enabled"), "live");
 });
 
 test("the backend adapter speaks the verified contract and never invents an acceptance", async () => {
   const seen: { url: string; init: RequestInit }[] = [];
   const adapterFor = (response: Response | Error) =>
     createBackendRegistrationAdapter(
-      { registerUrl: "https://api.example.com/public/trial-registrations", resendUrl: "https://api.example.com/public/trial-registrations/resend", timeoutMs: 1000 },
+      { registerUrl: "https://api.example.com/public/trial-registrations", resendUrl: "https://api.example.com/public/trial-registrations/resend", timeoutMs: 1000, forwarderToken },
       (async (url: string, init: RequestInit) => {
         seen.push({ url, init });
         if (response instanceof Error) throw response;
@@ -120,7 +128,8 @@ test("the backend adapter speaks the verified contract and never invents an acce
   const headers = seen[0].init.headers as Record<string, string>;
   assert.equal(seen[0].url, "https://api.example.com/public/trial-registrations");
   assert.equal(headers["cf-connecting-ip"], "203.0.113.7", "the visitor's address, for the backend's per-network rule");
-  assert.equal(headers.authorization, undefined, "no credential: the endpoint takes none");
+  assert.equal(headers.authorization, undefined, "no API credential: the endpoint takes none");
+  assert.equal(headers["x-redactplus-forwarder"], forwarderToken, "the shared secret that makes the backend trust the forwarded address");
   assert.equal(seen[0].init.redirect, "error");
   assert.deepEqual(JSON.parse(String(seen[0].init.body)), input);
   assert.doesNotMatch(String(seen[0].init.body), /password/i);
@@ -258,7 +267,7 @@ test("resend is offered only when supported, and answers without revealing an ac
 test("the dialog posts only to this site, shows success only after a 202, and stores nothing", () => {
   const form = read("src/components/portal-entry/RegistrationForm.tsx");
   const submit = form.slice(form.indexOf("async function submit"), form.indexOf("async function resend"));
-  assert.match(submit, /if \(busy \|\| disabled\) return;/);
+  assert.match(submit, /if \(busy \|\| unavailable\) return;/);
   assert.ok(submit.indexOf('submission === "preview"') < submit.indexOf("fetch("), "preview never reaches fetch");
   assert.match(submit, /fetch\("\/api\/registration"/);
   assert.match(submit, /credentials: "same-origin"/);
@@ -267,17 +276,25 @@ test("the dialog posts only to this site, shows success only after a 202, and st
   assert.match(submit, /turnstile\.current\?\.reset\(\)/, "a used Turnstile token is never resubmitted");
   assert.doesNotMatch(form + read("src/components/portal-entry/RegistrationSuccess.tsx") + read("src/components/portal-entry/TurnstileField.tsx"), /localStorage|sessionStorage|document\.cookie|console\./);
   assert.match(read("src/components/portal-entry/AuthPanel.tsx"), /<RegistrationForm/);
-  // Not switched on: no greyed-out form and no redirect to a sign-in page that cannot register.
-  const unavailable = form.slice(form.indexOf("if (disabled) {"), form.indexOf("const inputClass"));
+  // Registration is permanent. The only state without the form is a build missing its security
+  // key (a deployment fault): it says so plainly, offers sign-in, and never offers sales instead.
+  assert.match(form, /const unavailable = submission === "live" && !turnstileSiteKey;/);
+  const unavailable = form.slice(form.indexOf("if (unavailable) {"), form.indexOf("const inputClass"));
   assert.match(unavailable, /copy\.unavailableHeading/);
-  assert.match(unavailable, /href=\{salesHref\}/, "offers the sales enquiry");
-  assert.match(unavailable, /onClick=\{onSignIn\}/, "and sign-in for existing customers");
-  assert.doesNotMatch(unavailable, /<form|<input/);
+  assert.match(unavailable, /role="alert"/);
+  assert.match(unavailable, /onClick=\{onSignIn\}/, "sign-in for existing customers");
+  assert.doesNotMatch(unavailable, /<form|<input|salesHref|Contact Sales/, "no unusable form, and no sales detour");
+  assert.match(registrationCopy.unavailableLede, /nothing was created/);
+  assert.match(registrationCopy.unavailableLede, /support@redactplus\.io/);
+  assert.doesNotMatch(registrationCopy.unavailableLede, /sales/i);
+  assert.doesNotMatch(form, /"disabled"/, "no registration-off mode");
   assert.doesNotMatch(form, /portalAuthHref|intent=register/, "never sends new customers to Keycloak registration, which is off");
-  assert.match(read("src/components/portal-entry/PortalDialogProvider.tsx"), /registration=\{entry\.registration\}/);
+  assert.doesNotMatch(read("src/components/portal-entry/PortalDialogProvider.tsx"), /registration=/, "the real dialog always registers live");
+  assert.match(read("src/components/portal-entry/AuthPanel.tsx"), /registration = "live",/);
+  assert.doesNotMatch(read("src/content/portal.ts") + read("src/content/onboarding.ts") + read("deployment/redactplus/Dockerfile") + read("deployment/redactplus/scripts/build-image.sh"), /NEXT_PUBLIC_REDACTPLUS_REGISTRATION|registrationSubmission/, "no registration build switch");
   const middleware = read("src/middleware.ts");
   assert.match(middleware, /"connect-src 'self'"/, "the browser never calls the backend directly");
-  assert.match(middleware, /portalEntry\?\.registration === "live" && turnstileSiteKey \? TURNSTILE_ORIGIN : null/, "Turnstile's origin only for live registration with a key");
+  assert.match(middleware, /portalEntry && turnstileSiteKey \? TURNSTILE_ORIGIN : null/, "Turnstile's origin wherever the dialog and its key are built in");
 });
 
 test("the success copy states only the backend's verified trial facts and promises no delivery", () => {

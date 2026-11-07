@@ -22,8 +22,11 @@
 #              DEPLOY_NOTIFY_WEBHOOK                   optional, Slack-compatible incoming webhook
 #   variables: CD_ENABLED ("true" to deploy), CD_COMPONENTS ("portal" or "marketing,portal"),
 #              DEPLOY_HOST, PORTAL_EXPECTED_ACCESS (default "staff-preview"),
-#              MARKETING_PORTAL_URL (default empty), MARKETING_REGISTRATION (default "disabled"),
-#              TURNSTILE_SITE_KEY (public; only used when registration is enabled)
+#              TURNSTILE_SITE_KEY (public site key of the registration security check; required)
+#
+# Every production marketing image has the Download dialog with Create account and Sign in
+# (NEXT_PUBLIC_PORTAL_URL=https://home.redactplus.io and the Turnstile site key). There is no
+# registration switch; the server refuses a release whose registration route is not configured.
 name: Deploy production
 
 on:
@@ -42,8 +45,6 @@ jobs:
       enabled: ${{ steps.gate.outputs.enabled }}
       marketing: ${{ steps.decide.outputs.marketing }}
       portal: ${{ steps.decide.outputs.portal }}
-      marketing_registration: ${{ steps.decide.outputs.marketing_registration }}
-      marketing_portal_url: ${{ steps.decide.outputs.marketing_portal_url }}
     steps:
       - name: Gate (main push, switch, current head)
         id: gate
@@ -100,16 +101,12 @@ jobs:
         env:
           SHA: ${{ github.sha }}
           CD_COMPONENTS: ${{ vars.CD_COMPONENTS }}
-          WANT_PORTAL_URL: ${{ vars.MARKETING_PORTAL_URL }}
-          WANT_REGISTRATION: ${{ vars.MARKETING_REGISTRATION || 'disabled' }}
         run: |
           field() { grep -E "^$2=" "$RUNNER_TEMP/status-$1" | head -1 | cut -d= -f2-; }
-          [[ "$WANT_REGISTRATION" =~ ^(disabled|enabled)$ ]] || { echo "::error::MARKETING_REGISTRATION must be disabled or enabled"; exit 1; }
-          [[ -z "$WANT_PORTAL_URL" || "$WANT_PORTAL_URL" == "https://home.redactplus.io" ]] || { echo "::error::MARKETING_PORTAL_URL must be empty or https://home.redactplus.io"; exit 1; }
-          have_registration=$(field marketing image_registration); have_registration=${have_registration:-disabled}
-          have_portal_url=$(field marketing image_portal_url)
+          # Production marketing images always carry the Download dialog (Create account and
+          # Sign in). One built before that (no portal URL label) is replaced whatever changed.
           flags_changed=false
-          [ "$have_registration" = "$WANT_REGISTRATION" ] && [ "$have_portal_url" = "$WANT_PORTAL_URL" ] || flags_changed=true
+          [ "$(field marketing image_portal_url)" = "https://home.redactplus.io" ] || flags_changed=true
           node scripts/release/changed-components.mjs --head "$SHA" \
             --marketing-base "$(field marketing release_sha)" --portal-base "$(field portal release_sha)" \
             --marketing-flags-changed "$flags_changed" > "$RUNNER_TEMP/decision.json"
@@ -120,8 +117,6 @@ jobs:
             enabled_for "$c" || want=false
             echo "${c}=${want}" >> "$GITHUB_OUTPUT"
           done
-          echo "marketing_registration=${WANT_REGISTRATION}" >> "$GITHUB_OUTPUT"
-          echo "marketing_portal_url=${WANT_PORTAL_URL}" >> "$GITHUB_OUTPUT"
           {
             echo "### Plan for ${SHA}"
             echo "- automation enabled for: \`${CD_COMPONENTS:-none}\`"
@@ -157,17 +152,15 @@ jobs:
         uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
         with:
           node-version: 22
-      - name: Build the marketing image (build-image.sh, current production flags)
+      - name: Build the marketing image (build-image.sh, Download dialog with registration)
         env:
           SHA: ${{ github.sha }}
-          NEXT_PUBLIC_PORTAL_URL: ${{ needs.plan.outputs.marketing_portal_url }}
-          NEXT_PUBLIC_REDACTPLUS_REGISTRATION: ${{ needs.plan.outputs.marketing_registration == 'enabled' && 'enabled' || '' }}
-          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ needs.plan.outputs.marketing_registration == 'enabled' && vars.TURNSTILE_SITE_KEY || '' }}
+          NEXT_PUBLIC_PORTAL_URL: https://home.redactplus.io
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
         run: |
           bash deployment/redactplus/scripts/build-image.sh "$SHA"
-          tag="$SHA"; [ "$NEXT_PUBLIC_REDACTPLUS_REGISTRATION" = enabled ] && tag="${SHA}-registration"
-          echo "TAG=$tag" >> "$GITHUB_ENV"
-          echo "IMAGE=registry.safaridesk.io/safari/redactplus-landing:$tag" >> "$GITHUB_ENV"
+          echo "TAG=$SHA" >> "$GITHUB_ENV"
+          echo "IMAGE=registry.safaridesk.io/safari/redactplus-landing:$SHA" >> "$GITHUB_ENV"
       - name: Smoke-test the image before publishing
         env:
           SHA: ${{ github.sha }}
@@ -190,7 +183,6 @@ jobs:
           HOST: ${{ vars.DEPLOY_HOST }}
           COMPONENT: marketing
           RUN: ${{ github.run_number }}
-          EXPECT_REGISTRATION: ${{ needs.plan.outputs.marketing_registration }}
         run: bash .github/scripts/remote-deploy.sh
       - name: Public check
         run: |

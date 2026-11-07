@@ -20,8 +20,9 @@ It runs on:
 | `security / secrets` | `npm run check:secrets` (tracked files), plus gitleaks 8.30.1 over the commits the change adds. The binary is pinned by version and SHA-256, and `--redact` keeps any match out of the log |
 | `security / dependencies` | `npm audit --omit=dev --audit-level=low` for all three projects (any runtime advisory fails), then `npm audit --audit-level=high` (high or critical in build tooling fails; moderate is reported). Lockfile and manifest drift fails `npm ci` in the verify jobs |
 
-Every job builds with the production defaults: registration off, no portal URL, no lead delivery,
-CMS disabled. That is also what the route suites expect.
+Every job builds without the portal URL (so without the Download dialog), lead delivery or the
+CMS. That is also what the route suites expect. Registration itself has no switch: it is part of
+every dialog build.
 
 ## Safety properties
 

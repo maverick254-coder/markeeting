@@ -49,7 +49,12 @@ export interface BackendSettings {
   registerUrl: string;
   resendUrl: string;
   timeoutMs: number;
+  /** Proves to the Control Center that the forwarded visitor address comes from this server. */
+  forwarderToken: string;
 }
+
+/** Shared with the Control Center's TRIAL_FORWARDER_TOKEN; it refuses anything shorter. */
+export const FORWARDER_TOKEN_MIN_LENGTH = 32;
 
 export class RegistrationConfigurationError extends Error {}
 
@@ -67,26 +72,33 @@ function exactHttpsUrl(name: string, value: string): URL {
 }
 
 /**
- * Reads the adapter choice from the environment. Incomplete or contradictory configuration
- * throws (the route then answers 503) rather than silently accepting registrations that go
- * nowhere.
+ * Reads the registration configuration from the environment. Registration always goes to the
+ * Control Center; there is no "off" setting. Incomplete or contradictory configuration throws:
+ * the route then answers 503 `registration_unavailable` ("nothing was created") and logs the
+ * reason once, rather than accepting registrations that go nowhere.
  *
- *   REDACTPLUS_REGISTRATION_MODE         unset | backend | demo
+ *   REDACTPLUS_REGISTRATION_MODE         unset or backend (the Control Center); demo only under
+ *                                        `next dev`, for local design work
  *   REDACTPLUS_REGISTRATION_API_URL      backend: https://<api>/public/trial-registrations
  *   REDACTPLUS_REGISTRATION_RESEND_URL   backend, optional: defaults to <API_URL>/resend
  *   REDACTPLUS_REGISTRATION_TIMEOUT_MS   backend, optional: 1000 to 15000, default 10000
  *   NEXT_PUBLIC_TURNSTILE_SITE_KEY       backend: the Turnstile widget's public site key; the
  *                                        backend refuses every registration without a token
+ *   REDACTPLUS_REGISTRATION_FORWARDER_TOKEN
+ *                                        backend: the secret shared with the Control Center's
+ *                                        TRIAL_FORWARDER_TOKEN (at least 32 characters). It proves
+ *                                        that the visitor address this server forwards is genuine;
+ *                                        without it the backend ignores the address and counts
+ *                                        every website registration as one network.
  *
- * The endpoint takes no service credential (verified), so none is configured or sent. The old
- * REDACTPLUS_REGISTRATION_API_TOKEN is refused, so nobody believes the endpoint is protected by it.
+ * The endpoint itself is public (it takes no API credential), so the old
+ * REDACTPLUS_REGISTRATION_API_TOKEN is refused: nobody should believe the endpoint is protected by it.
  */
 export function resolveRegistrationAdapter(
   environment: Record<string, string | undefined> = process.env,
   fetchImpl: typeof fetch = fetch
 ): RegistrationAdapter {
-  const mode = environment.REDACTPLUS_REGISTRATION_MODE?.trim() || "";
-  if (!mode) return unavailableRegistrationAdapter;
+  const mode = environment.REDACTPLUS_REGISTRATION_MODE?.trim() || "backend";
 
   if (mode === "demo") {
     // `next dev` sets NODE_ENV=development; `next build`/`next start` force production. Tests
@@ -97,7 +109,7 @@ export function resolveRegistrationAdapter(
     return demoRegistrationAdapter;
   }
 
-  if (mode !== "backend") throw new RegistrationConfigurationError("REDACTPLUS_REGISTRATION_MODE must be unset, backend or demo.");
+  if (mode !== "backend") throw new RegistrationConfigurationError("REDACTPLUS_REGISTRATION_MODE must be unset (the Control Center), backend or demo.");
 
   if (environment.REDACTPLUS_REGISTRATION_API_TOKEN?.trim()) {
     throw new RegistrationConfigurationError(
@@ -122,8 +134,14 @@ export function resolveRegistrationAdapter(
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 15_000) {
     throw new RegistrationConfigurationError("REDACTPLUS_REGISTRATION_TIMEOUT_MS must be an integer from 1000 to 15000.");
   }
+  const forwarderToken = environment.REDACTPLUS_REGISTRATION_FORWARDER_TOKEN?.trim() ?? "";
+  if (forwarderToken.length < FORWARDER_TOKEN_MIN_LENGTH || /\s/.test(forwarderToken)) {
+    throw new RegistrationConfigurationError(
+      `REDACTPLUS_REGISTRATION_FORWARDER_TOKEN is required in backend mode (at least ${FORWARDER_TOKEN_MIN_LENGTH} characters, the same value as the Control Center's TRIAL_FORWARDER_TOKEN).`
+    );
+  }
 
-  return createBackendRegistrationAdapter({ registerUrl: register.href, resendUrl: resend.href, timeoutMs }, fetchImpl);
+  return createBackendRegistrationAdapter({ registerUrl: register.href, resendUrl: resend.href, timeoutMs, forwarderToken }, fetchImpl);
 }
 
 function retryAfter(response: Response): number | undefined {
@@ -154,6 +172,8 @@ export function createBackendRegistrationAdapter(settings: BackendSettings, fetc
    * for the website, so it passes the visitor's address there; without it every website
    * registration would count as one network and the fourth would be refused. The address is the
    * one this site's trusted proxy reported (TRUST_PROXY_HOPS), never a header the visitor sent.
+   * The backend honours it only with the shared forwarder secret (X-RedactPlus-Forwarder), so a
+   * public caller sending its own CF-Connecting-IP is counted by its real address.
    */
   async function post(url: string, body: unknown, clientAddress: string | null, requestId: string) {
     return fetchImpl(url, {
@@ -162,6 +182,7 @@ export function createBackendRegistrationAdapter(settings: BackendSettings, fetc
         "content-type": "application/json",
         accept: "application/json",
         "x-request-id": requestId,
+        "x-redactplus-forwarder": settings.forwarderToken,
         ...(clientAddress ? { "cf-connecting-ip": clientAddress } : {}),
       },
       body: JSON.stringify(body),

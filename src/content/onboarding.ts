@@ -23,17 +23,13 @@ export const legalLinks = {
 export const supportEmail = "support@redactplus.io";
 
 /**
- * Whether the Download dialog's registration form submits.
- * - `disabled` (default): it validates but sends nothing, and says registration is not open here.
- * - `live`: NEXT_PUBLIC_REDACTPLUS_REGISTRATION=enabled. Posts to this site's own
- *   /api/registration, which answers 503 until the server has a backend adapter configured.
+ * How the Download dialog's registration form submits. Registration is a permanent part of the
+ * dialog, not a switch:
+ * - `live`: posts to this site's own /api/registration, which calls the Control Center. If that
+ *   service is not configured or not reachable, the visitor is told plainly and nothing is created.
  * - `preview`: the development-only design preview; simulated, sends nothing.
  */
-export type RegistrationSubmission = "disabled" | "live" | "preview";
-
-export function registrationSubmission(raw: string | undefined): RegistrationSubmission {
-  return raw?.trim() === "enabled" ? "live" : "disabled";
-}
+export type RegistrationSubmission = "live" | "preview";
 
 /**
  * Cloudflare Turnstile's public site key for the registration security check. Fixed into the
@@ -64,9 +60,9 @@ export const registrationCopy = {
   lede: "Tell us who you are and we’ll email you a secure link to set your password. The same account signs you in to RedactPlus Home and RedactPlus Desktop.",
   submit: "Create account",
   busy: "Creating account…",
-  /** Shown instead of the form when online registration is not switched on for this build. */
-  unavailableHeading: "Get started with RedactPlus",
-  unavailableLede: "Online registration is not open yet. Contact sales and we will set up your RedactPlus account, or sign in if you already have one.",
+  /** Shown instead of the form only when this build has no security-check key (a deployment fault). */
+  unavailableHeading: "Create your RedactPlus account",
+  unavailableLede: "Account creation isn’t available right now, and nothing was created. Please try again later, or email support@redactplus.io. If you already have an account, sign in instead.",
   organizationHint: "Your company, agency or team. For your profile only.",
   passwordNote: "No password needed yet. You’ll choose one from the link in your email.",
   consentPrefix: `I am ${trialFacts.minimumAge} or older and agree to the`,

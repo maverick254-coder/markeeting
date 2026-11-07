@@ -204,3 +204,17 @@ test("the marketing typecheck and Docker context exclude the portal application"
   assert.match(read("tsconfig.json"), /"exclude": \["node_modules", "apps"\]/);
   assert.doesNotMatch(read(".dockerignore"), /^!apps/m);
 });
+
+test("Create account and Sign in are always both offered, and Contact Sales is only for sales enquiries", () => {
+  const panel = read("src/components/portal-entry/AuthPanel.tsx");
+  assert.match(panel, /initialView = "register"/, "the Download dialog opens on Create account");
+  assert.match(panel, /if \(view === "register"\) \{\s+return \(\s+<RegistrationForm/, "the form is always reachable");
+  assert.match(panel, /Create an account/, "sign-in links to Create account");
+  assert.match(panel, /onSignIn=\{\(\) => switchView\("signin"\)\}/, "Create account links to sign-in");
+  assert.doesNotMatch(panel, /registrationOpen|Contact Sales|demoHref/, "no registration-off state in the dialog");
+  assert.doesNotMatch(read("src/components/portal-entry/PortalCta.tsx"), /newCustomer|registrationOpen/);
+  // Get Started opens the same dialog as Download; only Enterprise and the enquiry pages are sales.
+  for (const file of ["src/components/pricing/PricingCards.tsx", "src/components/layout/Footer.tsx"]) {
+    assert.doesNotMatch(read(file), /newCustomer/, `${file}: Get Started is never diverted to sales`);
+  }
+});

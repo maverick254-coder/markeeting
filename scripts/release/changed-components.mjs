@@ -109,8 +109,7 @@ if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith
     console.error("--head must be a full commit SHA");
     process.exit(2);
   }
-  // Release tags may carry a -registration suffix; history is about the commit.
-  const base = (name) => argument(name).replace(/-registration$/, "");
+  const base = (name) => argument(name);
   const marketingFiles = changedFiles(base("marketing-base"), head);
   const portalFiles = changedFiles(base("portal-base"), head);
   const result = {

@@ -10,7 +10,7 @@ case "$1 $2" in
   "compose up")
     svc="${@: -1}"
     sha=$(grep '^RELEASE_SHA=' .env | cut -d= -f2-)
-    echo "${sha%-registration}" > "$state/running-$svc"
+    echo "$sha" > "$state/running-$svc"
     echo "compose up $svc $sha" >> "$state/calls"
     exit 0 ;;
 esac
@@ -30,8 +30,8 @@ if [ "$1 $2" = "image inspect" ]; then
   case "$fmt" in
     *revision*)
       if [ -e "$state/bad-revision" ]; then echo deadbeef; exit 0; fi
-      name="${image%%@*}"; tag="${name##*:}"; echo "${tag%-registration}" ;;
-    *registration*) echo "disabled|" ;;
+      name="${image%%@*}"; tag="${name##*:}"; echo "$tag" ;;
+    *portal-url*) echo "https://home.redactplus.io" ;;
   esac
   exit 0
 fi

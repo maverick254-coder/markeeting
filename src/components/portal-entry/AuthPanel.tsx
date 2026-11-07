@@ -40,8 +40,8 @@ const titles: Record<CredentialView, { heading: string; lede: string; submit: st
  * The Download dialog's account form: create an account, sign in, or request a password reset.
  *
  * Create account (RegistrationForm) collects name, email, optional organization and consent,
- * with no password, and posts to this site's own /api/registration; `registration` decides
- * whether it may submit.
+ * with no password, and posts to this site's own /api/registration. It is always offered: the
+ * real dialog submits ("live"); only the development design preview simulates ("preview").
  *
  * Sign in and reset keep the approved portal boundary. With `submission="disabled"` (the
  * default until the backend API exists) the form validates but never sends credentials; it says
@@ -52,7 +52,7 @@ const titles: Record<CredentialView, { heading: string; lede: string; submit: st
 export function AuthPanel({
   portalOrigin,
   submission,
-  registration = "disabled",
+  registration = "live",
   initialView = "register",
   previewOutcome = "success",
   registrationPreviewOutcome,

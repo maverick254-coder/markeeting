@@ -49,10 +49,12 @@ function fakeAdapter(overrides: Partial<RegistrationAdapter> = {}): Registration
   };
 }
 
+const forwarderToken = "f".repeat(64);
 const backendEnv = {
   REDACTPLUS_REGISTRATION_MODE: "backend",
   REDACTPLUS_REGISTRATION_API_URL: "https://api.example.com/public/trial-registrations",
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: "1x00000000000000000000AA",
+  REDACTPLUS_REGISTRATION_FORWARDER_TOKEN: forwarderToken,
 };
 
 // ── validation ─────────────────────────────────────────────────────────────
@@ -92,6 +94,10 @@ test("the adapter fails closed: unset is unavailable, demo exists only under nex
   assert.throws(() => resolveRegistrationAdapter({ ...backendEnv, REDACTPLUS_REGISTRATION_API_URL: "https://u:p@api.example.com/r" }), /credential-free/);
   assert.throws(() => resolveRegistrationAdapter({ ...backendEnv, REDACTPLUS_REGISTRATION_API_TOKEN: "t" }), /takes no service credential/, "a token implies protection the endpoint does not have");
   assert.throws(() => resolveRegistrationAdapter({ REDACTPLUS_REGISTRATION_MODE: "yes" }), /unset, backend or demo/);
+  // The forwarder secret is what makes the backend believe the forwarded visitor address.
+  assert.throws(() => resolveRegistrationAdapter({ ...backendEnv, REDACTPLUS_REGISTRATION_FORWARDER_TOKEN: "" }), /FORWARDER_TOKEN is required/);
+  assert.throws(() => resolveRegistrationAdapter({ ...backendEnv, REDACTPLUS_REGISTRATION_FORWARDER_TOKEN: "x".repeat(31) }), /at least 32/);
+  assert.throws(() => resolveRegistrationAdapter({ ...backendEnv, REDACTPLUS_REGISTRATION_FORWARDER_TOKEN: `${"x".repeat(20)} ${"y".repeat(20)}` }), /FORWARDER_TOKEN/);
   const backend = resolveRegistrationAdapter(backendEnv);
   assert.equal(backend.kind, "backend");
   assert.equal(backend.supportsResend, true, "the backend always offers resend");
@@ -104,7 +110,7 @@ test("the backend adapter speaks the verified contract and never invents an acce
   const seen: { url: string; init: RequestInit }[] = [];
   const adapterFor = (response: Response | Error) =>
     createBackendRegistrationAdapter(
-      { registerUrl: "https://api.example.com/public/trial-registrations", resendUrl: "https://api.example.com/public/trial-registrations/resend", timeoutMs: 1000 },
+      { registerUrl: "https://api.example.com/public/trial-registrations", resendUrl: "https://api.example.com/public/trial-registrations/resend", timeoutMs: 1000, forwarderToken },
       (async (url: string, init: RequestInit) => {
         seen.push({ url, init });
         if (response instanceof Error) throw response;
@@ -120,7 +126,8 @@ test("the backend adapter speaks the verified contract and never invents an acce
   const headers = seen[0].init.headers as Record<string, string>;
   assert.equal(seen[0].url, "https://api.example.com/public/trial-registrations");
   assert.equal(headers["cf-connecting-ip"], "203.0.113.7", "the visitor's address, for the backend's per-network rule");
-  assert.equal(headers.authorization, undefined, "no credential: the endpoint takes none");
+  assert.equal(headers.authorization, undefined, "no API credential: the endpoint takes none");
+  assert.equal(headers["x-redactplus-forwarder"], forwarderToken, "the shared secret that makes the backend trust the forwarded address");
   assert.equal(seen[0].init.redirect, "error");
   assert.deepEqual(JSON.parse(String(seen[0].init.body)), input);
   assert.doesNotMatch(String(seen[0].init.body), /password/i);

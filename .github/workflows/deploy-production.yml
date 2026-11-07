@@ -22,7 +22,8 @@
 #              DEPLOY_NOTIFY_WEBHOOK                   optional, Slack-compatible incoming webhook
 #   variables: CD_ENABLED ("true" to deploy), CD_COMPONENTS ("portal" or "marketing,portal"),
 #              DEPLOY_HOST, PORTAL_EXPECTED_ACCESS (default "staff-preview"),
-#              MARKETING_PORTAL_URL (default empty), MARKETING_REGISTRATION (default "disabled"),
+#              MARKETING_PORTAL_URL and MARKETING_REGISTRATION (unset: keep what production runs;
+#              set them only to change it: "none" or https://home.redactplus.io, "disabled" or "enabled"),
 #              TURNSTILE_SITE_KEY (public; only used when registration is enabled)
 name: Deploy production
 
@@ -100,14 +101,31 @@ jobs:
         env:
           SHA: ${{ github.sha }}
           CD_COMPONENTS: ${{ vars.CD_COMPONENTS }}
-          WANT_PORTAL_URL: ${{ vars.MARKETING_PORTAL_URL }}
-          WANT_REGISTRATION: ${{ vars.MARKETING_REGISTRATION || 'disabled' }}
+          SET_PORTAL_URL: ${{ vars.MARKETING_PORTAL_URL }}
+          SET_REGISTRATION: ${{ vars.MARKETING_REGISTRATION }}
         run: |
           field() { grep -E "^$2=" "$RUNNER_TEMP/status-$1" | head -1 | cut -d= -f2-; }
-          [[ "$WANT_REGISTRATION" =~ ^(disabled|enabled)$ ]] || { echo "::error::MARKETING_REGISTRATION must be disabled or enabled"; exit 1; }
-          [[ -z "$WANT_PORTAL_URL" || "$WANT_PORTAL_URL" == "https://home.redactplus.io" ]] || { echo "::error::MARKETING_PORTAL_URL must be empty or https://home.redactplus.io"; exit 1; }
+          # What production runs now, from the running image's labels.
           have_registration=$(field marketing image_registration); have_registration=${have_registration:-disabled}
           have_portal_url=$(field marketing image_portal_url)
+          # Unset variables KEEP what production runs, so a routine release can never switch
+          # registration off or drop the Download entry by accident. Setting one changes it.
+          case "$SET_REGISTRATION" in
+            "") WANT_REGISTRATION="$have_registration" ;;
+            disabled|enabled) WANT_REGISTRATION="$SET_REGISTRATION" ;;
+            *) echo "::error::MARKETING_REGISTRATION must be unset, disabled or enabled"; exit 1 ;;
+          esac
+          case "$SET_PORTAL_URL" in
+            "") WANT_PORTAL_URL="$have_portal_url" ;;
+            none) WANT_PORTAL_URL="" ;;
+            https://home.redactplus.io) WANT_PORTAL_URL="$SET_PORTAL_URL" ;;
+            *) echo "::error::MARKETING_PORTAL_URL must be unset, none or https://home.redactplus.io"; exit 1 ;;
+          esac
+          [[ "$WANT_REGISTRATION" =~ ^(disabled|enabled)$ ]] || { echo "::error::production reports an unknown registration label '${WANT_REGISTRATION}'"; exit 1; }
+          [[ -z "$WANT_PORTAL_URL" || "$WANT_PORTAL_URL" == "https://home.redactplus.io" ]] || { echo "::error::production reports an unknown portal URL label"; exit 1; }
+          if [ "$WANT_REGISTRATION" = enabled ] && [ -z "$WANT_PORTAL_URL" ]; then
+            echo "::error::registration needs the Download dialog: MARKETING_PORTAL_URL must be https://home.redactplus.io"; exit 1
+          fi
           flags_changed=false
           [ "$have_registration" = "$WANT_REGISTRATION" ] && [ "$have_portal_url" = "$WANT_PORTAL_URL" ] || flags_changed=true
           node scripts/release/changed-components.mjs --head "$SHA" \
@@ -125,6 +143,7 @@ jobs:
           {
             echo "### Plan for ${SHA}"
             echo "- automation enabled for: \`${CD_COMPONENTS:-none}\`"
+            echo "- marketing build flags: registration=${WANT_REGISTRATION} (${SET_REGISTRATION:-kept from production}), portal URL=${WANT_PORTAL_URL:-none} (${SET_PORTAL_URL:-kept from production})"
             echo "- marketing: $(decision 'd.marketing.deploy+" ("+d.marketing.reason+")"')"
             echo "- portal: $(decision 'd.portal.deploy+" ("+d.portal.reason+")"')"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -159,6 +159,9 @@ reveals nothing. It sends only for an enrolment whose trial still grants access,
    container or host loopback), or put the API behind Cloudflare and accept the header only from
    Cloudflare ranges. **The website relies on the header being honoured for its own forwarded
    value; agree the mechanism before changing it.**
+   **Agreed and implemented (7 Nov 2026, not yet deployed):** the API honours the header only with
+   a shared forwarder secret (`TRIAL_FORWARDER_TOKEN` / `REDACTPLUS_REGISTRATION_FORWARDER_TOKEN`,
+   sent as `X-RedactPlus-Forwarder`); Admin-panel `fix/trial-trusted-client-address`.
 2. **Personal data in logs.** `TrialService` and `KeycloakIdentityAdministrator` log the email
    address on failures and concurrent registrations.
 3. **Brand.** Backend emails and pages write "Redact Plus" (two words); the website writes

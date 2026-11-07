@@ -64,7 +64,12 @@ test("staff-only portal access and disabled registration are defaults that the d
   const portalDeploy = jobs.portal.steps.find((s) => /remote-deploy\.sh/.test(s.run ?? ""));
   assert.equal(portalDeploy.env.EXPECT_ACCESS, "${{ vars.PORTAL_EXPECTED_ACCESS || 'staff-preview' }}");
   const decideStep = jobs.plan.steps.find((s) => s.id === "decide");
-  assert.equal(decideStep.env.WANT_REGISTRATION, "${{ vars.MARKETING_REGISTRATION || 'disabled' }}");
+  assert.equal(decideStep.env.SET_REGISTRATION, "${{ vars.MARKETING_REGISTRATION }}");
+  assert.equal(decideStep.env.SET_PORTAL_URL, "${{ vars.MARKETING_PORTAL_URL }}");
+  // Unset keeps production's flags: a routine release never switches registration off or drops Download.
+  assert.match(decideStep.run, /"\) WANT_REGISTRATION="\$have_registration" ;;/);
+  assert.match(decideStep.run, /"\) WANT_PORTAL_URL="\$have_portal_url" ;;/);
+  assert.match(decideStep.run, /registration needs the Download dialog/);
   const build = jobs.marketing.steps.find((s) => /build-image\.sh/.test(s.run ?? ""));
   assert.match(build.env.NEXT_PUBLIC_REDACTPLUS_REGISTRATION, /== 'enabled' && 'enabled' \|\| ''/);
   const remote = read(".github/scripts/remote-deploy.sh");

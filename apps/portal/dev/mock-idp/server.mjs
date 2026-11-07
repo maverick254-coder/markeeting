@@ -27,8 +27,8 @@
  *   MOCK_IDP_REDIRECT_PATH  (/auth/callback)  the registered callback path on the redirect origin
  *   MOCK_IDP_NONCE_OPTIONAL (unset)           "true" accepts authorization requests without a
  *                                             nonce, as Keycloak does for plain OAuth2 clients
- *   MOCK_IDP_STAFF_EMAILS   (unset)           comma-separated emails that get roles ["forum-moderator"],
- *                                             like a Keycloak role mapped into the token
+ *   MOCK_IDP_STAFF_EMAILS   (unset)           comma-separated emails that get roles ["forum-moderator"]; everyone
+ *                                             else gets roles [] so a removed role is revoked (a Keycloak role mapper)
  * GET /userinfo answers for a valid access token (sub, email, email_verified, name, roles).
  */
 import { createHash, createSign, generateKeyPairSync, randomBytes, timingSafeEqual } from "node:crypto";
@@ -198,7 +198,7 @@ const server = createServer(async (request, response) => {
         email,
         email_verified: form.get("email_verified") === "true",
         name: (form.get("name") ?? "").trim().slice(0, 120) || undefined,
-        ...(staffEmails.has(email) ? { roles: ["forum-moderator"] } : {}),
+        ...(staffEmails.size ? { roles: staffEmails.has(email) ? ["forum-moderator"] : [] } : {}),
       };
       const code = randomBytes(24).toString("base64url");
       codes.set(code, {

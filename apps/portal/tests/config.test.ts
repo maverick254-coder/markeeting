@@ -90,3 +90,13 @@ test("download hosts must be exact names", () => {
   refuses({ ...production, PORTAL_DOWNLOAD_ALLOWED_HOSTS: "*.example.com" }, /exact host names/);
   refuses({ ...production, PORTAL_DOWNLOAD_ALLOWED_HOSTS: "https://example.com" }, /exact host names/);
 });
+
+test("the local NodeBB trial is refused in production, off loopback and when half set", () => {
+  const local = { ...production, PORTAL_ENVIRONMENT: "development", PORTAL_PUBLIC_ORIGIN: "http://localhost:3200", PORTAL_SESSION_STORE: "memory" };
+  const trial = { PORTAL_DEV_FORUM_NODEBB_URL: "http://localhost:4567", PORTAL_DEV_FORUM_NODEBB_TOKEN: "trial-token" };
+  refuses({ ...production, ...trial }, /local NodeBB trial only/);
+  refuses({ ...local, ...trial, PORTAL_DEV_FORUM_NODEBB_URL: "https://forum.redactplus.io" }, /loopback/);
+  refuses({ ...local, PORTAL_DEV_FORUM_NODEBB_URL: trial.PORTAL_DEV_FORUM_NODEBB_URL }, /both/);
+  assert.equal(parsePortalConfig(production).devForumNodebb, null);
+  assert.equal(parsePortalConfig({ ...local, ...trial }).devForumNodebb?.url.origin, "http://localhost:4567");
+});

@@ -51,6 +51,9 @@ state.
 2. Confirm an OIDC plugin works against the RedactPlus Keycloak realm.
 3. Confirm Write API v3 covers topics, posts, votes, solving, flags and uploads, acting as a user.
 
+The spike was run locally on 7 November 2026. The results and the custom work it found are in
+[forum-nodebb-trial.md](forum-nodebb-trial.md).
+
 **Fallbacks:**
 - **If the spike fails, use Discourse as its own site** (`community.redactplus.io`, themed,
   Keycloak via its OIDC plugin). It has the most mature Q&A (Post Voting plus solved) and

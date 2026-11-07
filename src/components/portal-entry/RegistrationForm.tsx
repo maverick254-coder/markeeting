@@ -2,7 +2,6 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { legalLinks, registrationCopy as copy, registrationEmailFailedCopy, supportEmail, turnstileSiteKey, type RegistrationSubmission } from "@/content/onboarding";
-import Link from "next/link";
 import { demoHref as salesHref } from "@/content/navigation";
 import type { RegistrationAcceptedBody } from "@/lib/onboarding/contract";
 import { Button } from "@/components/ui/Button";
@@ -62,8 +61,10 @@ export function RegistrationForm({
   const [errors, setErrors] = useState<RegistrationErrors>({});
   const [touched, setTouched] = useState<Partial<Record<RegistrationField, boolean>>>({});
   const [status, setStatus] = useState<Status>({ kind: "idle" });
-  // The security check: shown only for live registration built with a site key.
+  // The security check runs for every live registration. A build without its site key cannot
+  // register anyone (the backend refuses a missing token), so it says so instead of showing a form.
   const turnstileEnabled = submission === "live" && Boolean(turnstileSiteKey);
+  const unavailable = submission === "live" && !turnstileSiteKey;
   const turnstile = useRef<TurnstileHandle>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [turnstileError, setTurnstileError] = useState<string | null>(null);
@@ -72,7 +73,6 @@ export function RegistrationForm({
   const baseId = useId();
   const id = (field: string) => `${baseId}-${field}`;
   const busy = status.kind === "submitting";
-  const disabled = submission === "disabled";
 
   useEffect(() => {
     if (focusHeading) headingRef.current?.focus();
@@ -97,7 +97,7 @@ export function RegistrationForm({
 
   async function submit(event: FormEvent) {
     event.preventDefault();
-    if (busy || disabled) return;
+    if (busy || unavailable) return;
     const found = validateRegistration(values);
     setErrors(found);
     setTouched({ name: true, email: true, organization: true, consent: true });
@@ -198,25 +198,17 @@ export function RegistrationForm({
 
   // Online registration is not switched on for this build. Rather than a greyed-out form, or a
   // redirect to a sign-in page that cannot register anyone, offer the two routes that work.
-  if (disabled) {
+  if (unavailable) {
     return (
       <div>
         <h2 ref={headingRef} tabIndex={-1} className="pr-10 font-heading text-[1.375rem] font-semibold leading-tight tracking-[-0.025em] text-ink focus:outline-none">
           {copy.unavailableHeading}
         </h2>
-        <p className="mt-2 text-body text-ink-muted">{copy.unavailableLede}</p>
-        <Button variant="primary" size="md" className="mt-5 w-full" asChild>
-          <Link href={salesHref} onClick={onClose}>
-            Contact Sales
-            <Icon name="arrow" size={16} />
-          </Link>
+        <p role="alert" className="mt-2 text-body text-ink-muted">{copy.unavailableLede}</p>
+        <Button type="button" variant="primary" size="md" className="mt-5 w-full" onClick={onSignIn}>
+          Sign in
+          <Icon name="arrow" size={16} />
         </Button>
-        <p className="mt-4 text-center text-body-sm text-ink-muted">
-          Already have an account?{" "}
-          <button type="button" onClick={onSignIn} className="font-semibold text-accent-ink hover:text-accent-ink-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool">
-            Sign in
-          </button>
-        </p>
       </div>
     );
   }
@@ -394,7 +386,7 @@ export function RegistrationForm({
           ) : null}
         </div>
 
-        <Button type="submit" variant="primary" size="md" className="w-full" disabled={busy || disabled}>
+        <Button type="submit" variant="primary" size="md" className="w-full" disabled={busy}>
           {busy ? (
             <>
               <span aria-hidden="true" className="h-4 w-4 animate-spin rounded-full border-2 border-on-accent/30 border-t-on-accent" />

@@ -56,7 +56,7 @@ jobs:
         run: npm run typecheck
       - name: ESLint
         run: npm run lint
-      # Default settings only: registration off, no portal URL, no lead delivery. The route
+      # Default settings only: no portal URL (so no Download dialog), no lead delivery. The route
       # suite serves this build, so it must be the production default.
       - name: Production build (content is validated first, by prebuild)
         run: npm run build
@@ -124,7 +124,7 @@ jobs:
           node-version: 22
       # Builds both production images exactly as releases do, and pushes nothing. The marketing
       # script exports the commit with git archive and checks the runtime tree inside the image.
-      - name: Marketing image (registration off, as production defaults)
+      - name: Marketing image (default settings, no portal URL)
         run: bash deployment/redactplus/scripts/build-image.sh "$GITHUB_SHA"
       # The documented smoke test (deployment/redactplus/README.md): the read-only container on
       # loopback with the placeholder app.env, then GET/HEAD checks only.

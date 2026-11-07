@@ -43,11 +43,14 @@ fallback (`docs/portal/backend-integration-boundary.md` §6).
 | Email | `docs/onboarding/email/*`, `scripts/onboarding/*` |
 | Tests | `tests/registration-onboarding.test.ts`, `tests/portal-download-entry.test.ts` |
 
-## Turning it on (later, once the backend exists)
+## Production configuration
 
-1. The backend ships §2 (and optionally §3) of the contract, and sets the Keycloak theme and SMTP
-   ([findings](email-delivery-and-spacemail.md)).
-2. Configure the marketing server runtime: `REDACTPLUS_REGISTRATION_MODE=backend`, `…_API_URL`,
-   `…_API_TOKEN` (secret) and `TRUST_PROXY_HOPS`.
-3. Build the marketing site with `NEXT_PUBLIC_REDACTPLUS_REGISTRATION=enabled`. The deployment
-   Dockerfile does not pass this build argument yet; add it with the deployment change.
+Registration is a permanent part of the Download dialog; there is no on/off switch. The launch
+steps are in `docs/releases/2026-11-redactplus-customer-launch.md`:
+
+1. The backend ships the trusted-address change, Turnstile secret, trial organisation, the
+   customer login theme and SMTP ([findings](email-delivery-and-spacemail.md)).
+2. Configure the marketing server runtime: `REDACTPLUS_REGISTRATION_API_URL`,
+   `REDACTPLUS_REGISTRATION_FORWARDER_TOKEN` (secret) and `TRUST_PROXY_HOPS`.
+3. Build the marketing site with `NEXT_PUBLIC_PORTAL_URL` and `NEXT_PUBLIC_TURNSTILE_SITE_KEY`
+   (`deployment/redactplus/scripts/build-image.sh` requires the key with the portal URL).

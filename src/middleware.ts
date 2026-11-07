@@ -84,8 +84,8 @@ export function middleware(request: NextRequest) {
       ? `script-src 'self' 'nonce-${nonce}' 'unsafe-eval'`
       : `script-src 'self' 'nonce-${nonce}'`;
   // Cloudflare Turnstile (the registration security check) loads its script and its frame from
-  // one origin, and only when live registration is built with a site key.
-  const turnstileOrigin = portalEntry?.registration === "live" && turnstileSiteKey ? TURNSTILE_ORIGIN : null;
+  // one origin, on every build that has the Download dialog and a site key.
+  const turnstileOrigin = portalEntry && turnstileSiteKey ? TURNSTILE_ORIGIN : null;
   const scopedScriptDirective = [scriptDirective, chatwootOrigin, turnstileOrigin].filter(Boolean).join(" ");
   // The Download dialog submits credentials to the portal only in live mode; only then may
   // scripts on this site connect to the portal origin.

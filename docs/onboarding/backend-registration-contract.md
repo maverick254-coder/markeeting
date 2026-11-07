@@ -169,12 +169,14 @@ The UI design is ready (`/prototypes/set-password` in development); `PasswordSet
 
 | Variable | Where | Purpose |
 |---|---|---|
-| `NEXT_PUBLIC_REDACTPLUS_REGISTRATION=enabled` | build | lets the dialog submit (default: disabled, with a labelled fallback) |
-| `REDACTPLUS_REGISTRATION_MODE=backend` | server runtime | selects the backend adapter (unset means 503) |
-| `REDACTPLUS_REGISTRATION_API_URL` | server runtime | §2 endpoint, HTTPS only |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | build | the registration security check (public key) |
+| `REDACTPLUS_REGISTRATION_API_URL` | server runtime | §2 endpoint, HTTPS only (missing: the route answers 503) |
+| `REDACTPLUS_REGISTRATION_FORWARDER_TOKEN` | server secret | proves the forwarded visitor address (same as the API's `TRIAL_FORWARDER_TOKEN`) |
 | `REDACTPLUS_REGISTRATION_RESEND_URL` | server runtime, optional | §3 endpoint, HTTPS only |
-| `REDACTPLUS_REGISTRATION_API_TOKEN` | server secret | service credential (SECRET) |
-| `REDACTPLUS_REGISTRATION_TIMEOUT_MS` | server runtime, optional | 1000 to 15000, default 8000 |
+| `REDACTPLUS_REGISTRATION_TIMEOUT_MS` | server runtime, optional | 1000 to 15000, default 10000 |
+
+Registration has no on/off setting. `REDACTPLUS_REGISTRATION_MODE` is left unset (it means the
+backend); `REDACTPLUS_REGISTRATION_API_TOKEN` is refused because the endpoint takes no API credential.
 | `TRUST_PROXY_HOPS` | server runtime | per-address rate limits (already used by the contact form) |
 
 `REDACTPLUS_REGISTRATION_MODE=demo` is a local UI demonstration that works only under `next dev`.

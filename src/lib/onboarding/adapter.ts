@@ -72,11 +72,13 @@ function exactHttpsUrl(name: string, value: string): URL {
 }
 
 /**
- * Reads the adapter choice from the environment. Incomplete or contradictory configuration
- * throws (the route then answers 503) rather than silently accepting registrations that go
- * nowhere.
+ * Reads the registration configuration from the environment. Registration always goes to the
+ * Control Center; there is no "off" setting. Incomplete or contradictory configuration throws:
+ * the route then answers 503 `registration_unavailable` ("nothing was created") and logs the
+ * reason once, rather than accepting registrations that go nowhere.
  *
- *   REDACTPLUS_REGISTRATION_MODE         unset | backend | demo
+ *   REDACTPLUS_REGISTRATION_MODE         unset or backend (the Control Center); demo only under
+ *                                        `next dev`, for local design work
  *   REDACTPLUS_REGISTRATION_API_URL      backend: https://<api>/public/trial-registrations
  *   REDACTPLUS_REGISTRATION_RESEND_URL   backend, optional: defaults to <API_URL>/resend
  *   REDACTPLUS_REGISTRATION_TIMEOUT_MS   backend, optional: 1000 to 15000, default 10000
@@ -96,8 +98,7 @@ export function resolveRegistrationAdapter(
   environment: Record<string, string | undefined> = process.env,
   fetchImpl: typeof fetch = fetch
 ): RegistrationAdapter {
-  const mode = environment.REDACTPLUS_REGISTRATION_MODE?.trim() || "";
-  if (!mode) return unavailableRegistrationAdapter;
+  const mode = environment.REDACTPLUS_REGISTRATION_MODE?.trim() || "backend";
 
   if (mode === "demo") {
     // `next dev` sets NODE_ENV=development; `next build`/`next start` force production. Tests
@@ -108,7 +109,7 @@ export function resolveRegistrationAdapter(
     return demoRegistrationAdapter;
   }
 
-  if (mode !== "backend") throw new RegistrationConfigurationError("REDACTPLUS_REGISTRATION_MODE must be unset, backend or demo.");
+  if (mode !== "backend") throw new RegistrationConfigurationError("REDACTPLUS_REGISTRATION_MODE must be unset (the Control Center), backend or demo.");
 
   if (environment.REDACTPLUS_REGISTRATION_API_TOKEN?.trim()) {
     throw new RegistrationConfigurationError(

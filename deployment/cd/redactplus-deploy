@@ -66,8 +66,11 @@ healthy() {
 
 # Application checks after the container is healthy. All read-only: GET/HEAD, plus one POST
 # with an unparsable body that the registration route rejects before it could reach a backend.
-smoke() { # expected-commit
-  local expected="$1" health code
+# `deploy` also requires customer registration to be configured (that POST answers 400, not
+# 503): a marketing release that could not register customers is rolled back. `rollback` skips
+# that check, so an older release can always be restored.
+smoke() { # expected-commit [registration]
+  local expected="$1" require_registration="${2:-}" health code
   health=$(curl -s --max-time 10 "http://127.0.0.1:${port}/api/health" || true)
   case "$health" in *'"status":"ready"'*) ;; *) echo "check=health-not-ready"; return 1 ;; esac
   case "$health" in *"\"commitSha\":\"${expected}\""*) ;; *) echo "check=wrong-commit"; return 1 ;; esac
@@ -76,6 +79,11 @@ smoke() { # expected-commit
       code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 "http://127.0.0.1:${port}${path}" || true)
       [ "$code" = 200 ] || { echo "check=page-${path}-${code}"; return 1; }
     done
+    if [ "$require_registration" = registration ]; then
+      code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -X POST -H 'content-type: application/json' \
+        -H 'sec-fetch-site: same-origin' --data '{' "http://127.0.0.1:${port}/api/registration/resend" || true)
+      [ "$code" = 400 ] || { echo "check=registration-not-configured-${code}"; return 1; }
+    fi
   else
     case "$health" in *'"authentication":"configured"'*) ;; *) echo "check=portal-auth-unconfigured"; return 1 ;; esac
     case "$health" in *'"sessionStore":"postgres"'*) ;; *) echo "check=portal-session-store"; return 1 ;; esac
@@ -87,18 +95,13 @@ smoke() { # expected-commit
   return 0
 }
 
-# Reported, never changed: how the public reaches the portal, and whether registration is open.
+# Reported, never changed: how the public reaches the portal.
 report_modes() {
   if [ "$component" = portal ]; then
     if grep -q 'redactplus_portal_staff' "$HOME_SITE" 2>/dev/null; then echo "portal_access=staff-preview"
     elif grep -q 'not open yet' "$HOME_SITE" 2>/dev/null; then echo "portal_access=holding"
     elif [ -f "$HOME_SITE" ]; then echo "portal_access=public"
     else echo "portal_access=none"; fi
-  else
-    local code
-    code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -X POST -H 'content-type: application/json' \
-      -H 'sec-fetch-site: same-origin' --data '{' "http://127.0.0.1:${port}/api/registration/resend" || true)
-    case "$code" in 503) echo "registration=disabled" ;; 400) echo "registration=enabled" ;; *) echo "registration=unknown-${code}" ;; esac
   fi
 }
 
@@ -111,9 +114,8 @@ status() {
   echo "container=$(docker inspect "$service" --format '{{.State.Status}}/{{.State.Health.Status}}' 2>/dev/null || echo absent)"
   image=$(docker inspect "$service" --format '{{.Config.Image}}' 2>/dev/null || true)
   if [ -n "$image" ]; then
-    labels=$(docker image inspect "$image" --format '{{index .Config.Labels "io.safaridesk.redactplus.registration"}}|{{index .Config.Labels "io.safaridesk.redactplus.portal-url"}}' 2>/dev/null || echo '|')
-    echo "image_registration=${labels%%|*}"
-    echo "image_portal_url=${labels#*|}"
+    labels=$(docker image inspect "$image" --format '{{index .Config.Labels "io.safaridesk.redactplus.portal-url"}}' 2>/dev/null || true)
+    echo "image_portal_url=${labels}"
   fi
   report_modes
 }
@@ -138,11 +140,10 @@ case "$action" in
   deploy)
     [ "${#args[@]}" -eq 5 ] || refuse "unexpected arguments"
     tag="${args[2]}"; digest="${args[3]}"; run="${args[4]}"
-    [[ "$tag" =~ ^[0-9a-f]{40}(-registration)?$ ]] || refuse "bad tag"
+    [[ "$tag" =~ ^[0-9a-f]{40}$ ]] || refuse "bad tag"
     [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || refuse "bad digest"
     [[ "$run" =~ ^[0-9]{1,9}$ ]] || refuse "bad run number"
-    [[ "$tag" != *-registration || "$component" = marketing ]] || refuse "registration tags are marketing only"
-    commit="${tag%-registration}"
+    commit="$tag"
     previous="$(pin RELEASE_SHA)"
 
     # An older pipeline run never replaces a newer one, whatever order the runs finish in.
@@ -162,7 +163,7 @@ case "$action" in
 
     [ -f .env ] && cp -p .env .env.previous
     echo "previous_sha=$previous"
-    if up_pin "$tag" "$digest" && healthy && smoke "$commit"; then
+    if up_pin "$tag" "$digest" && healthy && smoke "$commit" registration; then
       echo "$run" > .deploy-run
       record deploy deployed "$tag" "$digest" "$run" "$previous"
       echo "result=deployed"; echo "release_sha=$tag"; echo "release_digest=$digest"
@@ -198,7 +199,7 @@ case "$action" in
     current="$(pin RELEASE_SHA)"
     cp -p .env .env.rolled-back-from
     cp -p .env.previous .env
-    if docker compose up -d --no-deps "$service" >/dev/null 2>&1 && healthy && smoke "$(pin RELEASE_SHA | sed 's/-registration$//')"; then
+    if docker compose up -d --no-deps "$service" >/dev/null 2>&1 && healthy && smoke "$(pin RELEASE_SHA)"; then
       record rollback rolled-back "$(pin RELEASE_SHA)" "$(pin RELEASE_DIGEST)" "$run" "$current"
       echo "result=rolled-back"; echo "release_sha=$(pin RELEASE_SHA)"
       report_modes

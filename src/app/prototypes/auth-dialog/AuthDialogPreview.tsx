@@ -85,7 +85,7 @@ export function AuthDialogPreview() {
           key={`${key}-${view}-${mode}`}
           portalOrigin="https://home.redactplus.io"
           submission={mode}
-          registration={mode}
+          registration="preview"
           initialView={view}
           previewOutcome={outcome}
           registrationPreviewOutcome={registrationOutcome}

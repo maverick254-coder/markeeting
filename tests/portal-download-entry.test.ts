@@ -131,7 +131,7 @@ test("header, tablet bar, mobile menu and homepage hero all use the same Downloa
 
 test("without a portal every trigger renders its original link, so the live site is unchanged", () => {
   const cta = read("src/components/portal-entry/PortalCta.tsx");
-  assert.match(cta, /if \(!dialog \|\| \(newCustomer && !dialog\.registrationOpen\)\) \{\s+return \(\s+<Link href=\{fallbackHref\}/);
+  assert.match(cta, /if \(!dialog\) \{\s+return \(\s+<Link href=\{fallbackHref\}/);
   assert.match(read("src/components/portal-entry/PortalDialogProvider.tsx"), /if \(!entry\) return <>\{children\}<\/>;/);
   assert.equal(heroContent.primaryCta.label, "Contact Sales", "without a portal the hero leads to sales, not a demo");
   assert.equal(heroContent.primaryCta.href, "/book-a-demo");
@@ -154,7 +154,7 @@ test("section CTAs are consolidated by purpose instead of repeating demo or down
   }
   // The meaningful sales journeys stay: the footer invitation (Get Started, or Contact Sales
   // without a portal), the article aside and both enquiry pages.
-  assert.match(read("src/components/layout/Footer.tsx"), /<PortalCta\s+newCustomer\s+label="Get Started"\s+fallbackHref=\{demoHref\}\s+fallbackLabel="Contact Sales"/);
+  assert.match(read("src/components/layout/Footer.tsx"), /<PortalCta\s+label="Get Started"\s+fallbackHref=\{demoHref\}\s+fallbackLabel="Contact Sales"/);
   const aside = read("src/components/blog/ArticleAsideCta.tsx");
   assert.match(aside, /href="\/book-a-demo"/);
   assert.match(aside, /Contact sales/);
@@ -172,7 +172,7 @@ test("standard packages open the shared registration dialog; Enterprise keeps Co
   }
   const cards = read("src/components/pricing/PricingCards.tsx");
   assert.match(cards, /plan\.ctaAction === "register" \? \(/);
-  assert.match(cards, /<PortalCta\s+newCustomer\s+label=\{plan\.ctaLabel\}/, "Get Started uses the one shared dialog trigger, as a new-customer action");
+  assert.match(cards, /<PortalCta\s+label=\{plan\.ctaLabel\}/, "Get Started uses the one shared dialog trigger");
   assert.match(cards, /fallbackHref=\{packageEnquiryHref\(plan\.slug\)\}\s+fallbackLabel="Contact Sales"/, "without a portal it stays the package's sales enquiry");
   assert.doesNotMatch(cards, /<dialog|fetch\(|\/api\//, "no new registration or purchase path");
   assert.match(read("src/components/pricing/PricingCards.tsx"), /\/book-a-demo\?package=\$\{slug\}/, "the package still preselects the enquiry form");
@@ -205,26 +205,16 @@ test("the marketing typecheck and Docker context exclude the portal application"
   assert.doesNotMatch(read(".dockerignore"), /^!apps/m);
 });
 
-test("while registration is off the dialog is sign-in only and never shows an unusable form", () => {
+test("Create account and Sign in are always both offered, and Contact Sales is only for sales enquiries", () => {
   const panel = read("src/components/portal-entry/AuthPanel.tsx");
-  assert.match(panel, /const registrationOpen = registration !== "disabled";/);
-  assert.match(panel, /initialView === "register" && !registrationOpen \? "signin" : initialView/, "a closed registration opens on sign-in");
-  assert.match(panel, /if \(view === "register" && registrationOpen\) \{\s+return \(\s+<RegistrationForm/, "the registration form renders only while registration is open");
-  assert.equal((panel.match(/switchView\("register"\)/g) ?? []).length, 1, "the only way into the form is the open-registration branch");
-  const newCustomer = panel.slice(panel.indexOf("const newCustomer"), panel.indexOf('if (view === "register" && registrationOpen)'));
-  assert.match(newCustomer, /registrationOpen \? \(/);
-  assert.match(newCustomer, /<Link href=\{demoHref\} onClick=\{onClose\}[^>]*>\s+Contact Sales\s+<\/Link>/, "new customers are sent to Contact Sales instead");
-  assert.match(read("src/components/portal-entry/PortalDialogProvider.tsx"), /registrationOpen = Boolean\(entry && entry\.registration !== "disabled"\)/);
-  // The registration journey stays in the code, behind the same flag.
-  assert.match(panel, /<RegistrationForm\s+submission=\{registration\}/);
-  assert.ok(existsSync(path.join(process.cwd(), "src/app/api/registration/route.ts")));
-});
-
-test("Get Started actions are sales links while registration is off; Download always opens sign-in", () => {
+  assert.match(panel, /initialView = "register"/, "the Download dialog opens on Create account");
+  assert.match(panel, /if \(view === "register"\) \{\s+return \(\s+<RegistrationForm/, "the form is always reachable");
+  assert.match(panel, /Create an account/, "sign-in links to Create account");
+  assert.match(panel, /onSignIn=\{\(\) => switchView\("signin"\)\}/, "Create account links to sign-in");
+  assert.doesNotMatch(panel, /registrationOpen|Contact Sales|demoHref/, "no registration-off state in the dialog");
+  assert.doesNotMatch(read("src/components/portal-entry/PortalCta.tsx"), /newCustomer|registrationOpen/);
+  // Get Started opens the same dialog as Download; only Enterprise and the enquiry pages are sales.
   for (const file of ["src/components/pricing/PricingCards.tsx", "src/components/layout/Footer.tsx"]) {
-    assert.match(read(file), /<PortalCta\s+newCustomer/, `${file}: Get Started is a new-customer action`);
-  }
-  for (const file of ["src/components/layout/SiteHeader.tsx", "src/components/layout/MobileNav.tsx", "src/components/sections/Hero.tsx"]) {
-    assert.doesNotMatch(read(file), /newCustomer/, `${file}: Download is for existing customers`);
+    assert.doesNotMatch(read(file), /newCustomer/, `${file}: Get Started is never diverted to sales`);
   }
 });

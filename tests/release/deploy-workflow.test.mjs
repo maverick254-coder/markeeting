@@ -60,21 +60,22 @@ test("the exact commit is built, pinned by digest, and deployed with a monotonic
   assert.match(read(".github/scripts/publish-image.sh"), /--password-stdin/);
 });
 
-test("staff-only portal access and disabled registration are defaults that the deployment verifies", () => {
+test("staff-only portal access is verified, and every marketing release carries Create account and Sign in", () => {
   const portalDeploy = jobs.portal.steps.find((s) => /remote-deploy\.sh/.test(s.run ?? ""));
   assert.equal(portalDeploy.env.EXPECT_ACCESS, "${{ vars.PORTAL_EXPECTED_ACCESS || 'staff-preview' }}");
-  const decideStep = jobs.plan.steps.find((s) => s.id === "decide");
-  assert.equal(decideStep.env.SET_REGISTRATION, "${{ vars.MARKETING_REGISTRATION }}");
-  assert.equal(decideStep.env.SET_PORTAL_URL, "${{ vars.MARKETING_PORTAL_URL }}");
-  // Unset keeps production's flags: a routine release never switches registration off or drops Download.
-  assert.match(decideStep.run, /"\) WANT_REGISTRATION="\$have_registration" ;;/);
-  assert.match(decideStep.run, /"\) WANT_PORTAL_URL="\$have_portal_url" ;;/);
-  assert.match(decideStep.run, /registration needs the Download dialog/);
-  const build = jobs.marketing.steps.find((s) => /build-image\.sh/.test(s.run ?? ""));
-  assert.match(build.env.NEXT_PUBLIC_REDACTPLUS_REGISTRATION, /== 'enabled' && 'enabled' \|\| ''/);
   const remote = read(".github/scripts/remote-deploy.sh");
   assert.match(remote, /portal_access\)" != "\$\{EXPECT_ACCESS:-staff-preview\}"/);
-  assert.match(remote, /registration\)" != "\$\{EXPECT_REGISTRATION:-disabled\}"/);
+  // Registration is not a switch: no variable, no build flag, no -registration tag.
+  assert.doesNotMatch(text, /MARKETING_REGISTRATION|NEXT_PUBLIC_REDACTPLUS_REGISTRATION|-registration|EXPECT_REGISTRATION|MARKETING_PORTAL_URL/);
+  assert.doesNotMatch(remote, /EXPECT_REGISTRATION/);
+  const build = jobs.marketing.steps.find((s) => /build-image\.sh/.test(s.run ?? ""));
+  assert.equal(build.env.NEXT_PUBLIC_PORTAL_URL, "https://home.redactplus.io", "the Download dialog is always built in");
+  assert.equal(build.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY, "${{ vars.TURNSTILE_SITE_KEY }}", "with its security check");
+  assert.match(build.run, /echo "TAG=\$SHA"/);
+  // A production image without the dialog is replaced at the next release.
+  assert.match(jobs.plan.steps.find((s) => s.id === "decide").run, /image_portal_url\)" = "https:\/\/home\.redactplus\.io" \] \|\| flags_changed=true/);
+  // build-image.sh refuses a dialog without the security-check key.
+  assert.match(read("deployment/redactplus/scripts/build-image.sh"), /NEXT_PUBLIC_PORTAL_URL:-\}" && -z "\$\{NEXT_PUBLIC_TURNSTILE_SITE_KEY:-\}"/);
 });
 
 test("logs never carry credentials, and nothing touches Keycloak, Cloudflare, nginx or the registry's storage", () => {

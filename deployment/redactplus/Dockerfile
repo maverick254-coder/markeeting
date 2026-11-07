@@ -33,20 +33,19 @@ COPY . .
 
 # Read by the build and fixed into the output; changing any needs a new image.
 #   NEXT_PUBLIC_DOCUMENTATION_URL  inlined into the navigation bundle
-#   NEXT_PUBLIC_PORTAL_URL         customer portal origin for the Download sign-in dialog;
-#                                  empty keeps the approved "Request a Demo" buttons
+#   NEXT_PUBLIC_PORTAL_URL         customer portal origin: the Download dialog with Create
+#                                  account and Sign in (empty keeps the sales links, for CI)
 #   SITE_NOINDEX                  next.config.ts headers and the static /robots.txt
 #   SITE_CANONICAL_ORIGIN          canonical links, sitemap, robots.txt, structured data
 #                                  (also baked into the runtime ENV below, so the
 #                                  prerendered and per-request output agree)
-# Production images leave the first two empty. NEXT_PUBLIC_PORTAL_URL stays empty until
-# the portal at home.redactplus.io is live.
+# Production images leave the documentation URL and SITE_NOINDEX empty and set
+# NEXT_PUBLIC_PORTAL_URL=https://home.redactplus.io (build-image.sh then requires the site key).
 ARG NEXT_PUBLIC_DOCUMENTATION_URL=""
 ARG NEXT_PUBLIC_PORTAL_URL=""
 ARG NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH=""
-# Trial registration: "enabled" shows the form; the Turnstile site key is public (its secret is
-# on the Control Center API). Both empty keeps the Contact Sales panel.
-ARG NEXT_PUBLIC_REDACTPLUS_REGISTRATION=""
+# Registration security check: the Turnstile site key is public (its secret is on the Control
+# Center API). Without it the registration form says account creation is unavailable.
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY=""
 ARG SITE_NOINDEX=""
 ARG SITE_CANONICAL_ORIGIN="https://redactplus.io"
@@ -56,7 +55,6 @@ ENV NEXT_TELEMETRY_DISABLED=1 \
     NEXT_PUBLIC_DOCUMENTATION_URL=${NEXT_PUBLIC_DOCUMENTATION_URL} \
     NEXT_PUBLIC_PORTAL_URL=${NEXT_PUBLIC_PORTAL_URL} \
     NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH=${NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH} \
-    NEXT_PUBLIC_REDACTPLUS_REGISTRATION=${NEXT_PUBLIC_REDACTPLUS_REGISTRATION} \
     NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY} \
     SITE_NOINDEX=${SITE_NOINDEX} \
     SITE_CANONICAL_ORIGIN=${SITE_CANONICAL_ORIGIN}

@@ -15,12 +15,12 @@ The release is exactly two pull requests, one per repository, both from a branch
 
 | PR | Repository | Contains |
 |---|---|---|
-| **Marketing** | Safe-Redact/Marketing-Site | Sign-in fallback for the Download dialog, the forwarder secret, sticky deployment flags, this document |
+| **Marketing** | Safe-Redact/Marketing-Site | Permanent registration in the Download dialog (no switch), the forwarder secret, deployment that always builds the dialog and refuses unconfigured registration, this document |
 | **Backend** | Safe-Redact/Admin-panel | Trusted visitor address (forwarder secret) and staff-address guard, RedactPlus customer login theme, SpaceMail SMTP script |
 
 | Component | In | Production today | After launch |
 |---|---|---|---|
-| Marketing site | Marketing PR | `7c1ff6b` image `sha256:4a52ff7e…` (4 Nov) | merge commit, tag `<sha>-registration` |
+| Marketing site | Marketing PR | `7c1ff6b` image `sha256:4a52ff7e…` (4 Nov) | merge commit, tag `<sha>` |
 | Customer portal | Marketing-Site `main` already (PR #13 wording) | `e5e7954` `sha256:a855304b…` (staff preview) | `main` merge commit, public |
 | Control Center API | Backend PR | `:prod` built 6 Nov 16:28 UTC (unlabelled, after `7026a19`) | `:prod` from the merge commit |
 | Keycloak customer theme | Backend PR | staff theme for every client | `redactplus` theme on `redactplus-portal` |
@@ -31,8 +31,8 @@ The release is exactly two pull requests, one per repository, both from a branch
 `saferedact-control-center-api:prod` and `-web:prod` (`.github/workflows/production.yml`), and
 Watchtower on the server (`--label-enable --interval 60 --cleanup`) replaces `saferedact_api` and
 `saferedact_admin` within about a minute. With no new settings this is safe: without
-`TRIAL_FORWARDER_TOKEN` the API ignores forwarded visitor addresses, registration is still off on
-the website, and the theme and realm change only take effect through phase 2's manual steps. Merge
+`TRIAL_FORWARDER_TOKEN` the API ignores forwarded visitor addresses, production still runs the old
+marketing site, and the theme and realm change only take effect through phase 2's manual steps. Merge
 it at the start of the launch window (phase 1), not earlier. Rollback: the previous image is in
 the registry as `:sha-7026a19…` (Watchtower's `--cleanup` removes it from the server, so it is
 pulled again).
@@ -42,14 +42,16 @@ The original per-change branches (`fix/redactplus-sign-in-only-download`;
 `fix/smtp-script-spacemail`) stay until both PRs are verified and merged, then can be deleted.
 
 ### What the branches change
-- **Website, sign-in fallback:** while registration is off, the Download dialog is sign-in only (no unusable form,
-  no links to unapproved legal pages) and Get Started stays the sales enquiry. With registration on,
-  the same dialog offers Create account and Sign in, unchanged.
+- **Website, permanent registration:** the Download dialog always offers Create account and Sign in;
+  Download and Get Started open it, and Contact Sales is only for Enterprise and enquiries. There is
+  no registration switch (build argument, runtime mode or deployment variable). When the
+  registration service is genuinely unavailable the form says so ("nothing was created") instead
+  of sending people to sales.
 - **Website, registration security:** backend mode requires `REDACTPLUS_REGISTRATION_FORWARDER_TOKEN` and sends it
   as `X-RedactPlus-Forwarder` with the visitor's `CF-Connecting-IP`.
-- **Website, automatic deployment:** unset `MARKETING_REGISTRATION` and `MARKETING_PORTAL_URL` now keep what production
-  runs. A routine release can no longer switch registration off or drop the Download entry, and
-  registration without the portal URL is refused.
+- **Website, deployment:** every production marketing build includes the Download dialog and the
+  Turnstile key (`build-image.sh` refuses the dialog without the key), and the server rolls back a
+  marketing release whose registration route is not configured.
 - **API:** the visitor header is honoured only with the shared forwarder secret (optionally also from
   listed networks); otherwise the connection address counts. Staff addresses cannot register
   trials. Misconfiguration stops start-up.
@@ -74,11 +76,10 @@ can change (container recreated, network renumbered) without breaking or weakeni
 | Where | Setting | Value |
 |---|---|---|
 | Marketing build | `NEXT_PUBLIC_PORTAL_URL` | `https://home.redactplus.io` |
-| Marketing build | `NEXT_PUBLIC_REDACTPLUS_REGISTRATION` | `enabled` (tag gets `-registration`) |
 | Marketing build | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | the widget's public site key (owner) |
 | Marketing build | `NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH` | unset (sign-in stays the Keycloak redirect) |
 | Marketing `app.env` | `TRUST_PROXY_HOPS` | `1` |
-| Marketing `app.env` | `REDACTPLUS_REGISTRATION_MODE` | `backend` |
+| Marketing `app.env` | `REDACTPLUS_REGISTRATION_MODE` | unset (means the Control Center; there is no off) |
 | Marketing `app.env` | `REDACTPLUS_REGISTRATION_API_URL` | `https://api.saferedact.io/public/trial-registrations` |
 | Marketing `app.env` | `REDACTPLUS_REGISTRATION_FORWARDER_TOKEN` | shared secret (section 2, H2) |
 | API `.env` | `TRIAL_FORWARDER_TOKEN` | the same shared secret |
@@ -124,13 +125,13 @@ switch. Stop at the first failed check and roll that phase back.
 | 2 | **Keycloak**: SMTP (H3), customer theme (H8) | Test connection; portal sign-in page wording; Admin Panel sign-in unchanged | Clear the client's login theme; restore the previous SMTP from the backup |
 | 3 | **Portal**: deploy `main`, then stage I (public site) | Health `ready` and commit; non-staff `/` redirects to sign-in; direct origin 403; `/forum` 404 | `.env.previous`; reinstall the preview site |
 | 4 | **Stage M** (H7) | Marketing health and real visitor addresses in the log | Restore the nginx backup and reload |
-| 5 | **Marketing**: add H11's WAF rule first; then build the launch merge commit with the section 1 build arguments, set the `app.env` registration lines, deploy | Health commit; Download opens Create account and Sign in; Turnstile renders; a non-QA registration is blocked by the WAF rule | `.env.previous` (`7c1ff6b`); or remove `REDACTPLUS_REGISTRATION_MODE` from `app.env` and restart (form answers "unavailable", creates nothing) |
+| 5 | **Marketing**: add H11's WAF rule first; then build the launch merge commit with the section 1 build arguments, set the `app.env` registration lines, deploy | Health commit; Download opens Create account and Sign in; Turnstile renders; a non-QA registration is blocked by the WAF rule | `.env.previous` (`7c1ff6b`). To stop registrations without a rollback: keep or re-add the WAF rule, or unset the trial organisation (the form answers "trials can't be started right now"; nothing is created) |
 | 6 | **Acceptance**: section 4, T1–T12, with the H9 identities | All pass | Phases 5 → 1 in reverse |
 | 7 | **Public**: remove the WAF rule | One more registration from a non-QA network succeeds | Re-add the rule |
 
 Automatic deployment stays off (`CD_ENABLED` unset) through the launch. Switch it on afterwards
-(`deployment/cd/README.md`): with the sticky-flag fix it rebuilds marketing with registration on
-and the portal URL set, because that is what production then runs.
+(`deployment/cd/README.md`): every marketing release it builds has the Download dialog with
+registration, and the server refuses one whose registration is not configured.
 
 ## 4. End-to-end acceptance plan
 

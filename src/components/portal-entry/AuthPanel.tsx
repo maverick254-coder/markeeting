@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 import type { RegistrationSubmission } from "@/content/onboarding";
-import { demoHref } from "@/content/navigation";
 import { isPortalRedirect, portalAuthHref, type CredentialSubmission } from "@/content/portal";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
@@ -39,15 +37,11 @@ const titles: Record<CredentialView, { heading: string; lede: string; submit: st
 };
 
 /**
- * The Download dialog's account form: sign in, request a password reset, and (once online
- * registration is open) create an account.
+ * The Download dialog's account form: create an account, sign in, or request a password reset.
  *
  * Create account (RegistrationForm) collects name, email, optional organization and consent,
- * with no password, and posts to this site's own /api/registration. It is shown only when
- * `registration` is "live" or "preview". With "disabled" (the default until the backend is
- * approved) the dialog is sign-in only: it opens on sign-in, never renders the registration
- * form, and points new customers to Contact Sales instead. The registration code is unchanged
- * and returns with NEXT_PUBLIC_REDACTPLUS_REGISTRATION=enabled.
+ * with no password, and posts to this site's own /api/registration. It is always offered: the
+ * real dialog submits ("live"); only the development design preview simulates ("preview").
  *
  * Sign in and reset keep the approved portal boundary. With `submission="disabled"` (the
  * default until the backend API exists) the form validates but never sends credentials; it says
@@ -58,7 +52,7 @@ const titles: Record<CredentialView, { heading: string; lede: string; submit: st
 export function AuthPanel({
   portalOrigin,
   submission,
-  registration = "disabled",
+  registration = "live",
   initialView = "register",
   previewOutcome = "success",
   registrationPreviewOutcome,
@@ -72,9 +66,7 @@ export function AuthPanel({
   registrationPreviewOutcome?: RegistrationPreviewOutcome;
   onClose?: () => void;
 }) {
-  const registrationOpen = registration !== "disabled";
-  const startView: AuthView = initialView === "register" && !registrationOpen ? "signin" : initialView;
-  const [view, setView] = useState<AuthView>(startView);
+  const [view, setView] = useState<AuthView>(initialView);
   const [switched, setSwitched] = useState(false);
   const [values, setValues] = useState<Record<AuthField, string>>({ email: "", password: "" });
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -89,7 +81,7 @@ export function AuthPanel({
   const copy = titles[view === "register" ? "signin" : view];
   const disabled = submission === "disabled";
 
-  useEffect(() => setView(startView), [startView]);
+  useEffect(() => setView(initialView), [initialView]);
 
   const switchView = useCallback((next: AuthView) => {
     setView(next);
@@ -104,22 +96,7 @@ export function AuthPanel({
     window.setTimeout(() => headingRef.current?.focus(), 0);
   }, []);
 
-  // New customers: the registration form while it is open; otherwise the sales enquiry.
-  const newCustomer = (label: string) =>
-    registrationOpen ? (
-      <button type="button" onClick={() => switchView("register")} className="font-semibold text-accent-ink hover:text-accent-ink-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool">
-        {label}
-      </button>
-    ) : (
-      <>
-        <Link href={demoHref} onClick={onClose} className="font-semibold text-accent-ink hover:text-accent-ink-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool">
-          Contact Sales
-        </Link>{" "}
-        to set up an account.
-      </>
-    );
-
-  if (view === "register" && registrationOpen) {
+  if (view === "register") {
     return (
       <RegistrationForm
         submission={registration}
@@ -152,12 +129,15 @@ export function AuthPanel({
         </Button>
         <p className="mt-3 text-center text-body-sm text-ink-muted">Forgot your password? Choose “Forgot password” on the sign-in page.</p>
         <p className="mt-4 text-center text-body-sm text-ink-muted">
-          New to RedactPlus? {newCustomer("Get started")}
+          New to RedactPlus?{" "}
+          <button type="button" onClick={() => switchView("register")} className="font-semibold text-accent-ink hover:text-accent-ink-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool">
+            Get started
+          </button>
         </p>
       </div>
     );
   }
-  const credentialView: CredentialView = view === "register" ? "signin" : view;
+  const credentialView: CredentialView = view;
 
   function update(field: AuthField, value: string) {
     const next = { ...values, [field]: value };
@@ -340,7 +320,10 @@ export function AuthPanel({
       <p className="mt-4 text-center text-body-sm text-ink-muted">
         {view === "signin" ? (
           <>
-            New to RedactPlus? {newCustomer("Create an account")}
+            New to RedactPlus?{" "}
+            <button type="button" onClick={() => switchView("register")} className="font-semibold text-accent-ink hover:text-accent-ink-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool">
+              Create an account
+            </button>
           </>
         ) : (
           <button type="button" onClick={() => switchView("signin")} className="font-semibold text-accent-ink hover:text-accent-ink-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool">

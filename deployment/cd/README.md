@@ -55,13 +55,14 @@ On the server, `redactplus-deploy deploy …`:
    again, and reports `result=failed rollback=healthy|unhealthy`;
 7. records the attempt in `deploy-history.jsonl` and `releases.log` (mode 600, beside the
    component's `.env`) and reports, without changing anything:
-   - portal: `portal_access` (staff-preview / holding / public, read from the nginx site);
-   - marketing: `registration` (enabled / disabled, from an invalid request that the route rejects
-     before any backend is called).
+   - portal: `portal_access` (staff-preview / holding / public, read from the nginx site).
+
+For marketing, step 5 also requires registration to be configured: an invalid request to
+`/api/registration/resend`, which the route rejects before any backend is called, must answer 400
+(503 means the registration service is not configured, and the release is rolled back).
 
 The workflow fails if the reported portal access is not `PORTAL_EXPECTED_ACCESS`
-(default `staff-preview`), or registration is not the state the plan built for (see the build
-flags below).
+(default `staff-preview`).
 
 ### When nothing is deployed
 
@@ -80,15 +81,15 @@ Change detection compares the commit with the one production actually runs (from
 a skipped commit's changes are picked up by the next one. If the deployed commit is unknown, not
 an ancestor of the head, or nothing is deployed yet, the component is deployed. The marketing
 input list mirrors the `.dockerignore` allowlist (a test enforces that). Marketing is also rebuilt
-when the requested build flags (`MARKETING_REGISTRATION`, `MARKETING_PORTAL_URL`) differ from the
-labels on the running image.
+when the running image was built without the Download dialog (no
+`io.safaridesk.redactplus.portal-url` label).
 
-**Build flags are sticky.** With `MARKETING_REGISTRATION` and `MARKETING_PORTAL_URL` unset, every
-marketing build reuses the flags of the image production runs (its `io.safaridesk.redactplus.*`
-labels). A routine release therefore can never switch registration off, switch it on, or drop the
-Download entry. To change one, set the variable (`disabled`/`enabled`; `none`/
-`https://home.redactplus.io`), let one release go out, then unset it again. Registration without
-the portal URL is refused.
+**Every marketing release has Create account and Sign in.** The workflow always builds with
+`NEXT_PUBLIC_PORTAL_URL=https://home.redactplus.io` and the `TURNSTILE_SITE_KEY` variable
+(`build-image.sh` refuses the build without the key). There is no registration switch. On the
+server, `deploy` additionally requires the registration route to be configured (a malformed
+request to `/api/registration/resend` must answer 400, not 503); otherwise the release is rolled
+back. `rollback` does not require it, so an older release can always be restored.
 
 ## Security review
 
@@ -101,7 +102,7 @@ the portal URL is refused.
 | Deploy key is stolen | It can run only `/usr/local/sbin/redactplus-deploy` (`restrict,command=…`): no shell, PTY, forwarding or file access. The command takes only `status`, `deploy` and `rollback` for the two components, with fixed paths and `PATH`, and can only re-pin an image that is in the registry and labelled with a matching commit. The worst case is deploying an older legitimate build, which the run-number check limits and the history records. Revoke by deleting its `authorized_keys` line |
 | Host spoofing | `StrictHostKeyChecking=yes` against the pinned `DEPLOY_SSH_KNOWN_HOSTS` |
 | Secrets in logs | Registry password via `--password-stdin`; key and known_hosts written with `umask 077` to `$RUNNER_TEMP` and deleted on exit; no `set -x`; the forced command never reads or prints `app.env`, `db.env`, SMTP, Keycloak or database credentials (enforced by tests). GitHub masks environment secrets in logs |
-| Portal opened to the public / registration enabled by accident | The pipeline cannot change nginx or the staff allowlist. Registration is a build flag that only changes when `MARKETING_REGISTRATION` is set deliberately (unset keeps production's state), and the deployment fails if production reports anything other than the expected state |
+| Portal opened to the public by accident; a release that cannot register customers | The pipeline cannot change nginx or the staff allowlist, and fails if the portal's reported access is not the expected one. A marketing release whose registration route is not configured is rolled back by the server |
 | Changes beyond the image | No Keycloak, licensing, Cloudflare, DNS, nginx, firewall or database-schema change is possible from the workflow or the forced command. Server-config changes are only reported |
 | Supply chain | Actions pinned by commit SHA (`actions/checkout`, `actions/setup-node` v6.0.0); `npm ci` from lockfiles; the CI security checks run before deployment |
 | Registry or disk exhaustion | See retention below; nothing is deleted automatically |
@@ -141,9 +142,7 @@ Residual risks, accepted for now:
      | `CD_COMPONENTS` | `portal` first; later `marketing,portal` |
      | `DEPLOY_HOST` | The production server's address |
      | `PORTAL_EXPECTED_ACCESS` | Unset (= `staff-preview`). Change only after public access is separately approved |
-     | `MARKETING_PORTAL_URL` | Unset: keep production's value. `https://home.redactplus.io` or `none` only to change it |
-     | `MARKETING_REGISTRATION` | Unset: keep production's value. `enabled` only when registration is separately approved; `disabled` to switch it off |
-     | `TURNSTILE_SITE_KEY` | Public site key; used only when registration is enabled |
+     | `TURNSTILE_SITE_KEY` | Public site key of the registration security check (required for marketing builds) |
 
 2. **Settings → Rules → Rulesets** for `main` (as in `docs/ci/README.md`): require the five CI
    checks and a reviewed pull request, and block force pushes. Branch protection is what makes
@@ -194,8 +193,8 @@ Each stage is its own approval. Do not skip ahead.
 | 2b | Merge two portal changes in quick succession | The first run is skipped ("main has moved on") or queued; only the newest is deployed; `last_run` only rises |
 | 2c | A PR whose CI fails (or the history of one) | `deploy / production` skipped |
 | 2d | Rollback drill: on the server, `SSH_ORIGINAL_COMMAND="rollback portal 0" /usr/local/sbin/redactplus-deploy`, then let the next merge redeploy | Previous digest restored and healthy; recorded in history. (The automatic rollback on failed health checks is covered by the tests; do not break production to show it) |
-| 2e | After each: staff sign-in works, a non-staff address still gets 503, registration still disabled | Access unchanged |
-| 3 | After a week of clean portal runs: `CD_COMPONENTS=marketing,portal`, with `MARKETING_PORTAL_URL` and `MARKETING_REGISTRATION` unset | The next marketing change rebuilds with the flags production already runs; `/`, `/pricing`, `/contact` 200; the reported registration state is unchanged |
+| 2e | After each: staff sign-in works, a non-staff address still gets 503 (until the portal's public launch) | Access unchanged |
+| 3 | After a week of clean portal runs, and once production registration is configured (launch document): `CD_COMPONENTS=marketing,portal` | The next marketing change rebuilds with the Download dialog; `/`, `/pricing`, `/contact` 200; the registration route answers 400 to the server's malformed probe |
 
 To stop automation at any time: set `CD_ENABLED` to anything other than `true` (takes effect
 from the next run), or remove a component from `CD_COMPONENTS`. To cut the server off entirely:
@@ -249,8 +248,9 @@ run by an operator. Proposal, for separate review:
 - `tests/release/redactplus-deploy.test.mjs` runs the real forced command against stand-in
   `docker`/`curl` in a temporary root: status; deploy with history; older and equal run numbers
   refused; unhealthy release rolled back; wrong commit served rolled back; revision-label mismatch
-  refused before any change; 12 malformed or injected requests refused; registration tag
-  marketing-only; rollback action; no forbidden commands in the script.
+  refused before any change; 13 malformed or injected requests refused (including any
+  `-registration` tag); a marketing release without configured registration rolled back; a
+  rollback that does not require registration; rollback action; no forbidden commands.
 - `tests/release/changed-components.test.mjs`: per-image rules, `.dockerignore` mirror, server
   config reporting, decisions, and a temporary Git history (docs-only, other-app, shared
   lockfile, non-ancestor and unknown deployed commits).

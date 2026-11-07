@@ -14,8 +14,6 @@
  * src/content/onboarding.ts.
  */
 
-import { registrationSubmission, type RegistrationSubmission } from "./onboarding";
-
 export type PortalAuthIntent = "register" | "signin";
 
 /** Where the portal sends someone after sign-in from the Download dialog: its download and community hub. */
@@ -63,8 +61,6 @@ export interface PortalEntry {
   portalOrigin: string;
   /** Existing-customer sign-in and password reset (the approved portal boundary). */
   submission: CredentialSubmission;
-  /** New-customer registration through this site's own /api/registration (src/content/onboarding.ts). */
-  registration: RegistrationSubmission;
 }
 
 export function credentialSubmission(raw: string | undefined): CredentialSubmission {
@@ -77,7 +73,6 @@ export const portalEntry: PortalEntry | null = configuredPortalOrigin
   ? {
       portalOrigin: configuredPortalOrigin,
       submission: credentialSubmission(process.env.NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH),
-      registration: registrationSubmission(process.env.NEXT_PUBLIC_REDACTPLUS_REGISTRATION),
     }
   : null;
 

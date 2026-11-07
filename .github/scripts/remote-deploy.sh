@@ -3,7 +3,7 @@
 # interprets its key=value answer. Used by .github/workflows/deploy-production.yml only.
 #
 # Needs: DEPLOY_SSH_KEY, DEPLOY_SSH_KNOWN_HOSTS, HOST, COMPONENT, TAG, DIGEST, RUN, and
-# EXPECT_ACCESS (portal) or EXPECT_REGISTRATION (marketing).
+# EXPECT_ACCESS (portal).
 set -uo pipefail
 : "${DEPLOY_SSH_KEY:?}" "${DEPLOY_SSH_KNOWN_HOSTS:?}" "${HOST:?}" "${COMPONENT:?}" "${TAG:?}" "${DIGEST:?}" "${RUN:?}"
 
@@ -28,12 +28,8 @@ case "$(field result)" in
   *) echo "::error::${COMPONENT} deployment refused or unreachable (exit ${rc}): $(field reason)"; exit 1 ;;
 esac
 
-# The deployment must not have changed who can reach the portal or whether registration is open.
+# The deployment must not have changed who can reach the portal.
 if [ "$COMPONENT" = portal ] && [ "$(field portal_access)" != "${EXPECT_ACCESS:-staff-preview}" ]; then
   echo "::error::portal access is '$(field portal_access)', expected '${EXPECT_ACCESS:-staff-preview}'"
-  exit 1
-fi
-if [ "$COMPONENT" = marketing ] && [ "$(field registration)" != "${EXPECT_REGISTRATION:-disabled}" ]; then
-  echo "::error::registration is '$(field registration)', expected '${EXPECT_REGISTRATION:-disabled}'"
   exit 1
 fi

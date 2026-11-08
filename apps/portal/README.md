@@ -15,12 +15,18 @@ no sign-in or registration controls of its own.
 - **Account** is an initials avatar in the header whose only action is Sign out.
 - **Home** (`/`) is the downloads and resources hub: the latest verified installer, then
   compact groups for getting started, news, documentation and the community.
-- **Forum** (`/forum`, `/forum/questions/[slug]`, `/forum/ask`): a Q&A index with search,
-  answered/unanswered filters, sorting, categories, tags and pagination; question pages with
-  answers, an accepted answer and nested comments; and a composer with Markdown preview and
-  image attachments. It runs on the `ForumService` interface. Production has no forum engine yet,
-  so it shows an empty, clearly labelled state, question URLs return 404, and nothing is posted.
-  The engine choice is in docs/portal/forum-and-cms-evaluation.md.
+- **Forum** (`/forum`, `/forum/questions/[slug]`, `/forum/ask`, `/forum/notifications`,
+  `/forum/moderation`): a Q&A index with search, answered/unanswered filters, sorting,
+  categories, tags and pagination. Question pages have:
+  - answers, voting, an accepted answer and nested comments;
+  - editing, deleting and reporting;
+  - a composer with Markdown preview and image uploads.
+
+  Moderators get a report queue. The forum is backed by NodeBB, private behind the portal,
+  through the RedactPlus bridge (`services/forum-bridge`, `deployment/forum`). The portal calls
+  it server side with `src/lib/community/bridge.ts` and `/api/forum/*`. It is **off unless
+  `PORTAL_FORUM_ENABLED=true`**: until then every forum URL is a 404 and there is no navigation
+  entry.
 - **News** (`/news`, `/news/[slug]`) renders published Markdown articles from `content/news`,
   the same format Decap CMS edits.
 - **The download UI** shows product, version, platform, size, the download button and release
@@ -33,7 +39,8 @@ no sign-in or registration controls of its own.
 
 Phase status:
 - **Working:** sign-in, sessions, downloads, release notes and search.
-- **Forum:** layout only, with no backend. Production shows it empty and its controls are disabled.
+- **Forum:** complete, against NodeBB through the bridge. It is off in production until it is
+  enabled (deployment/forum/RUNBOOK.md).
 - **Not available yet:** Documentation, Tutorials, News, Announcements and Support tickets.
   Each is marked that way on its page.
 
@@ -114,7 +121,11 @@ Development settings cannot reach production:
 | `PORTAL_MARKETING_ORIGIN` | no | Default `https://redactplus.io`. |
 | `TRUST_PROXY_HOPS` | no | `1` behind host nginx. Used for per-address rate limits. |
 | `PORTAL_ENVIRONMENT` | no | Never set in production. `development` and `test` work on loopback only. |
-| `PORTAL_DEV_COMMUNITY_FIXTURES` | no | `true` shows sample forum discussions, under a "Development sample data" banner. Refused in production. |
+| `PORTAL_DEV_COMMUNITY_FIXTURES` | no | `true` shows sample forum discussions, read-only, under a "Development sample data" banner. Refused in production. |
+| `PORTAL_FORUM_ENABLED` | no | `true` turns the forum on. Needs both bridge settings. Unset: no forum anywhere. |
+| `PORTAL_FORUM_BRIDGE_URL` | with the forum | NodeBB's private address: https, loopback, or a private service name such as `http://redactplus-forum:4567`. |
+| `PORTAL_FORUM_BRIDGE_KEY` | with the forum | The bridge key (32+ characters), the same as NodeBB's `REDACTPLUS_BRIDGE_KEY`. Server side only. |
+| `PORTAL_FORUM_MODERATOR_ROLE` | no | The identity provider role for forum moderators. Default `forum-moderator`. |
 
 ## Authentication
 

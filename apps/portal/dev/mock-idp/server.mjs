@@ -29,9 +29,14 @@
  *                                             nonce, as Keycloak does for plain OAuth2 clients
  *   MOCK_IDP_STAFF_EMAILS   (unset)           comma-separated emails that get roles ["forum-moderator"]; everyone
  *                                             else gets roles [] so a removed role is revoked (a Keycloak role mapper)
+ *   MOCK_IDP_STATE_FILE     (unset)           a JSON file read on every userinfo and refresh call, to
+ *                                             change an account while it is signed in, as Keycloak does:
+ *                                             { "roles": { "<email>": ["forum-moderator"] }, "disabled": ["<email>"] }
+ *                                             A disabled email fails userinfo (401) and refresh (invalid_grant).
  * GET /userinfo answers for a valid access token (sub, email, email_verified, name, roles).
  */
 import { createHash, createSign, generateKeyPairSync, randomBytes, timingSafeEqual } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 
 if (process.env.NODE_ENV === "production") {
@@ -54,6 +59,21 @@ const redirectUri = `${portalOrigin}${process.env.MOCK_IDP_REDIRECT_PATH || "/au
 const nonceOptional = process.env.MOCK_IDP_NONCE_OPTIONAL === "true";
 const staffEmails = new Set((process.env.MOCK_IDP_STAFF_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean));
 const accessTokens = new Map(); // access token -> identity (for /userinfo)
+const stateFile = process.env.MOCK_IDP_STATE_FILE;
+
+/** The identity as it is now: roles and disabled accounts from MOCK_IDP_STATE_FILE, if set. */
+function liveIdentity(identity) {
+  if (!stateFile) return identity;
+  let state = {};
+  try {
+    state = JSON.parse(readFileSync(stateFile, "utf8"));
+  } catch {
+    state = {};
+  }
+  if (Array.isArray(state.disabled) && state.disabled.includes(identity.email)) return null;
+  const roles = state.roles && Object.prototype.hasOwnProperty.call(state.roles, identity.email) ? state.roles[identity.email] : identity.roles;
+  return { ...identity, ...(Array.isArray(roles) ? { roles } : {}) };
+}
 const postLogoutRedirectUri = `${portalOrigin}/signed-out`;
 
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -169,7 +189,9 @@ const server = createServer(async (request, response) => {
       const presented = (request.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
       const entry = accessTokens.get(presented);
       if (!entry || entry.expiresAt < Date.now()) return json(response, 401, { error: "invalid_token" });
-      return json(response, 200, entry.identity);
+      const live = liveIdentity(entry.identity);
+      if (!live) return json(response, 401, { error: "invalid_token", error_description: "account disabled" });
+      return json(response, 200, live);
     }
 
     if (url.pathname === "/authorize" && request.method === "GET") {
@@ -238,14 +260,17 @@ const server = createServer(async (request, response) => {
       }
 
       if (form.get("grant_type") === "refresh_token") {
-        const identity = refreshTokens.get(form.get("refresh_token") ?? "");
-        if (!identity) return json(response, 400, { error: "invalid_grant" });
+        const stored = refreshTokens.get(form.get("refresh_token") ?? "");
         refreshTokens.delete(form.get("refresh_token"));
+        const identity = stored ? liveIdentity(stored) : null;
+        if (!identity) return json(response, 400, { error: "invalid_grant" });
         const refresh = randomBytes(24).toString("base64url");
-        refreshTokens.set(refresh, identity);
+        refreshTokens.set(refresh, stored);
+        const accessToken = signJwt({ iss: issuer, azp: clientId, typ: "Bearer", iat: now, exp: now + 300, jti: randomBytes(8).toString("hex"), ...identity });
+        accessTokens.set(accessToken, { identity: stored, expiresAt: Date.now() + 300_000 });
         return json(response, 200, {
           token_type: "Bearer",
-          access_token: signJwt({ iss: issuer, azp: clientId, typ: "Bearer", iat: now, exp: now + 300, jti: randomBytes(8).toString("hex"), ...identity }),
+          access_token: accessToken,
           expires_in: 300,
           refresh_token: refresh,
         });

@@ -2,7 +2,9 @@
 
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Icon } from "../Icon";
+import { forumRequest, requestKey, uploadImage } from "./forum-client";
 import { Markdown } from "./Markdown";
 import {
   applyFormat,
@@ -17,6 +19,8 @@ import {
   type DraftErrors,
   type FormatAction,
 } from "@/lib/community/compose";
+import { portalImageUrl, storedImagePath } from "@/lib/community/images";
+import { questionSlug } from "@/lib/community/slug";
 import type { CommunityCategory } from "@/lib/community/types";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +28,19 @@ interface Attachment {
   id: string;
   name: string;
   size: number;
+  /** Portal image URL once uploaded; empty while uploading. */
   url: string;
+  status: "uploading" | "ready";
+}
+
+export interface QuestionDraftInitial {
+  questionId: number;
+  slug: string;
+  title: string;
+  categorySlug: string;
+  tags: string[];
+  body: string;
+  attachments: { name: string; sizeBytes: number; url: string }[];
 }
 
 const toolbar: { action: FormatAction; label: string; text: string }[] = [
@@ -39,34 +55,48 @@ const toolbar: { action: FormatAction; label: string; text: string }[] = [
 ];
 
 /**
- * The Ask Question composer: title, category, tags, a Markdown editor with formatting toolbar
- * and live preview, and image attachments. It posts as the signed-in portal identity.
- *
- * No forum service is connected yet, so a valid question is NOT posted or saved anywhere: the
- * composer says so plainly. Images stay in this browser tab (blob: URLs) and are never uploaded.
+ * The Ask Question composer (and the question editor): title, category, tags, a Markdown
+ * editor with formatting toolbar and live preview, and image attachments. It posts as the
+ * signed-in portal customer through the portal's forum API. Images upload as they are chosen
+ * and are checked again, by their bytes, on the server.
  */
-export function QuestionComposer({ categories, authorName, authorInitials }: { categories: readonly CommunityCategory[]; authorName: string; authorInitials: string }) {
-  const [title, setTitle] = useState("");
-  const [categorySlug, setCategorySlug] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
+export function QuestionComposer({
+  categories,
+  authorName,
+  authorInitials,
+  csrf,
+  initial,
+}: {
+  categories: readonly CommunityCategory[];
+  authorName: string;
+  authorInitials: string;
+  csrf: string;
+  initial?: QuestionDraftInitial;
+}) {
+  const router = useRouter();
+  const editing = Boolean(initial);
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [categorySlug, setCategorySlug] = useState(initial?.categorySlug ?? "");
+  const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
   const [tagInput, setTagInput] = useState("");
-  const [body, setBody] = useState("");
+  const [body, setBody] = useState(initial?.body ?? "");
   const [tab, setTab] = useState<"write" | "preview">("write");
-  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>(
+    () => initial?.attachments.map((item, index) => ({ id: `existing-${index}`, name: item.name, size: item.sizeBytes, url: item.url, status: "ready" as const })) ?? []
+  );
   const [attachmentProblems, setAttachmentProblems] = useState<string[]>([]);
   const [errors, setErrors] = useState<DraftErrors>({});
   const [submitted, setSubmitted] = useState(false);
-  const [notice, setNotice] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  // One key per question being written: a double click or a retry cannot post it twice.
+  const submissionKey = useRef(requestKey());
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const summaryRef = useRef<HTMLDivElement>(null);
   const base = useId();
   const id = (name: string) => `${base}-${name}`;
   const knownCategories = categories.map((category) => category.slug);
-  const attachmentsRef = useRef(attachments);
-  attachmentsRef.current = attachments;
-
-  // Release the in-memory image previews when the composer goes away.
-  useEffect(() => () => attachmentsRef.current.forEach((item) => URL.revokeObjectURL(item.url)), []);
 
   const draft = { title, categorySlug, tags, body };
   useEffect(() => {
@@ -101,38 +131,77 @@ export function QuestionComposer({ categories, authorName, authorInitials }: { c
     }, 0);
   }
 
-  function onFiles(list: FileList | null) {
+  async function onFiles(list: FileList | null) {
     if (!list) return;
     const files = Array.from(list);
     const { accepted, problems } = checkAttachments(attachments.length, files);
     setAttachmentProblems(problems);
-    setAttachments([
-      ...attachments,
-      ...accepted.map((index) => ({ id: `${Date.now()}-${index}`, name: files[index].name, size: files[index].size, url: URL.createObjectURL(files[index]) })),
-    ]);
+    const pending = accepted.map((index) => ({ id: `${Date.now()}-${index}`, file: files[index] }));
+    setAttachments((current) => [...current, ...pending.map(({ id: key, file }) => ({ id: key, name: file.name, size: file.size, url: "", status: "uploading" as const }))]);
+    for (const item of pending) {
+      const result = await uploadImage(item.file, csrf);
+      const stored = result.ok ? result.data?.files[0] : undefined;
+      const url = stored ? portalImageUrl(stored.url) : null;
+      if (url) {
+        setAttachments((current) => current.map((entry) => (entry.id === item.id ? { ...entry, url, status: "ready" } : entry)));
+      } else {
+        setAttachments((current) => current.filter((entry) => entry.id !== item.id));
+        if (result.status !== 401) setAttachmentProblems((current) => [...current, `${item.file.name}: ${result.error?.message ?? "the upload failed."}`]);
+      }
+    }
   }
 
   function removeAttachment(target: Attachment) {
-    URL.revokeObjectURL(target.url);
     setAttachments(attachments.filter((item) => item.id !== target.id));
   }
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
-    if (tagInput.trim()) {
+    setFailure(null);
+    const pendingTag = tagInput.trim() ? normaliseTag(tagInput) : "";
+    if (pendingTag) {
       addTag(tagInput);
       setTagInput("");
     }
-    const found = validateDraft({ ...draft, tags: tagInput.trim() && !tags.includes(normaliseTag(tagInput)) ? [...tags, normaliseTag(tagInput)].filter(Boolean) : tags }, knownCategories);
+    const finalTags = pendingTag && !tags.includes(pendingTag) && tags.length < MAX_TAGS ? [...tags, pendingTag] : tags;
+    const found = validateDraft({ ...draft, tags: finalTags }, knownCategories);
     setSubmitted(true);
     setErrors(found);
     if (Object.keys(found).length) {
-      setNotice(false);
+      setNotice(null);
       window.setTimeout(() => summaryRef.current?.focus(), 0);
       return;
     }
-    // No forum service: nothing is sent and nothing is saved.
-    setNotice(true);
+    if (attachments.some((item) => item.status === "uploading")) {
+      setFailure("Wait for the images to finish uploading.");
+      return;
+    }
+    const payload = {
+      category: categorySlug,
+      title: title.trim(),
+      body: body.trim(),
+      tags: finalTags,
+      attachments: attachments.flatMap((item) => {
+        const url = storedImagePath(item.url);
+        return url ? [{ url, name: item.name, sizeBytes: item.size }] : [];
+      }),
+    };
+    setBusy(true);
+    const result = initial
+      ? await forumRequest<{ id: number }>(`questions/${initial.questionId}`, { method: "PUT", body: payload, csrf })
+      : await forumRequest<{ id: number; slugTitle: string }>("questions", { body: payload, csrf, idempotent: submissionKey.current });
+    setBusy(false);
+    if (!result.ok) {
+      if (result.status !== 401) setFailure(result.error?.message ?? "Your question could not be posted. Try again.");
+      return;
+    }
+    if (result.status === 202) {
+      setNotice("Thanks. Your question is waiting for a moderator to review it and will appear once approved.");
+      return;
+    }
+    const created = result.data as { id: number; slugTitle?: string };
+    router.push(initial ? `/forum/questions/${initial.slug}` : `/forum/questions/${questionSlug(created.id, created.slugTitle ?? "")}`);
+    router.refresh();
   }
 
   const fieldClass = (field: keyof DraftErrors) =>
@@ -149,12 +218,7 @@ export function QuestionComposer({ categories, authorName, authorInitials }: { c
   const errorList = Object.entries(errors) as [keyof DraftErrors, string][];
 
   return (
-    <form noValidate onSubmit={submit} className="space-y-6" aria-describedby={id("not-connected")}>
-      <p id={id("not-connected")} role="note" className="rounded-xl border border-border-subtle bg-surface-raised px-4 py-3 text-body-sm text-ink-muted">
-        <strong className="text-ink">Posting is not connected yet.</strong> You can write and preview a question. It won’t be posted or saved until the
-        forum service is connected.
-      </p>
-
+    <form noValidate onSubmit={submit} className="space-y-6">
       {errorList.length ? (
         <div ref={summaryRef} tabIndex={-1} role="alert" className="rounded-xl border border-[#b42318]/30 bg-[#b42318]/[0.05] px-4 py-3 text-body-sm text-ink focus:outline-none">
           <p className="font-semibold">Check {errorList.length === 1 ? "this field" : `these ${errorList.length} fields`}:</p>
@@ -174,7 +238,7 @@ export function QuestionComposer({ categories, authorName, authorInitials }: { c
         <span aria-hidden="true" className="flex h-8 w-8 items-center justify-center rounded-full bg-accent-warm/15 text-caption font-semibold text-accent-ink">
           {authorInitials}
         </span>
-        Posting as <span className="font-medium text-ink">{authorName}</span>
+        {editing ? "Editing as" : "Posting as"} <span className="font-medium text-ink">{authorName}</span>
       </div>
 
       <div>
@@ -318,13 +382,11 @@ export function QuestionComposer({ categories, authorName, authorInitials }: { c
             />
           </div>
           <div id={id("panel-preview")} role="tabpanel" aria-labelledby={id("tab-preview")} hidden={tab !== "preview"} className="min-h-[18rem] px-4 py-3">
-            {body.trim() ? <Markdown>{body}</Markdown> : <p className="text-body-sm text-ink-muted">Nothing to preview yet.</p>}
+            {body.trim() ? <Markdown images="forum">{body}</Markdown> : <p className="text-body-sm text-ink-muted">Nothing to preview yet.</p>}
             {attachments.length ? (
               <ul className="mt-4 flex flex-wrap gap-2">
                 {attachments.map((item) => (
-                  <li key={item.id}>
-                    <img src={item.url} alt={item.name} className="h-24 w-auto rounded-lg border border-border-subtle object-cover" />
-                  </li>
+                  <li key={item.id}>{item.url ? <img src={item.url} alt={item.name} className="h-24 w-auto rounded-lg border border-border-subtle object-cover" /> : null}</li>
                 ))}
               </ul>
             ) : null}
@@ -349,7 +411,7 @@ export function QuestionComposer({ categories, authorName, authorInitials }: { c
           <span>
             <span className="font-medium text-accent-ink">Choose images</span> (PNG, JPEG, GIF or WebP, up to 5 MB, {MAX_ATTACHMENTS} max)
           </span>
-          <span className="text-caption">Images stay on this device until posting is connected.</span>
+          <span className="text-caption">Images upload when you choose them. Remove anything personal or sensitive first.</span>
         </label>
         <input
           id={id("files")}
@@ -359,7 +421,7 @@ export function QuestionComposer({ categories, authorName, authorInitials }: { c
           className="sr-only"
           disabled={attachments.length >= MAX_ATTACHMENTS}
           onChange={(event) => {
-            onFiles(event.target.files);
+            void onFiles(event.target.files);
             event.target.value = "";
           }}
         />
@@ -374,7 +436,13 @@ export function QuestionComposer({ categories, authorName, authorInitials }: { c
           <ul className="mt-3 flex flex-wrap gap-3">
             {attachments.map((item) => (
               <li key={item.id} className="relative">
-                <img src={item.url} alt="" className="h-20 w-28 rounded-lg border border-border-subtle object-cover" />
+                {item.url ? (
+                  <img src={item.url} alt="" className="h-20 w-28 rounded-lg border border-border-subtle object-cover" />
+                ) : (
+                  <span role="status" className="flex h-20 w-28 items-center justify-center rounded-lg border border-dashed border-border-subtle bg-surface-raised text-caption text-ink-muted">
+                    Uploading…
+                  </span>
+                )}
                 <button type="button" onClick={() => removeAttachment(item)} aria-label={`Remove ${item.name}`} className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full border border-border-subtle bg-white text-ink-muted shadow-card hover:text-ink">
                   <Icon name="close" size={12} />
                 </button>
@@ -388,17 +456,25 @@ export function QuestionComposer({ categories, authorName, authorInitials }: { c
       <div aria-live="polite">
         {notice ? (
           <p role="status" className="rounded-xl border border-border-subtle bg-surface-raised px-4 py-3 text-body-sm text-ink">
-            Your question looks ready, but the forum service isn’t connected, so it was <strong>not posted</strong> and nothing was saved. Keep a copy if
-            you need it.
+            {notice}
+          </p>
+        ) : null}
+        {failure ? (
+          <p role="alert" className="rounded-xl border border-[#b42318]/30 bg-[#b42318]/[0.05] px-4 py-3 text-body-sm text-ink">
+            {failure}
           </p>
         ) : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-3 border-t border-border-subtle pt-5">
-        <button type="submit" className="inline-flex min-h-11 items-center rounded-full bg-accent-warm px-6 text-[0.9375rem] font-semibold text-on-accent shadow-action hover:bg-accent-warm-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool focus-visible:ring-offset-2">
-          Post your question
+        <button
+          type="submit"
+          disabled={busy}
+          className="inline-flex min-h-11 items-center rounded-full bg-accent-warm px-6 text-[0.9375rem] font-semibold text-on-accent shadow-action hover:bg-accent-warm-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {busy ? (editing ? "Saving…" : "Posting…") : editing ? "Save changes" : "Post your question"}
         </button>
-        <Link href="/forum" prefetch={false} className="inline-flex min-h-11 items-center rounded-full px-4 text-[0.9375rem] font-medium text-ink-muted hover:bg-surface-active hover:text-ink">
+        <Link href={initial ? `/forum/questions/${initial.slug}` : "/forum"} prefetch={false} className="inline-flex min-h-11 items-center rounded-full px-4 text-[0.9375rem] font-medium text-ink-muted hover:bg-surface-active hover:text-ink">
           Cancel
         </Link>
       </div>

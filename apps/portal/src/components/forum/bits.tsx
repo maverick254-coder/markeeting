@@ -1,5 +1,4 @@
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { Icon } from "../Icon";
 import { initialsFor } from "@/lib/initials";
 import type { ForumAuthor } from "@/lib/community/types";
@@ -50,22 +49,6 @@ export function TagChip({ tag, href }: { tag: string; href?: string }) {
   );
 }
 
-/** A forum action that exists in the design but has no service behind it yet. */
-export function PendingAction({ icon, children, hint }: { icon: string; children: ReactNode; hint: string }) {
-  return (
-    <button
-      type="button"
-      disabled
-      title={hint}
-      aria-label={`${typeof children === "string" ? children : ""} (${hint})`}
-      className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-caption font-medium text-ink-muted disabled:cursor-not-allowed disabled:opacity-60"
-    >
-      <Icon name={icon} size={14} />
-      {children}
-    </button>
-  );
-}
-
 export function FixtureBanner() {
   return (
     <p role="note" className="rounded-xl border border-dashed border-accent-warm/50 bg-accent-warm/[0.06] px-4 py-2.5 text-body-sm text-ink">
@@ -73,14 +56,3 @@ export function FixtureBanner() {
     </p>
   );
 }
-
-/** Local NodeBB feasibility trial: real NodeBB data on this machine, never production. */
-export function NodebbTrialBanner() {
-  return (
-    <p role="note" className="rounded-xl border border-dashed border-accent-warm/50 bg-accent-warm/[0.06] px-4 py-2.5 text-body-sm text-ink">
-      <strong>NodeBB trial.</strong> These questions come from a local NodeBB used to evaluate the forum engine. Production never shows them.
-    </p>
-  );
-}
-
-export const NOT_LIVE = "Opens when the forum service is connected";

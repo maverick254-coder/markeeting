@@ -508,6 +508,15 @@ const icons: Record<string, ReactElement> = {
   "vote-up": <path d="M12 5 5 14h14L12 5z" strokeWidth="1.5" strokeLinejoin="round" />,
   "vote-down": <path d="M12 19 5 10h14l-7 9z" strokeWidth="1.5" strokeLinejoin="round" />,
   flag: <path d="M5 21V4M5 4h11l-2 4 2 4H5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
+  trash: <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
+  bell: <path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16zM10 20a2 2 0 0 0 4 0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
+  undo: <path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
+  ban: (
+    <>
+      <circle cx="12" cy="12" r="8.5" strokeWidth="1.5" />
+      <path d="m6 6 12 12" strokeWidth="1.5" strokeLinecap="round" />
+    </>
+  ),
   edit: <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
   paperclip: (
     <path d="m20 11-8.5 8.5a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L14 7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />

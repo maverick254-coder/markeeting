@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { HeaderSearch } from "@/components/HeaderSearch";
 import { PageHeading } from "@/components/ui";
-import { forumService } from "@/lib/community/source";
+import { forumAvailable } from "@/lib/community/source";
 import { defaultManifestPath, loadManifest } from "@/lib/releases/manifest";
 import { normaliseQuery, searchPortal } from "@/lib/search";
 import { requirePortalSession } from "@/lib/session/current";
@@ -14,7 +14,7 @@ export default async function SearchPage({ searchParams }: { searchParams: Promi
   const raw = (await searchParams).q;
   const query = normaliseQuery(Array.isArray(raw) ? raw[0] : raw);
   const manifest = await loadManifest(runtime.config.releasesManifestPath ?? defaultManifestPath());
-  const results = query ? searchPortal(query, manifest.ok ? manifest.manifest.releases : [], { forum: forumService(runtime.config).kind !== "unavailable" }) : [];
+  const results = query ? searchPortal(query, manifest.ok ? manifest.manifest.releases : [], { forum: forumAvailable(runtime.config) }) : [];
 
   return (
     <div className="space-y-6">

@@ -212,6 +212,23 @@ test("without a forum service the forum is not offered: its pages do not exist",
     assert.equal(response.status, 404, path);
     assert.doesNotMatch(await response.text(), /\[Sample\]|Development sample data|Sample Customer|data-question=/, "fixtures never appear outside development");
   }
+  for (const path of ["/forum/notifications", "/forum/moderation", "/forum/questions/12-anything/edit"]) {
+    assert.equal((await browser.request(`${PORTAL}${path}`)).status, 404, path);
+  }
+});
+
+test("the forum API needs a session, and does not exist while the forum is off", async () => {
+  const anonymous = new Browser();
+  for (const [method, path] of [["GET", "/api/forum/me"], ["POST", "/api/forum/questions"], ["PUT", "/api/forum/posts/1/vote"], ["GET", "/api/forum/uploads/1-shot.png"]]) {
+    const response = await anonymous.request(`${PORTAL}${path}`, { method, headers: { origin: PORTAL, "content-type": "application/json" }, body: method === "GET" ? undefined : "{}" });
+    assert.equal(response.status, 401, `${method} ${path} without a session`);
+    assert.equal(response.headers.get("cache-control"), "no-store, max-age=0");
+  }
+  const { browser } = await signIn();
+  const me = await browser.request(`${PORTAL}/api/forum/me`);
+  assert.equal(me.status, 404, "no forum, no forum API");
+  assert.equal((await me.json()).error.code, "not_found");
+  assert.equal((await browser.request(`${PORTAL}/api/forum/uploads/1-shot.png`)).status, 404);
 });
 
 

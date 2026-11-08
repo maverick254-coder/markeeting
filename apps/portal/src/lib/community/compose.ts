@@ -5,6 +5,11 @@ export const TITLE_MAX = 150;
 export const BODY_MIN = 30;
 export const BODY_MAX = 20_000;
 export const MAX_TAGS = 5;
+/** Answers and comments; NodeBB enforces its own minimum (8) and maximum as well. */
+export const ANSWER_MIN = 15;
+export const COMMENT_MIN = 8;
+export const COMMENT_MAX = 5_000;
+export const REPORT_REASONS = ["Spam or advertising", "Rude or abusive", "Off-topic", "Shares personal or sensitive data", "Something else"] as const;
 export const MAX_ATTACHMENTS = 5;
 export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
 export const ATTACHMENT_TYPES = ["image/png", "image/jpeg", "image/gif", "image/webp"] as const;

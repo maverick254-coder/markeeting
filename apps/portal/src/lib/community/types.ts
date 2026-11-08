@@ -1,7 +1,7 @@
 /**
- * The forum's shape, independent of the engine that will serve it. Field names follow what the
- * recommended engine (NodeBB, see docs/portal/forum-and-cms-evaluation.md) exposes through its
- * read and write APIs: topics with posts, a solved/accepted post, votes and view counts.
+ * The forum's shape, independent of the engine that serves it. In production NodeBB serves it
+ * through the private RedactPlus bridge (services/forum-bridge); locally the development
+ * fixtures can stand in, read-only.
  */
 
 export interface CommunityCategory {
@@ -15,6 +15,29 @@ export interface ForumAuthor {
   isStaff: boolean;
 }
 
+/**
+ * What the signed-in customer may do with a post. Absent (fixtures) means read-only: the page
+ * then offers no controls at all. Every action is checked again by NodeBB.
+ */
+export interface PostAbilities {
+  own: boolean;
+  /** 1 up, -1 down, 0 none. */
+  vote: 1 | -1 | 0;
+  canVote: boolean;
+  canDownvote: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
+  canRestore: boolean;
+  canReport: boolean;
+}
+
+export interface QuestionAbilities extends PostAbilities {
+  canAnswer: boolean;
+  canComment: boolean;
+  canAccept: boolean;
+  isModerator: boolean;
+}
+
 /** A comment on a question or answer. Replies nest, to a bounded depth (MAX_COMMENT_DEPTH). */
 export interface ForumComment {
   id: string;
@@ -22,13 +45,19 @@ export interface ForumComment {
   /** Markdown, rendered without raw HTML. */
   body: string;
   createdAt: string;
+  editedAt?: string | null;
+  /** Only moderators see removed posts, marked as removed. */
+  deleted?: boolean;
   replies: ForumComment[];
+  viewer?: PostAbilities;
 }
 
 export interface ForumAttachment {
   name: string;
   sizeBytes: number;
   kind: "image" | "file";
+  /** Portal URL of the stored image (served through the portal, signed-in only). */
+  url?: string;
 }
 
 export interface ForumAnswer {
@@ -36,9 +65,13 @@ export interface ForumAnswer {
   author: ForumAuthor;
   body: string;
   createdAt: string;
+  editedAt?: string | null;
+  deleted?: boolean;
   score: number;
   accepted: boolean;
+  attachments?: ForumAttachment[];
   comments: ForumComment[];
+  viewer?: PostAbilities;
 }
 
 export interface QuestionSummary {
@@ -60,10 +93,15 @@ export interface QuestionSummary {
 }
 
 export interface Question extends QuestionSummary {
+  /** The engine's id for the question post (comments on the question reply to it). */
+  postId?: string;
   body: string;
+  editedAt?: string | null;
+  locked?: boolean;
   attachments: ForumAttachment[];
   comments: ForumComment[];
   answers: ForumAnswer[];
+  viewer?: QuestionAbilities;
 }
 
 export const QUESTION_SORTS = ["activity", "newest"] as const;
@@ -88,15 +126,43 @@ export interface QuestionPage {
   pageSize: number;
 }
 
+export interface ForumNotification {
+  id: string;
+  text: string;
+  createdAt: string;
+  read: boolean;
+  href: string | null;
+}
+
+export interface ForumReport {
+  id: string;
+  createdAt: string;
+  reasons: string[];
+  reportCount: number;
+  post: { id: string; excerpt: string; deleted: boolean } | null;
+  href: string | null;
+}
+
+export interface ForumMe {
+  isModerator: boolean;
+  canWrite: boolean;
+  suspended: boolean;
+  unreadNotifications: number;
+}
+
 /**
- * What the portal needs from a forum engine. `unavailable` is the production implementation
- * until an engine is deployed; `development-fixtures` serves sample content locally only.
+ * What the forum pages read. `unavailable` is the default (production included until the forum
+ * is enabled); `development-fixtures` serves read-only sample content locally; `nodebb` is the
+ * real forum, bound to the signed-in customer.
  */
 export interface ForumService {
-  readonly kind: "unavailable" | "development-fixtures" | "nodebb-trial";
+  readonly kind: "unavailable" | "development-fixtures" | "nodebb";
   readonly categories: readonly CommunityCategory[];
   listQuestions(query: QuestionQuery): Promise<QuestionPage>;
-  getQuestion(slug: string): Promise<Question | null>;
+  getQuestion(slug: string, options?: { countView?: boolean }): Promise<Question | null>;
   relatedQuestions(slug: string, limit: number): Promise<QuestionSummary[]>;
   popularTags(limit: number): Promise<{ tag: string; count: number }[]>;
+  me(): Promise<ForumMe | null>;
+  notifications(): Promise<{ items: ForumNotification[]; unread: number } | null>;
+  reports(page: number): Promise<{ items: ForumReport[]; page: number; pageCount: number } | null>;
 }

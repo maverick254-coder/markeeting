@@ -1,14 +1,15 @@
 import type { PortalConfig } from "../config";
+import type { CurrentSession } from "../session/current";
+import { nodebbForum } from "./bridge";
 import { plannedCategories } from "./categories";
 import { devFixtureQuestions } from "./dev-fixtures";
-import { nodebbForum } from "./nodebb";
 import { queryQuestions, tagCounts } from "./query";
 import type { ForumService, Question, QuestionSummary } from "./types";
+import { forumIdentity, type ForumIdentity } from "./viewer";
 
 /**
- * Production: no forum engine is deployed yet, so nothing is listed, no question page exists
- * and nothing can be posted. The adapter for the chosen engine replaces this
- * (docs/portal/forum-and-cms-evaluation.md).
+ * The forum is off unless PORTAL_FORUM_ENABLED=true and the bridge is configured: then no page,
+ * route or navigation entry exists, and nothing can be posted.
  */
 const unavailableForum: ForumService = {
   kind: "unavailable",
@@ -24,6 +25,15 @@ const unavailableForum: ForumService = {
   },
   async popularTags() {
     return [];
+  },
+  async me() {
+    return null;
+  },
+  async notifications() {
+    return null;
+  },
+  async reports() {
+    return null;
   },
 };
 
@@ -47,7 +57,7 @@ function summary(question: Question): QuestionSummary {
 
 const fixtureSummaries = devFixtureQuestions.map(summary);
 
-/** Local development only: the sample questions, searchable, filterable and paginated. */
+/** Local development only: the sample questions, read-only, searchable, filterable and paginated. */
 const fixtureForum: ForumService = {
   kind: "development-fixtures",
   categories: plannedCategories,
@@ -67,10 +77,31 @@ const fixtureForum: ForumService = {
   async popularTags(limit) {
     return tagCounts(fixtureSummaries).slice(0, limit);
   },
+  async me() {
+    return null;
+  },
+  async notifications() {
+    return null;
+  },
+  async reports() {
+    return null;
+  },
 };
 
-export function forumService(config: PortalConfig): ForumService {
-  // Local NodeBB feasibility trial only; config refuses it outside development.
-  if (config.devForumNodebb && config.environment !== "production") return nodebbForum(config.devForumNodebb);
+/** Whether the portal offers a forum at all (navigation, home card, search, pages). */
+export function forumAvailable(config: PortalConfig) {
+  return Boolean(config.forum) || (config.devCommunityFixtures && config.environment !== "production");
+}
+
+/**
+ * The forum for this signed-in request. The customer identity (with current roles) is resolved
+ * once, on the first call that needs it.
+ */
+export function forumFor(current: CurrentSession, options: { address?: string; fresh?: boolean } = {}): ForumService {
+  const { config } = current.runtime;
+  if (config.forum) {
+    let identity: Promise<ForumIdentity> | null = null;
+    return nodebbForum(config.forum, () => (identity ??= forumIdentity(current, { ip: options.address, fresh: options.fresh })));
+  }
   return config.devCommunityFixtures && config.environment !== "production" ? fixtureForum : unavailableForum;
 }

@@ -1,35 +1,55 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
-import { AuthorLine, FixtureBanner, formatForumDate, NodebbTrialBanner, NOT_LIVE, PendingAction, TagChip } from "@/components/forum/bits";
+import { notFound, redirect } from "next/navigation";
+import { AuthorLine, FixtureBanner, formatForumDate, TagChip } from "@/components/forum/bits";
+import { forumProblem } from "@/components/forum/ForumState";
 import { Markdown } from "@/components/forum/Markdown";
-import { Attachments, CommentsBlock, PostActions, VoteColumn } from "@/components/forum/Thread";
+import { Attachments, CommentsBlock, RemovedLabel, VoteColumn } from "@/components/forum/Thread";
+import { AcceptControl, AnswerComposer, PostTools, type ThreadContext } from "@/components/forum/ThreadControls";
 import { Icon } from "@/components/Icon";
 import { questionQueryHref, parseQuestionQuery } from "@/lib/community/query";
-import { forumService } from "@/lib/community/source";
+import { forumFor } from "@/lib/community/source";
+import type { Question, QuestionSummary } from "@/lib/community/types";
 import { requirePortalSession } from "@/lib/session/current";
 
 export const metadata: Metadata = { title: "Question" };
 
 /**
- * A single question with its answers and comment threads. With no forum service (production
- * today) no question exists, so every URL here is a 404 rather than a fabricated page.
+ * A single question with its answers and comment threads. Without a forum (production until it
+ * is enabled) no question exists, so every URL here is a 404 rather than a fabricated page.
  */
 export default async function QuestionPage({ params }: { params: Promise<{ slug: string }> }) {
-  const { runtime } = await requirePortalSession();
-  const forum = forumService(runtime.config);
+  const current = await requirePortalSession();
+  const forum = forumFor(current);
+  if (forum.kind === "unavailable") notFound();
   const { slug } = await params;
   if (!/^[a-z0-9-]{1,120}$/.test(slug)) notFound();
-  const question = await forum.getQuestion(slug);
+
+  let question: Question | null;
+  let related: QuestionSummary[];
+  try {
+    question = await forum.getQuestion(slug, { countView: true });
+    related = question ? await forum.relatedQuestions(slug, 5) : [];
+  } catch (error) {
+    return forumProblem(error, current, `/forum/questions/${slug}`);
+  }
   if (!question) notFound();
-  const related = await forum.relatedQuestions(slug, 5);
+  // Titles can be edited: keep one address per question.
+  if (forum.kind === "nodebb" && question.slug !== slug) redirect(`/forum/questions/${question.slug}`);
+
+  const viewer = question.viewer;
+  const ctx: ThreadContext | null =
+    forum.kind === "nodebb" && viewer
+      ? { csrf: current.session.csrfToken, questionId: Number(question.slug.split("-")[0]), questionSlug: question.slug, isModerator: viewer.isModerator, canComment: viewer.canComment }
+      : null;
   const baseQuery = parseQuestionQuery({}, forum.categories.map((category) => category.slug));
   const category = forum.categories.find((item) => item.slug === question.categorySlug);
   const answers = [...question.answers].sort((a, b) => Number(b.accepted) - Number(a.accepted) || b.score - a.score);
+  const visibleAnswers = answers.filter((answer) => !answer.deleted).length;
 
   return (
     <div className="space-y-6">
-      {forum.kind === "development-fixtures" ? <FixtureBanner /> : forum.kind === "nodebb-trial" ? <NodebbTrialBanner /> : null}
+      {forum.kind === "development-fixtures" ? <FixtureBanner /> : null}
 
       <nav aria-label="Breadcrumb" className="text-body-sm text-ink-muted">
         <ol className="flex flex-wrap items-center gap-1.5">
@@ -66,59 +86,63 @@ export default async function QuestionPage({ params }: { params: Promise<{ slug:
             {question.viewCount !== null ? (
               <div className="flex gap-1">
                 <dt>Viewed</dt>
-                <dd className="text-ink">{question.viewCount} times</dd>
+                <dd className="text-ink">
+                  {question.viewCount} {question.viewCount === 1 ? "time" : "times"}
+                </dd>
               </div>
             ) : null}
           </dl>
         </div>
-        <Link
-          href="/forum/ask"
-          prefetch={false}
-          className="inline-flex min-h-10 shrink-0 items-center gap-2 self-start rounded-full bg-accent-warm px-4 text-body-sm font-semibold text-on-accent shadow-action hover:bg-accent-warm-hover"
-        >
-          <Icon name="edit" size={15} />
-          Ask Question
-        </Link>
+        {forum.kind === "nodebb" ? (
+          <Link
+            href="/forum/ask"
+            prefetch={false}
+            className="inline-flex min-h-10 shrink-0 items-center gap-2 self-start rounded-full bg-accent-warm px-4 text-body-sm font-semibold text-on-accent shadow-action hover:bg-accent-warm-hover"
+          >
+            <Icon name="edit" size={15} />
+            Ask Question
+          </Link>
+        ) : null}
       </header>
 
       <div className="grid gap-8 lg:grid-cols-[1fr_16rem]">
         <div className="min-w-0 space-y-8">
-          <article aria-labelledby="question-body-label" className="flex gap-3 sm:gap-5">
+          <article id={question.postId ? `post-${question.postId}` : undefined} aria-labelledby="question-body-label" className="flex scroll-mt-28 gap-3 sm:gap-5">
             <h2 id="question-body-label" className="sr-only">
               Question
             </h2>
-            <VoteColumn score={question.score} label="Question" />
+            <VoteColumn ctx={ctx} postId={question.postId ?? ""} score={question.score} label="Question" viewer={viewer} />
             <div className="min-w-0 flex-1">
-              <Markdown>{question.body}</Markdown>
+              <Markdown images={forum.kind === "nodebb" ? "forum" : "any"}>{question.body}</Markdown>
               <Attachments items={question.attachments} />
               <div className="mt-4 flex flex-wrap gap-1.5">
                 {question.tags.map((tag) => (
                   <TagChip key={tag} tag={tag} href={questionQueryHref(baseQuery, { tag })} />
                 ))}
               </div>
-              <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                <PostActions />
+              <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
+                {ctx && viewer && question.postId ? <PostTools ctx={ctx} postId={question.postId} kind="question" viewer={viewer} body={question.body} /> : <span />}
                 <div className="rounded-xl bg-surface-raised px-3 py-2">
-                  <AuthorLine author={question.author} verb="asked" date={question.createdAt} />
+                  <AuthorLine author={question.author} verb={question.editedAt ? "asked (edited)" : "asked"} date={question.createdAt} />
                 </div>
               </div>
-              <CommentsBlock comments={question.comments} />
+              <CommentsBlock comments={question.comments} ctx={ctx} parentId={question.postId ?? null} />
             </div>
           </article>
 
           <section aria-labelledby="answers-heading">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
               <h2 id="answers-heading" className="type-h2">
-                {answers.length} {answers.length === 1 ? "Answer" : "Answers"}
+                {visibleAnswers} {visibleAnswers === 1 ? "Answer" : "Answers"}
               </h2>
               <p className="text-caption text-ink-muted">Accepted answer first, then by score</p>
             </div>
             {answers.length ? (
               <ol className="divide-y divide-border-subtle">
                 {answers.map((answer) => (
-                  <li key={answer.id} id={`answer-${answer.id}`} className="flex gap-3 py-6 sm:gap-5">
+                  <li key={answer.id} id={`post-${answer.id}`} className="flex scroll-mt-28 gap-3 py-6 sm:gap-5">
                     <div className="flex flex-col items-center gap-2">
-                      <VoteColumn score={answer.score} label="Answer" />
+                      <VoteColumn ctx={ctx} postId={answer.id} score={answer.score} label="Answer" viewer={answer.viewer} />
                       {answer.accepted ? (
                         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#15803d] text-white" title="Accepted answer">
                           <Icon name="check-circle" size={18} />
@@ -126,45 +150,49 @@ export default async function QuestionPage({ params }: { params: Promise<{ slug:
                         </span>
                       ) : null}
                     </div>
-                    <div className="min-w-0 flex-1">
+                    <div className={answer.deleted ? "min-w-0 flex-1 opacity-70" : "min-w-0 flex-1"}>
+                      {answer.deleted ? <RemovedLabel /> : null}
                       {answer.accepted ? (
                         <p className="mb-2 inline-flex items-center gap-1.5 rounded-md bg-[#15803d]/10 px-2 py-0.5 text-caption font-semibold text-[#15803d]">Accepted answer</p>
                       ) : null}
-                      <Markdown>{answer.body}</Markdown>
-                      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                        <PostActions
-                          extra={
-                            answer.accepted ? null : (
-                              <PendingAction icon="check-circle" hint={`${NOT_LIVE}; only the question's author can accept`}>
-                                Accept
-                              </PendingAction>
-                            )
-                          }
-                        />
-                        <AuthorLine author={answer.author} verb="answered" date={answer.createdAt} />
+                      <Markdown images={forum.kind === "nodebb" ? "forum" : "any"}>{answer.body}</Markdown>
+                      <Attachments items={answer.attachments ?? []} />
+                      <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
+                        {ctx && answer.viewer ? (
+                          <PostTools ctx={ctx} postId={answer.id} kind="answer" viewer={answer.viewer} body={answer.body}>
+                            {viewer?.canAccept && !answer.deleted ? <AcceptControl ctx={ctx} postId={answer.id} accepted={answer.accepted} /> : null}
+                          </PostTools>
+                        ) : (
+                          <span />
+                        )}
+                        <AuthorLine author={answer.author} verb={answer.editedAt ? "answered (edited)" : "answered"} date={answer.createdAt} />
                       </div>
-                      <CommentsBlock comments={answer.comments} />
+                      <CommentsBlock comments={answer.comments} ctx={ctx} parentId={answer.deleted ? null : answer.id} />
                     </div>
                   </li>
                 ))}
               </ol>
             ) : (
-              <p className="py-6 text-body-sm text-ink-muted">No answers yet.</p>
+              <p className="py-6 text-body-sm text-ink-muted">No answers yet.{ctx && viewer?.canAnswer ? " Be the first to help." : ""}</p>
             )}
           </section>
 
-          <section aria-labelledby="your-answer" className="rounded-[20px] border border-border-subtle bg-surface-raised p-5">
-            <h2 id="your-answer" className="type-h3">
-              Your answer
-            </h2>
-            <label htmlFor="answer-body" className="sr-only">
-              Your answer
-            </label>
-            <textarea id="answer-body" disabled rows={4} placeholder="Answering opens when the forum service is connected." className="mt-3 w-full resize-none rounded-xl border border-border-subtle bg-white p-3 text-body-sm disabled:cursor-not-allowed" />
-            <button type="button" disabled className="mt-3 inline-flex min-h-10 items-center rounded-full bg-accent-warm px-5 text-body-sm font-semibold text-on-accent disabled:cursor-not-allowed disabled:opacity-50">
-              Post your answer
-            </button>
-          </section>
+          {ctx && viewer ? (
+            <section aria-labelledby="your-answer" className="rounded-[20px] border border-border-subtle bg-surface-raised p-5">
+              <h2 id="your-answer" className="type-h3">
+                Your answer
+              </h2>
+              {viewer.canAnswer ? (
+                <AnswerComposer ctx={ctx} />
+              ) : (
+                <p className="mt-2 text-body-sm text-ink-muted">
+                  {question.locked
+                    ? "This question is closed to new answers."
+                    : "Answering needs a verified email address on your RedactPlus account. Verify it, then sign in again."}
+                </p>
+              )}
+            </section>
+          ) : null}
         </div>
 
         <aside className="min-w-0 space-y-6" aria-label="Related">

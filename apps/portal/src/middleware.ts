@@ -37,7 +37,7 @@ export function middleware(request: NextRequest) {
     "default-src 'self'",
     "style-src 'self'",
     "style-src-attr 'unsafe-inline'",
-    "img-src 'self' data: blob:", // blob: previews images chosen in the question composer
+    "img-src 'self' data:", // forum images come from the portal's own signed-in route
     "font-src 'self'",
     "connect-src 'self'",
     "object-src 'none'",

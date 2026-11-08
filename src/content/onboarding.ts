@@ -46,8 +46,6 @@ export const trialFacts = {
   lengthDays: 7,
   /** A trial nobody activates in the desktop app starts by itself after this many days. */
   startsAnywayAfterDays: 14,
-  totalCredits: 100,
-  credits: "40 for documents, 40 for video and images, 20 for audio",
   setupLinkHours: 72,
   minimumAge: 18,
 } as const;
@@ -80,7 +78,7 @@ export const registrationSuccessCopy = {
   resent: "You had already registered with this address, so we’ve sent the secure set-up link again. Check your inbox and follow it to continue.",
   notArrived: "Nothing after a few minutes? Check your spam or junk folder. The link works for 72 hours.",
   trialHeading: "Your seven-day trial",
-  trialBody: `Your ${trialLengthWords} start when you first sign in to RedactPlus Desktop, or ${trialFacts.startsAnywayAfterDays} days after registering if you haven’t by then. It includes ${trialFacts.totalCredits} cloud credits (${trialFacts.credits}) and ends automatically.`,
+  trialBody: `Your ${trialLengthWords} start when you first sign in to RedactPlus Desktop, or ${trialFacts.startsAnywayAfterDays} days after registering if you haven’t by then. It ends automatically.`,
   returnLabel: "Return to website",
   resendLabel: "Resend instructions",
   resendBusy: "Sending…",

@@ -186,8 +186,9 @@ reveals nothing. It sends only for an enrolment whose trial still grants access,
   - The public client with PKCE: no secret, and no `prompt=create`.
   - `/welcome` starts the ordinary OIDC sign-in, or goes home when a session exists. It never
     assumes the set-up page created a session.
-  - The home page shows `GET /portal/me` (licence, trial status, credits) server side; the access
-    token never reaches the browser.
+  - The home page shows `GET /portal/me` (licence, trial status) server side; the access
+    token never reaches the browser. The response's trial credits are validated but not displayed:
+    customers see no credit balances or allocations (8 November 2026).
 
 ## 8. Not implemented, or open
 

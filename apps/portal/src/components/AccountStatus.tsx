@@ -8,6 +8,9 @@ import { signInPath } from "@/lib/session/current";
  * The signed-in customer's licence and trial, exactly as the Control Center reported them
  * (GET /portal/me). Nothing is computed here beyond formatting: no dates are derived, no status
  * is guessed, and when the API is not configured nothing is shown at all.
+ *
+ * Cloud credit balances are not shown to customers: the API still reports a trial's credits, and
+ * the Control Center keeps all credit accounting, but this page displays none of it.
  */
 
 const dateFormat = new Intl.DateTimeFormat("en-GB", { dateStyle: "long", timeStyle: "short", timeZone: "UTC" });
@@ -59,18 +62,6 @@ function Trial({ trial, supportEmail }: { trial: NonNullable<PortalProfile["tria
           <>This trial is no longer available. Contact {contact}.</>
         )}
       </p>
-      {trial.credits.length && (trial.status === "not_started" || trial.status === "active") ? (
-        <dl className="mt-4 grid gap-3 sm:grid-cols-3">
-          {trial.credits.map((credit) => (
-            <div key={credit.bucket} className="rounded-xl border border-border-subtle px-3.5 py-2.5">
-              <dt className="text-caption text-ink-muted">{credit.name} cloud credits</dt>
-              <dd className="mt-0.5 font-semibold text-ink">
-                {credit.remaining} <span className="font-normal text-ink-muted">of {credit.granted} left</span>
-              </dd>
-            </div>
-          ))}
-        </dl>
-      ) : null}
     </>
   );
 }

@@ -305,7 +305,9 @@ test("the success copy states only the backend's verified trial facts and promis
   assert.doesNotMatch(all, /delivered|activated|licen[cs]e (is )?active/i);
   assert.match(registrationSuccessCopy.trialBody, /seven days start when you first sign in to RedactPlus Desktop/);
   assert.match(registrationSuccessCopy.trialBody, /14 days after registering/);
-  assert.match(registrationSuccessCopy.trialBody, /100 cloud credits \(40 for documents, 40 for video and images, 20 for audio\)/);
+  assert.match(registrationSuccessCopy.trialBody, /It ends automatically\.$/);
+  // No fixed cloud-credit allocation is advertised, and nothing implies cloud video processing.
+  assert.doesNotMatch(all, /credits?\b|allowance|\b\d+ for (documents|video|audio)|video and images/i);
   assert.equal(trialFacts.lengthDays, 7);
   assert.equal(trialFacts.setupLinkHours, 72);
   assert.match(registrationEmailFailedCopy.body, /couldn’t send the set-up email/);

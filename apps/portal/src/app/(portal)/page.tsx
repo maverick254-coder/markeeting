@@ -5,7 +5,7 @@ import { DownloadSection } from "@/components/DownloadSection";
 import { Icon } from "@/components/Icon";
 import { NewsList } from "@/components/NewsList";
 import { Notice } from "@/components/ui";
-import { forumService } from "@/lib/community/source";
+import { forumAvailable as forumIsAvailable } from "@/lib/community/source";
 import { customerStatusFor } from "@/lib/customer-api/for-session";
 import { defaultNewsDir, loadPublishedNews } from "@/lib/editorial/news";
 import { requirePortalSession } from "@/lib/session/current";
@@ -61,9 +61,9 @@ export default async function PortalHomePage() {
   const current = await requirePortalSession();
   const { runtime, session } = current;
   const { config } = runtime;
-  const [news, forum] = [await loadPublishedNews(config.newsDir ?? defaultNewsDir()), forumService(config)];
+  const news = await loadPublishedNews(config.newsDir ?? defaultNewsDir());
   const featured = news.filter((article) => article.featured || article.type !== "news").slice(0, 3);
-  const forumAvailable = forum.kind !== "unavailable";
+  const forumAvailable = forumIsAvailable(config);
   const supportEmail = config.supportEmail;
   // The Control Center's view of this account (GET /portal/me); nothing when not configured.
   const account = await customerStatusFor(current);

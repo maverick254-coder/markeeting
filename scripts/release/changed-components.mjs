@@ -50,6 +50,9 @@ export const SERVER_CONFIG = [
   "deployment/portal/db.env.example",
   "deployment/portal/nginx/",
   "deployment/portal/scripts/",
+  "deployment/portal/compose.forum.yaml",
+  // The forum backend is installed by hand (deployment/forum/RUNBOOK.md); the pipeline never deploys it.
+  "deployment/forum/",
   "deployment/shared/",
   "deployment/cd/",
 ];

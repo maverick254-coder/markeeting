@@ -1,0 +1,17 @@
+# Build context for deployment/forum/Dockerfile (the repository root). Allowlist: only the
+# bridge plugin's runtime files and the forum deployment scripts enter the context.
+*
+
+!services/forum-bridge/package.json
+!services/forum-bridge/plugin.json
+!services/forum-bridge/library.js
+!services/forum-bridge/categories.json
+!services/forum-bridge/lib
+!services/forum-bridge/scripts
+!deployment/forum/scripts
+
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+**/node_modules

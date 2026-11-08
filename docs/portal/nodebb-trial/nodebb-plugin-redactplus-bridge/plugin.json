@@ -1,0 +1,2 @@
+{ "id": "nodebb-plugin-redactplus-bridge", "library": "./library.js",
+  "hooks": [ { "hook": "static:api.routes", "method": "addRoutes" } ] }

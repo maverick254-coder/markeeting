@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { FixtureBanner, TagChip } from "@/components/forum/bits";
+import { forumProblem } from "@/components/forum/ForumState";
 import { QuestionRow } from "@/components/forum/QuestionRow";
 import { Icon } from "@/components/Icon";
-import { forumService } from "@/lib/community/source";
+import { forumFor } from "@/lib/community/source";
 import { parseQuestionQuery, questionQueryHref } from "@/lib/community/query";
-import type { QuestionFilter, QuestionQuery, QuestionSort } from "@/lib/community/types";
+import type { ForumMe, QuestionFilter, QuestionPage, QuestionQuery, QuestionSort } from "@/lib/community/types";
 import { requirePortalSession } from "@/lib/session/current";
 import { cn } from "@/lib/utils";
 
@@ -22,42 +23,43 @@ const sorts: { value: QuestionSort; label: string }[] = [
   { value: "newest", label: "Newest" },
 ];
 
-function Segmented({ items, current, href, label, live }: { items: { value: string; label: string }[]; current: string; href: (value: string) => string; label: string; live: boolean }) {
+function Segmented({ items, current, href, label }: { items: { value: string; label: string }[]; current: string; href: (value: string) => string; label: string }) {
   return (
     <nav aria-label={label} className="inline-flex rounded-full border border-border-subtle bg-surface-raised p-0.5">
-      {items.map((item) =>
-        live ? (
-          <Link
-            key={item.value}
-            href={href(item.value)}
-            prefetch={false}
-            aria-current={current === item.value ? "true" : undefined}
-            className={cn(
-              "rounded-full px-3 py-1.5 text-body-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool",
-              current === item.value ? "bg-white text-ink shadow-card" : "text-ink-muted hover:text-ink"
-            )}
-          >
-            {item.label}
-          </Link>
-        ) : (
-          <span key={item.value} aria-disabled="true" className={cn("rounded-full px-3 py-1.5 text-body-sm font-medium text-ink-muted/70", current === item.value && "bg-white shadow-card")}>
-            {item.label}
-          </span>
-        )
-      )}
+      {items.map((item) => (
+        <Link
+          key={item.value}
+          href={href(item.value)}
+          prefetch={false}
+          aria-current={current === item.value ? "true" : undefined}
+          className={cn(
+            "rounded-full px-3 py-1.5 text-body-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool",
+            current === item.value ? "bg-white text-ink shadow-card" : "text-ink-muted hover:text-ink"
+          )}
+        >
+          {item.label}
+        </Link>
+      ))}
     </nav>
   );
 }
 
 export default async function ForumPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const { runtime } = await requirePortalSession();
-  const forum = forumService(runtime.config);
-  // No forum engine is deployed in production yet: the forum is not offered (it is also absent
-  // from navigation) rather than shown as an empty, read-only board.
+  const current = await requirePortalSession();
+  const forum = forumFor(current);
+  // Without a forum (production until it is enabled) the forum is not offered (it is also
+  // absent from navigation) rather than shown as an empty, read-only board.
   if (forum.kind === "unavailable") notFound();
-  const live = forum.kind === "development-fixtures";
   const query: QuestionQuery = parseQuestionQuery(await searchParams, forum.categories.map((category) => category.slug));
-  const [page, tags] = await Promise.all([forum.listQuestions(query), forum.popularTags(12)]);
+  let page: QuestionPage;
+  let tags: { tag: string; count: number }[];
+  let me: ForumMe | null;
+  try {
+    [page, tags, me] = await Promise.all([forum.listQuestions(query), forum.popularTags(12), forum.me()]);
+  } catch (error) {
+    return forumProblem(error, current, questionQueryHref(query, { page: query.page }));
+  }
+  const canAsk = forum.kind === "nodebb" && Boolean(me?.canWrite);
   const categoryName = (slug: string) => forum.categories.find((category) => category.slug === slug)?.name ?? slug;
   const activeCategory = query.category ? categoryName(query.category) : null;
   const narrowed = Boolean(query.q || query.category || query.tag || query.filter !== "all");
@@ -69,20 +71,55 @@ export default async function ForumPage({ searchParams }: { searchParams: Promis
           <p className="type-eyebrow">Forum</p>
           <h1 className="type-h1 mt-2">{activeCategory ?? "All Questions"}</h1>
           <p className="mt-1 text-body-sm text-ink-muted">
-            {live ? `${page.total} ${page.total === 1 ? "question" : "questions"}` : "Questions and answers from RedactPlus customers and the team."}
+            {`${page.total} ${page.total === 1 ? "question" : "questions"}`}
           </p>
         </div>
-        <Link
-          href="/forum/ask"
-          prefetch={false}
-          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-accent-warm px-5 text-[0.9375rem] font-semibold text-on-accent shadow-action transition-all hover:bg-accent-warm-hover hover:shadow-action-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool focus-visible:ring-offset-2"
-        >
-          <Icon name="edit" size={16} />
-          Ask Question
-        </Link>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {me ? (
+            <Link
+              href="/forum/notifications"
+              prefetch={false}
+              className="relative inline-flex min-h-11 items-center gap-2 rounded-full border border-border-subtle px-4 text-body-sm font-semibold text-ink hover:bg-surface-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool"
+            >
+              <Icon name="bell" size={16} />
+              Notifications
+              {me.unreadNotifications ? (
+                <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-accent-warm px-1.5 text-caption font-semibold text-on-accent">
+                  {me.unreadNotifications > 99 ? "99+" : me.unreadNotifications}
+                  <span className="sr-only"> unread</span>
+                </span>
+              ) : null}
+            </Link>
+          ) : null}
+          {me?.isModerator ? (
+            <Link
+              href="/forum/moderation"
+              prefetch={false}
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border-subtle px-4 text-body-sm font-semibold text-ink hover:bg-surface-active focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool"
+            >
+              <Icon name="flag" size={16} />
+              Reports
+            </Link>
+          ) : null}
+          {canAsk ? (
+            <Link
+              href="/forum/ask"
+              prefetch={false}
+              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-accent-warm px-5 text-[0.9375rem] font-semibold text-on-accent shadow-action transition-all hover:bg-accent-warm-hover hover:shadow-action-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool focus-visible:ring-offset-2"
+            >
+              <Icon name="edit" size={16} />
+              Ask Question
+            </Link>
+          ) : null}
+        </div>
       </div>
 
-      {live ? <FixtureBanner /> : null}
+      {forum.kind === "development-fixtures" ? <FixtureBanner /> : null}
+      {forum.kind === "nodebb" && me && !me.canWrite ? (
+        <p role="note" className="rounded-xl border border-border-subtle bg-surface-raised px-4 py-2.5 text-body-sm text-ink">
+          You can read the forum. To ask, answer or vote, verify the email address on your RedactPlus account, then sign in again.
+        </p>
+      ) : null}
 
       <div className="grid gap-8 lg:grid-cols-[1fr_15.5rem]">
         <div className="min-w-0 space-y-4">
@@ -102,18 +139,17 @@ export default async function ForumPage({ searchParams }: { searchParams: Promis
                 name="q"
                 defaultValue={query.q}
                 maxLength={100}
-                disabled={!live}
-                placeholder={live ? "Search questions" : "Search opens with the forum"}
+                placeholder="Search questions"
                 className="h-10 w-full rounded-full border border-border-subtle bg-white pl-10 pr-4 text-body-sm text-ink placeholder:text-ink-muted focus:border-ink/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink/10 disabled:cursor-not-allowed disabled:bg-surface-raised"
               />
             </form>
             <div className="flex flex-wrap items-center gap-2">
-              <Segmented label="Filter questions" items={filters} current={query.filter} live={live} href={(value) => questionQueryHref(query, { filter: value as QuestionFilter })} />
-              <Segmented label="Sort questions" items={sorts} current={query.sort} live={live} href={(value) => questionQueryHref(query, { sort: value as QuestionSort })} />
+              <Segmented label="Filter questions" items={filters} current={query.filter} href={(value) => questionQueryHref(query, { filter: value as QuestionFilter })} />
+              <Segmented label="Sort questions" items={sorts} current={query.sort} href={(value) => questionQueryHref(query, { sort: value as QuestionSort })} />
             </div>
           </div>
 
-          {narrowed && live ? (
+          {narrowed ? (
             <p className="flex flex-wrap items-center gap-2 text-body-sm text-ink-muted">
               Showing
               {query.q ? <span className="rounded-md bg-surface-active px-2 py-0.5 text-ink">“{query.q}”</span> : null}
@@ -126,27 +162,27 @@ export default async function ForumPage({ searchParams }: { searchParams: Promis
             </p>
           ) : null}
 
-          {!live ? (
-            <div className="rounded-[20px] border border-dashed border-border-subtle bg-surface-raised px-5 py-12 text-center">
-              <Icon name="comment" size={28} className="mx-auto text-ink-muted" />
-              <p className="type-h3 mt-3">The forum is not open yet</p>
-              <p className="mx-auto mt-1.5 max-w-md text-body-sm text-ink-muted">
-                Questions, answers and announcements will appear here once the forum service is connected. You will use the same RedactPlus account.
-              </p>
-            </div>
-          ) : page.items.length ? (
+          {page.items.length ? (
             <ol className="divide-y divide-border-subtle overflow-hidden rounded-[20px] border border-border-subtle bg-white" aria-label="Questions">
               {page.items.map((question) => (
                 <QuestionRow key={question.slug} question={question} categoryName={categoryName(question.categorySlug)} query={query} />
               ))}
             </ol>
           ) : (
-            <p role="status" className="rounded-[20px] border border-border-subtle px-5 py-8 text-center text-body-sm text-ink-muted">
-              No questions match. <Link href="/forum" prefetch={false} className="font-medium text-accent-ink">Clear the filters</Link>.
-            </p>
+            narrowed ? (
+              <p role="status" className="rounded-[20px] border border-border-subtle px-5 py-8 text-center text-body-sm text-ink-muted">
+                No questions match. <Link href="/forum" prefetch={false} className="font-medium text-accent-ink">Clear the filters</Link>.
+              </p>
+            ) : (
+              <div role="status" className="rounded-[20px] border border-dashed border-border-subtle bg-surface-raised px-5 py-12 text-center">
+                <Icon name="comment" size={28} className="mx-auto text-ink-muted" />
+                <p className="type-h3 mt-3">No questions yet</p>
+                <p className="mx-auto mt-1.5 max-w-md text-body-sm text-ink-muted">Ask the first question: other RedactPlus customers and the team will answer here.</p>
+              </div>
+            )
           )}
 
-          {live && page.pageCount > 1 ? (
+          {page.pageCount > 1 ? (
             <nav aria-label="Pages" className="flex flex-wrap items-center justify-center gap-1.5 pt-2">
               {page.page > 1 ? (
                 <Link href={questionQueryHref(query, { page: page.page - 1 })} prefetch={false} rel="prev" className="rounded-full border border-border-subtle px-3 py-1.5 text-body-sm font-medium text-ink hover:bg-surface-active">
@@ -184,31 +220,21 @@ export default async function ForumPage({ searchParams }: { searchParams: Promis
             </h2>
             <ul className="flex gap-1.5 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
               <li className="shrink-0">
-                {live ? (
-                  <Link href={questionQueryHref(query, { category: null })} prefetch={false} aria-current={!query.category ? "true" : undefined} className={categoryClass(!query.category)}>
-                    All questions
-                  </Link>
-                ) : (
-                  <span className={categoryClass(false)}>All questions</span>
-                )}
+                <Link href={questionQueryHref(query, { category: null })} prefetch={false} aria-current={!query.category ? "true" : undefined} className={categoryClass(!query.category)}>
+                  All questions
+                </Link>
               </li>
               {forum.categories.map((category) => (
                 <li key={category.slug} className="shrink-0">
-                  {live ? (
-                    <Link
-                      href={questionQueryHref(query, { category: category.slug })}
-                      prefetch={false}
-                      title={category.description}
-                      aria-current={query.category === category.slug ? "true" : undefined}
-                      className={categoryClass(query.category === category.slug)}
-                    >
-                      {category.name}
-                    </Link>
-                  ) : (
-                    <span title={category.description} className={categoryClass(false)}>
-                      {category.name}
-                    </span>
-                  )}
+                  <Link
+                    href={questionQueryHref(query, { category: category.slug })}
+                    prefetch={false}
+                    title={category.description}
+                    aria-current={query.category === category.slug ? "true" : undefined}
+                    className={categoryClass(query.category === category.slug)}
+                  >
+                    {category.name}
+                  </Link>
                 </li>
               ))}
             </ul>

@@ -6,7 +6,8 @@ import { plannedCategories } from "../src/lib/community/categories";
 import { applyFormat, checkAttachments, normaliseTag, validateDraft } from "../src/lib/community/compose";
 import { devFixtureQuestions } from "../src/lib/community/dev-fixtures";
 import { PAGE_SIZE, parseQuestionQuery, queryQuestions, questionQueryHref } from "../src/lib/community/query";
-import { forumService } from "../src/lib/community/source";
+import { forumAvailable, forumFor } from "../src/lib/community/source";
+import type { CurrentSession } from "../src/lib/session/current";
 import { parsePortalConfig, type PortalConfig } from "../src/lib/config";
 import { loadPublishedNews, parseNewsFile } from "../src/lib/editorial/news";
 import { initialsFor } from "../src/lib/initials";
@@ -18,6 +19,8 @@ const base = { PORTAL_SESSION_SECRET: "a".repeat(43), PORTAL_SESSION_STORE: "mem
 const local = (extra: Record<string, string> = {}): PortalConfig =>
   parsePortalConfig({ ...base, PORTAL_ENVIRONMENT: "development", PORTAL_PUBLIC_ORIGIN: "http://localhost:3200", ...extra });
 const categorySlugs = plannedCategories.map((category) => category.slug);
+// Without a forum bridge the forum never touches the session, so a bare runtime is enough here.
+const forumService = (config: PortalConfig) => forumFor({ runtime: { config } } as unknown as CurrentSession);
 
 test("initials come from the verified name, else the email, never a placeholder name", () => {
   assert.equal(initialsFor("Ada Lovelace", "ada@example.test"), "AL");
@@ -39,6 +42,8 @@ test("production shows no questions; fixtures need the development flag on loopb
   assert.deepEqual(await real.popularTags(5), []);
   assert.deepEqual(await real.relatedQuestions("sample-verify-installer-before-running", 5), []);
   assert.equal(forumService(local()).kind, "unavailable", "development without the flag is honest too");
+  assert.equal(forumAvailable(production), false, "no forum navigation in production");
+  assert.equal(forumAvailable(local({ PORTAL_DEV_COMMUNITY_FIXTURES: "true" })), true);
   const fixtures = forumService(local({ PORTAL_DEV_COMMUNITY_FIXTURES: "true" }));
   assert.equal(fixtures.kind, "development-fixtures");
   assert.equal((await fixtures.listQuestions(parseQuestionQuery({}, []))).total, devFixtureQuestions.length);

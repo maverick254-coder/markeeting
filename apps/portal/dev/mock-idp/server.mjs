@@ -21,8 +21,22 @@
  * MOCK_IDP_PUBLIC_CLIENT=true behaves like the production "redactplus-portal" client: public, no
  * secret, PKCE S256 required. Access tokens are signed JWTs carrying sub, email and azp, so a
  * local stand-in for the Control Center's GET /portal/me can read who is asking.
+ *
+ * Opt-in settings for other local clients (the NodeBB forum trial); the defaults keep the
+ * portal's behaviour exactly as above:
+ *   MOCK_IDP_REDIRECT_PATH  (/auth/callback)  the registered callback path on the redirect origin
+ *   MOCK_IDP_NONCE_OPTIONAL (unset)           "true" accepts authorization requests without a
+ *                                             nonce, as Keycloak does for plain OAuth2 clients
+ *   MOCK_IDP_STAFF_EMAILS   (unset)           comma-separated emails that get roles ["forum-moderator"]; everyone
+ *                                             else gets roles [] so a removed role is revoked (a Keycloak role mapper)
+ *   MOCK_IDP_STATE_FILE     (unset)           a JSON file read on every userinfo and refresh call, to
+ *                                             change an account while it is signed in, as Keycloak does:
+ *                                             { "roles": { "<email>": ["forum-moderator"] }, "disabled": ["<email>"] }
+ *                                             A disabled email fails userinfo (401) and refresh (invalid_grant).
+ * GET /userinfo answers for a valid access token (sub, email, email_verified, name, roles).
  */
 import { createHash, createSign, generateKeyPairSync, randomBytes, timingSafeEqual } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 
 if (process.env.NODE_ENV === "production") {
@@ -41,7 +55,25 @@ if (!publicClient && (!clientSecret || clientSecret.length < 16)) {
   console.error("mock-idp: set MOCK_IDP_CLIENT_SECRET (16+ characters) to the same value as PORTAL_OIDC_CLIENT_SECRET.");
   process.exit(1);
 }
-const redirectUri = `${portalOrigin}/auth/callback`;
+const redirectUri = `${portalOrigin}${process.env.MOCK_IDP_REDIRECT_PATH || "/auth/callback"}`;
+const nonceOptional = process.env.MOCK_IDP_NONCE_OPTIONAL === "true";
+const staffEmails = new Set((process.env.MOCK_IDP_STAFF_EMAILS ?? "").split(",").map((e) => e.trim().toLowerCase()).filter(Boolean));
+const accessTokens = new Map(); // access token -> identity (for /userinfo)
+const stateFile = process.env.MOCK_IDP_STATE_FILE;
+
+/** The identity as it is now: roles and disabled accounts from MOCK_IDP_STATE_FILE, if set. */
+function liveIdentity(identity) {
+  if (!stateFile) return identity;
+  let state = {};
+  try {
+    state = JSON.parse(readFileSync(stateFile, "utf8"));
+  } catch {
+    state = {};
+  }
+  if (Array.isArray(state.disabled) && state.disabled.includes(identity.email)) return null;
+  const roles = state.roles && Object.prototype.hasOwnProperty.call(state.roles, identity.email) ? state.roles[identity.email] : identity.roles;
+  return { ...identity, ...(Array.isArray(roles) ? { roles } : {}) };
+}
 const postLogoutRedirectUri = `${portalOrigin}/signed-out`;
 
 const { privateKey, publicKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
@@ -123,7 +155,7 @@ function validateAuthorizeParams(params) {
   if (params.get("redirect_uri") !== redirectUri) return "redirect_uri is not registered";
   if (params.get("response_type") !== "code") return "response_type must be code";
   if (params.get("code_challenge_method") !== "S256" || !params.get("code_challenge")) return "PKCE S256 is required";
-  if (!params.get("state") || !params.get("nonce")) return "state and nonce are required";
+  if (!params.get("state") || (!params.get("nonce") && !nonceOptional)) return "state and nonce are required";
   if (!(params.get("scope") ?? "").split(" ").includes("openid")) return "scope must include openid";
   return null;
 }
@@ -137,6 +169,7 @@ const server = createServer(async (request, response) => {
         issuer,
         authorization_endpoint: `${issuer}/authorize`,
         token_endpoint: `${issuer}/token`,
+        userinfo_endpoint: `${issuer}/userinfo`,
         jwks_uri: `${issuer}/jwks`,
         end_session_endpoint: `${issuer}/logout`,
         response_types_supported: ["code"],
@@ -151,6 +184,15 @@ const server = createServer(async (request, response) => {
     }
 
     if (url.pathname === "/jwks") return json(response, 200, { keys: [jwk] });
+
+    if (url.pathname === "/userinfo") {
+      const presented = (request.headers.authorization ?? "").replace(/^Bearer\s+/i, "");
+      const entry = accessTokens.get(presented);
+      if (!entry || entry.expiresAt < Date.now()) return json(response, 401, { error: "invalid_token" });
+      const live = liveIdentity(entry.identity);
+      if (!live) return json(response, 401, { error: "invalid_token", error_description: "account disabled" });
+      return json(response, 200, live);
+    }
 
     if (url.pathname === "/authorize" && request.method === "GET") {
       const problem = validateAuthorizeParams(url.searchParams);
@@ -178,6 +220,7 @@ const server = createServer(async (request, response) => {
         email,
         email_verified: form.get("email_verified") === "true",
         name: (form.get("name") ?? "").trim().slice(0, 120) || undefined,
+        ...(staffEmails.size ? { roles: staffEmails.has(email) ? ["forum-moderator"] : [] } : {}),
       };
       const code = randomBytes(24).toString("base64url");
       codes.set(code, {
@@ -205,9 +248,11 @@ const server = createServer(async (request, response) => {
         if (challenge !== entry.challenge) return json(response, 400, { error: "invalid_grant", error_description: "PKCE verification failed" });
         const refresh = randomBytes(24).toString("base64url");
         refreshTokens.set(refresh, entry.identity);
+        const accessToken = signJwt({ iss: issuer, azp: clientId, typ: "Bearer", iat: now, exp: now + 300, jti: randomBytes(8).toString("hex"), ...entry.identity });
+        accessTokens.set(accessToken, { identity: entry.identity, expiresAt: Date.now() + 300_000 });
         return json(response, 200, {
           token_type: "Bearer",
-          access_token: signJwt({ iss: issuer, azp: clientId, typ: "Bearer", iat: now, exp: now + 300, jti: randomBytes(8).toString("hex"), ...entry.identity }),
+          access_token: accessToken,
           expires_in: 300,
           refresh_token: refresh,
           id_token: signJwt({ iss: issuer, aud: clientId, iat: now, exp: now + 300, nonce: entry.nonce, ...entry.identity }),
@@ -215,14 +260,17 @@ const server = createServer(async (request, response) => {
       }
 
       if (form.get("grant_type") === "refresh_token") {
-        const identity = refreshTokens.get(form.get("refresh_token") ?? "");
-        if (!identity) return json(response, 400, { error: "invalid_grant" });
+        const stored = refreshTokens.get(form.get("refresh_token") ?? "");
         refreshTokens.delete(form.get("refresh_token"));
+        const identity = stored ? liveIdentity(stored) : null;
+        if (!identity) return json(response, 400, { error: "invalid_grant" });
         const refresh = randomBytes(24).toString("base64url");
-        refreshTokens.set(refresh, identity);
+        refreshTokens.set(refresh, stored);
+        const accessToken = signJwt({ iss: issuer, azp: clientId, typ: "Bearer", iat: now, exp: now + 300, jti: randomBytes(8).toString("hex"), ...identity });
+        accessTokens.set(accessToken, { identity: stored, expiresAt: Date.now() + 300_000 });
         return json(response, 200, {
           token_type: "Bearer",
-          access_token: signJwt({ iss: issuer, azp: clientId, typ: "Bearer", iat: now, exp: now + 300, jti: randomBytes(8).toString("hex"), ...identity }),
+          access_token: accessToken,
           expires_in: 300,
           refresh_token: refresh,
         });

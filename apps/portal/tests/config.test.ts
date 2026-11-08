@@ -90,3 +90,19 @@ test("download hosts must be exact names", () => {
   refuses({ ...production, PORTAL_DOWNLOAD_ALLOWED_HOSTS: "*.example.com" }, /exact host names/);
   refuses({ ...production, PORTAL_DOWNLOAD_ALLOWED_HOSTS: "https://example.com" }, /exact host names/);
 });
+
+test("the forum is off by default and its bridge must be private and keyed", () => {
+  const key = "k".repeat(40);
+  assert.equal(parsePortalConfig(production).forum, null, "off unless enabled");
+  assert.equal(parsePortalConfig({ ...production, PORTAL_FORUM_BRIDGE_URL: "http://redactplus-forum:4567", PORTAL_FORUM_BRIDGE_KEY: key }).forum, null, "configured but not enabled stays off");
+  refuses({ ...production, PORTAL_FORUM_ENABLED: "true" }, /needs PORTAL_FORUM_BRIDGE_URL/);
+  refuses({ ...production, PORTAL_FORUM_ENABLED: "yes" }, /must be true or false/);
+  refuses({ ...production, PORTAL_FORUM_ENABLED: "true", PORTAL_FORUM_BRIDGE_URL: "http://forum.redactplus.io", PORTAL_FORUM_BRIDGE_KEY: key }, /must use https unless/);
+  refuses({ ...production, PORTAL_FORUM_ENABLED: "true", PORTAL_FORUM_BRIDGE_URL: "http://redactplus-forum:4567/api", PORTAL_FORUM_BRIDGE_KEY: key }, /must be an origin/);
+  refuses({ ...production, PORTAL_FORUM_ENABLED: "true", PORTAL_FORUM_BRIDGE_URL: "http://redactplus-forum:4567", PORTAL_FORUM_BRIDGE_KEY: "short" }, /at least 32/);
+  refuses({ ...production, PORTAL_FORUM_ENABLED: "true", PORTAL_FORUM_BRIDGE_URL: "http://redactplus-forum:4567", PORTAL_FORUM_BRIDGE_KEY: key, PORTAL_FORUM_MODERATOR_ROLE: "bad role" }, /not a valid role/);
+  const forum = parsePortalConfig({ ...production, PORTAL_FORUM_ENABLED: "true", PORTAL_FORUM_BRIDGE_URL: "http://redactplus-forum:4567", PORTAL_FORUM_BRIDGE_KEY: key }).forum;
+  assert.equal(forum?.bridgeUrl.origin, "http://redactplus-forum:4567", "a private service name on the deployment network");
+  assert.equal(forum?.moderatorRole, "forum-moderator");
+  assert.equal(parsePortalConfig({ ...production, PORTAL_FORUM_ENABLED: "true", PORTAL_FORUM_BRIDGE_URL: "https://forum.internal.example", PORTAL_FORUM_BRIDGE_KEY: key }).forum?.bridgeUrl.protocol, "https:");
+});

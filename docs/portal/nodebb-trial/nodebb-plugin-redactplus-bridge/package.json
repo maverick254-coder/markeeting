@@ -1,0 +1,3 @@
+{ "name": "nodebb-plugin-redactplus-bridge", "version": "0.0.1", "private": true, "main": "library.js",
+  "description": "Local trial: REST routes the RedactPlus portal needs that NodeBB plugins expose only over socket.io.",
+  "nbbpm": { "compatibility": "^4.14.0" } }

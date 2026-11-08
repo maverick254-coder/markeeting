@@ -1,11 +1,14 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { FORUM_IMAGE_ROUTE } from "@/lib/community/images";
 import { cn } from "@/lib/utils";
 
 /**
  * Renders forum and editorial Markdown safely: raw HTML is never rendered (react-markdown's
  * default), URLs pass through its safe-protocol filter, and external links open with
  * rel="noopener noreferrer nofollow ugc". Code keeps its whitespace and scrolls inside its box.
+ * With images="forum" (customer content) only images stored by the forum and served by the
+ * portal render; any other image becomes a plain link, so posts cannot load outside images.
  */
 const components: Components = {
   p: ({ children }) => <p className="my-3 first:mt-0 last:mb-0">{children}</p>,
@@ -54,10 +57,25 @@ const components: Components = {
   td: ({ children }) => <td className="border-b border-border-subtle px-3 py-2 align-top">{children}</td>,
 };
 
-export function Markdown({ children, className }: { children: string; className?: string }) {
+const forumComponents: Components = {
+  ...components,
+  img: ({ src, alt }) =>
+    typeof src === "string" && src.startsWith(FORUM_IMAGE_ROUTE) && /^[A-Za-z0-9._-]+$/.test(src.slice(FORUM_IMAGE_ROUTE.length)) ? (
+      <a href={src} target="_blank" rel="noopener noreferrer">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={src} alt={alt ?? ""} loading="lazy" className="my-4 h-auto max-w-full rounded-xl border border-border-subtle" />
+      </a>
+    ) : typeof src === "string" && /^https?:\/\//.test(src) ? (
+      <a href={src} target="_blank" rel="noopener noreferrer nofollow ugc" className="font-medium text-accent-ink underline decoration-accent-ink/30 underline-offset-4">
+        {alt ? `Image: ${alt}` : "External image"}
+      </a>
+    ) : null,
+};
+
+export function Markdown({ children, className, images = "any" }: { children: string; className?: string; images?: "any" | "forum" }) {
   return (
     <div className={cn("break-words text-[0.9375rem] leading-7 text-ink", className)}>
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={images === "forum" ? forumComponents : components}>
         {children}
       </ReactMarkdown>
     </div>

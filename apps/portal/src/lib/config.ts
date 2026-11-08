@@ -58,6 +58,20 @@ export interface PortalConfig {
   trustProxyHops: number;
   /** Development only: show sample community discussions, clearly labelled. */
   devCommunityFixtures: boolean;
+  /**
+   * The customer forum, served by NodeBB through its private RedactPlus bridge. Null keeps the
+   * forum off (the default, production included): no forum page, route or navigation exists.
+   */
+  forum: ForumSettings | null;
+}
+
+export interface ForumSettings {
+  /** NodeBB's private address: https, loopback, or a single-label private service name. */
+  bridgeUrl: URL;
+  /** Shared with NodeBB's REDACTPLUS_BRIDGE_KEY; server side only. */
+  bridgeKey: string;
+  /** The identity provider role that makes someone a forum moderator. */
+  moderatorRole: string;
 }
 
 type Env = Record<string, string | undefined>;
@@ -156,6 +170,37 @@ function parseOidc(env: Env, environment: PortalEnvironment): OidcSettings | nul
   return { issuer, clientId, clientSecret, scopes, registrationPrompt, allowInsecureIssuer: loopbackHttp };
 }
 
+/**
+ * The forum is on only with PORTAL_FORUM_ENABLED=true and both bridge settings. NodeBB is never
+ * published: its address is https, loopback, or a single-label name on the deployment's private
+ * network (for example http://redactplus-forum:4567), never a public host over plain HTTP.
+ */
+function parseForum(env: Env): ForumSettings | null {
+  const enabled = read(env, "PORTAL_FORUM_ENABLED");
+  const urlRaw = read(env, "PORTAL_FORUM_BRIDGE_URL");
+  const key = read(env, "PORTAL_FORUM_BRIDGE_KEY");
+  if (enabled && enabled !== "true" && enabled !== "false") throw new PortalConfigurationError("PORTAL_FORUM_ENABLED must be true or false.");
+  if (enabled !== "true") return null;
+  if (!urlRaw || !key) throw new PortalConfigurationError("PORTAL_FORUM_ENABLED=true needs PORTAL_FORUM_BRIDGE_URL and PORTAL_FORUM_BRIDGE_KEY.");
+  let bridgeUrl: URL;
+  try {
+    bridgeUrl = new URL(urlRaw);
+  } catch {
+    throw new PortalConfigurationError("PORTAL_FORUM_BRIDGE_URL is not a URL.");
+  }
+  if (bridgeUrl.username || bridgeUrl.password || bridgeUrl.search || bridgeUrl.hash || (bridgeUrl.pathname !== "/" && bridgeUrl.pathname !== "")) {
+    throw new PortalConfigurationError("PORTAL_FORUM_BRIDGE_URL must be an origin such as http://redactplus-forum:4567.");
+  }
+  const privateName = /^[a-z0-9-]{1,63}$/i.test(bridgeUrl.hostname);
+  if (bridgeUrl.protocol !== "https:" && !(bridgeUrl.protocol === "http:" && (isLoopbackHost(bridgeUrl.hostname) || privateName))) {
+    throw new PortalConfigurationError("PORTAL_FORUM_BRIDGE_URL must use https unless it is loopback or a private service name.");
+  }
+  if (key.length < 32 || !/^[!-~]+$/.test(key)) throw new PortalConfigurationError("PORTAL_FORUM_BRIDGE_KEY must be at least 32 printable characters.");
+  const moderatorRole = read(env, "PORTAL_FORUM_MODERATOR_ROLE") ?? "forum-moderator";
+  if (!/^[A-Za-z0-9._:-]{1,100}$/.test(moderatorRole)) throw new PortalConfigurationError("PORTAL_FORUM_MODERATOR_ROLE is not a valid role name.");
+  return { bridgeUrl, bridgeKey: key, moderatorRole };
+}
+
 export function parsePortalConfig(env: Env): PortalConfig {
   const environment = parseEnvironment(read(env, "PORTAL_ENVIRONMENT"));
   const nonProduction = environment !== "production";
@@ -219,6 +264,8 @@ export function parsePortalConfig(env: Env): PortalConfig {
     throw new PortalConfigurationError("PORTAL_DEV_COMMUNITY_FIXTURES is for local development only.");
   }
 
+  const forum = parseForum(env);
+
   const hopsRaw = read(env, "TRUST_PROXY_HOPS");
   const hops = hopsRaw ? Number(hopsRaw) : 0;
 
@@ -239,6 +286,7 @@ export function parsePortalConfig(env: Env): PortalConfig {
     supportEmail,
     trustProxyHops: Number.isSafeInteger(hops) && hops >= 0 && hops <= 10 ? hops : 0,
     devCommunityFixtures,
+    forum,
   };
 }
 

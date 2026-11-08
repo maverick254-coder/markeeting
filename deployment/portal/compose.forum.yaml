@@ -1,0 +1,15 @@
+# Joins the portal to the forum's private network, so it can reach NodeBB by name
+# (http://redactplus-forum:4567). Use it only once deployment/forum is installed:
+#   docker compose -f compose.yaml -f compose.forum.yaml up -d
+# Without it (today), the portal runs exactly as before and the forum stays off.
+services:
+  redactplus-portal:
+    networks:
+      - redactplus-portal
+      - redactplus-portal-db
+      - redactplus-forum
+
+networks:
+  redactplus-forum:
+    name: redactplus-forum
+    external: true

@@ -107,11 +107,15 @@ jobs:
       # /portal/me stand-in on loopback; both refuse NODE_ENV=production.
       - name: Unit and route tests
         run: npm test
+      # The forum bridge's pure logic (identity parsing, key check, error mapping, queries).
+      - name: Forum bridge unit tests
+        working-directory: services/forum-bridge
+        run: node --test test/unit.test.js
 
   images:
     name: images / build
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Check out repository
         uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -145,6 +149,59 @@ jobs:
             -f deployment/portal/Dockerfile \
             --build-arg GIT_COMMIT="$GITHUB_SHA" \
             -t "registry.safaridesk.io/safari/redactplus-portal:${GITHUB_SHA}" apps/portal
+      # The forum backend image (NodeBB + the RedactPlus bridge), built as a release would, then
+      # run read-only against a throwaway PostgreSQL and checked with the bridge's integration
+      # test (real NodeBB, real posting delays) and a restart. Every secret is made for this run.
+      - name: Forum image
+        run: |
+          docker build --platform linux/amd64 \
+            -f deployment/forum/Dockerfile \
+            --build-arg GIT_COMMIT="$GITHUB_SHA" \
+            -t "registry.safaridesk.io/safari/redactplus-forum:${GITHUB_SHA}" .
+      - name: Forum image integration test
+        run: |
+          set -eu
+          key=$(openssl rand -hex 32)
+          dbpass=$(openssl rand -hex 24)
+          mkdir -p "$RUNNER_TEMP/forum"
+          openssl rand -hex 16 > "$RUNNER_TEMP/forum/admin-password"
+          chmod 644 "$RUNNER_TEMP/forum/admin-password"
+          healthy() {
+            for i in $(seq 1 90); do
+              [ "$(docker inspect --format '{{.State.Health.Status}}' forum-ci)" = healthy ] && return 0
+              sleep 2
+            done
+            return 1
+          }
+          docker network create forum-ci
+          docker run -d --name forum-ci-db --network forum-ci \
+            -e POSTGRES_DB=forum -e POSTGRES_USER=forum -e POSTGRES_PASSWORD="$dbpass" \
+            postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50
+          for i in $(seq 1 30); do docker exec forum-ci-db pg_isready -U forum -d forum -q && break; sleep 2; done
+          docker run -d --name forum-ci --network forum-ci -p 127.0.0.1:4567:4567 --read-only \
+            --tmpfs /tmp --tmpfs /run/nodebb:uid=1000,gid=1000,mode=700 \
+            -v forum-ci-uploads:/usr/src/app/public/uploads \
+            -v "$RUNNER_TEMP/forum/admin-password:/run/secrets/admin-password:ro" \
+            -e FORUM_URL=http://localhost:4567 -e FORUM_SECRET="$(openssl rand -hex 24)" \
+            -e REDACTPLUS_BRIDGE_KEY="$key" -e FORUM_DATABASE=postgres -e FORUM_DB_HOST=forum-ci-db \
+            -e FORUM_DB_NAME=forum -e FORUM_DB_USER=forum -e FORUM_DB_PASSWORD="$dbpass" \
+            -e FORUM_ADMIN_USERNAME=ci-admin -e FORUM_ADMIN_EMAIL=ci-admin@forum.test \
+            -e FORUM_ADMIN_PASSWORD_FILE=/run/secrets/admin-password \
+            "registry.safaridesk.io/safari/redactplus-forum:${GITHUB_SHA}"
+          healthy
+          FORUM_BRIDGE_URL=http://127.0.0.1:4567 FORUM_BRIDGE_KEY="$key" node services/forum-bridge/test/integration.mjs
+          docker restart forum-ci
+          healthy
+          FORUM_BRIDGE_URL=http://127.0.0.1:4567 FORUM_BRIDGE_KEY="$key" node services/forum-bridge/test/integration.mjs --verify-persisted
+      - name: Forum container logs
+        if: failure()
+        run: docker logs --tail 200 forum-ci 2>&1 || true
+      - name: Remove the forum test containers
+        if: always()
+        run: |
+          docker rm -f forum-ci forum-ci-db >/dev/null 2>&1 || true
+          docker volume rm forum-ci-uploads >/dev/null 2>&1 || true
+          docker network rm forum-ci >/dev/null 2>&1 || true
 
   secrets:
     name: security / secrets

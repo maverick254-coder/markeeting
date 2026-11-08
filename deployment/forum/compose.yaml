@@ -1,0 +1,134 @@
+# RedactPlus forum backend: Compose template for /root/deploy/redactplus-forum/.
+# FILES ONLY — not deployed. Installed beside files that are never committed:
+#   .env        the release pin (RELEASE_SHA, RELEASE_DIGEST), as for the portal
+#   forum.env   NodeBB settings and the bridge key, mode 600; see forum.env.example
+#   db.env      the forum database's own credentials, mode 600; see db.env.example
+#   secrets/    admin-password (first start only), mode 600
+#
+# Two services, nothing published to the internet:
+#   redactplus-forum      NodeBB + the RedactPlus bridge. The portal reaches it by name on the
+#                         private network "redactplus-forum". Administrators reach NodeBB's own
+#                         UI only through an SSH tunnel to 127.0.0.1:6097 (RUNBOOK.md).
+#   redactplus-forum-db   its own PostgreSQL, no published port, durable named volume
+name: redactplus-forum
+
+services:
+  redactplus-forum:
+    container_name: redactplus-forum
+    image: "registry.safaridesk.io/safari/redactplus-forum:${RELEASE_SHA:?set RELEASE_SHA in .env}@${RELEASE_DIGEST:?set RELEASE_DIGEST in .env}"
+    pull_policy: missing
+    restart: unless-stopped
+    init: true
+    depends_on:
+      redactplus-forum-db:
+        condition: service_healthy
+    env_file:
+      - path: ./forum.env
+        required: true
+    environment:
+      FORUM_DATABASE: postgres
+      FORUM_DB_HOST: redactplus-forum-db
+      FORUM_DB_PORT: "5432"
+      FORUM_ADMIN_PASSWORD_FILE: /run/secrets/admin-password
+      NODE_OPTIONS: --max-old-space-size=448
+    secrets:
+      - admin-password
+    # Loopback only, for administrators over an SSH tunnel. Customers never reach NodeBB.
+    ports:
+      - "127.0.0.1:6097:4567"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+      - /run/nodebb:size=1m,uid=1000,gid=1000,mode=700
+    volumes:
+      - uploads:/usr/src/app/public/uploads
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 640M
+          cpus: "1.0"
+          pids: 256
+    # The image's HEALTHCHECK asks the bridge for /health with the bridge key.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+      io.safaridesk.service: redactplus-forum
+    networks:
+      # Shared with the portal only: internal, no route off the host.
+      - redactplus-forum
+      - redactplus-forum-db
+
+  redactplus-forum-db:
+    container_name: redactplus-forum-db
+    # The postgres:16-alpine image the portal database already uses (no extra pull or disk).
+    image: "postgres:16-alpine@sha256:4e6e670bb069649261c9c18031f0aded7bb249a5b6664ddec29c013a89310d50"
+    pull_policy: missing
+    restart: unless-stopped
+    env_file:
+      - path: ./db.env
+        required: true
+    environment:
+      PGDATA: /var/lib/postgresql/data/pgdata
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=40", "-c", "work_mem=4MB"]
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    shm_size: 64m
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_OVERRIDE
+      - FOWNER
+      - SETGID
+      - SETUID
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+          pids: 128
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\" -q"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      com.centurylinklabs.watchtower.enable: "false"
+      io.safaridesk.service: redactplus-forum-db
+    networks:
+      - redactplus-forum-db
+
+secrets:
+  admin-password:
+    file: ./secrets/admin-password
+
+networks:
+  # The portal joins this network too (deployment/portal/compose.yaml); nothing else does.
+  redactplus-forum:
+    name: redactplus-forum
+    internal: true
+  redactplus-forum-db:
+    name: redactplus-forum-db
+    internal: true
+
+volumes:
+  db-data:
+    name: redactplus-forum-db-data
+  uploads:
+    name: redactplus-forum-uploads

@@ -1,0 +1,18 @@
+{
+  "id": "nodebb-plugin-redactplus-bridge",
+  "name": "RedactPlus portal bridge",
+  "description": "Private API for the RedactPlus customer portal.",
+  "library": "./library.js",
+  "hooks": [
+    { "hook": "static:app.load", "method": "init" },
+    { "hook": "action:topic.save", "method": "onTopicSave" },
+    { "hook": "action:post.save", "method": "onPostSave" },
+    { "hook": "action:post.delete", "method": "onPostChange" },
+    { "hook": "action:post.restore", "method": "onPostChange" },
+    { "hook": "action:posts.purge", "method": "onPostsPurge" },
+    { "hook": "action:topic.delete", "method": "onTopicChange" },
+    { "hook": "action:topic.restore", "method": "onTopicChange" },
+    { "hook": "action:topic.move", "method": "onTopicChange" },
+    { "hook": "action:topics.purge", "method": "onTopicsPurge" }
+  ]
+}

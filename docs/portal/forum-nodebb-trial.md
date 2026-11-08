@@ -1,5 +1,10 @@
 # NodeBB feasibility trial for the RedactPlus Home forum (7 November 2026)
 
+> **Implemented (8 November 2026).** The forum this trial recommended is now built: the bridge
+> plugin in `services/forum-bridge/`, the portal forum in `apps/portal`, and the private NodeBB
+> deployment in [`deployment/forum/`](../../deployment/forum/README.md) (README, RUNBOOK, LOCAL).
+> The trial's master-token adapter and its scripts below are superseded and kept as the record.
+
 A local-only trial of the spike recommended in
 [forum-and-cms-evaluation.md](forum-and-cms-evaluation.md) §3. Nothing here is deployed. No forum
 runs on any server, live sign-in is untouched, and production forum navigation stays off.

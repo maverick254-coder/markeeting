@@ -79,3 +79,8 @@ assets/product-screenshots/source/
 
 # Security findings with exploitable details: never commit
 *.private.md
+
+# Local forum development: the mock identity provider's live roles (apps/portal/dev/forum-dev.mjs)
+apps/portal/dev/.forum-idp-state.json
+# The bridge integration test writes its last run here (services/forum-bridge/test/integration.mjs)
+services/forum-bridge/test/integration-result.json

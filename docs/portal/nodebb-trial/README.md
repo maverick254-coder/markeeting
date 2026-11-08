@@ -1,5 +1,8 @@
 # NodeBB trial scripts (local development only)
 
+> Superseded: the production bridge is `services/forum-bridge/` (no master token; the portal
+> sends a verified identity). These are the feasibility trial's scripts, kept as the record.
+
 These are the scripts and the bridge plugin behind [../forum-nodebb-trial.md](../forum-nodebb-trial.md).
 They expect a NodeBB install in a folder outside this repository, laid out like this:
 `nodebb/` (NodeBB v4.16.7), `node22/` (Node ≥ 22.19) and `plugins/`, with this folder's files beside them.

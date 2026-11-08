@@ -31,7 +31,8 @@ const idp = spawn(process.execPath, ["dev/mock-idp/server.mjs"], {
   stdio: "inherit",
   env: { ...base, MOCK_IDP_PUBLIC_CLIENT: "true", MOCK_IDP_REDIRECT_ORIGIN: "http://localhost:3200", MOCK_IDP_STATE_FILE: stateFile },
 });
-const next = spawn(process.execPath, [path.join(portal, "node_modules/next/dist/bin/next"), "dev", "-p", "3200"], {
+// Loopback only: the development portal is never reachable from the local network.
+const next = spawn(process.execPath, [path.join(portal, "node_modules/next/dist/bin/next"), "dev", "-p", "3200", "-H", "127.0.0.1"], {
   cwd: portal,
   stdio: "inherit",
   env: {

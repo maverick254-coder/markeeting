@@ -1,33 +1,24 @@
 "use client";
 
-import Link from "next/link";
 import type { ReactNode } from "react";
+import { portalAuthHref, portalEntry } from "@/content/portal";
 import { usePortalDialog } from "./PortalDialogProvider";
 
 /**
- * A Download call to action. It keeps the exact styling it is given (className) and changes
- * only its text and action:
- *
- * - portal configured: a button that opens the shared Download dialog;
- * - portal not configured: the original link and label it replaces, unchanged, so a build
- *   without NEXT_PUBLIC_PORTAL_URL looks and behaves exactly as before.
+ * A Download call to action: a button, styled by its className, that opens the shared Download
+ * dialog. It always keeps its own label. Outside the dialog provider (which the root layout
+ * always mounts) it is a plain link to the portal's sign-in, still with the same label.
  */
 export function PortalCta({
   label,
-  fallbackHref,
-  fallbackLabel,
   className,
   ariaLabel,
-  fallbackAriaLabel,
   onBeforeOpen,
   children,
 }: {
-  /** Accessible names when the visible label alone is ambiguous (e.g. one per pricing card). */
+  /** Accessible name when the visible label alone is ambiguous (e.g. one per pricing card). */
   ariaLabel?: string;
-  fallbackAriaLabel?: string;
   label: string;
-  fallbackHref: string;
-  fallbackLabel: string;
   className?: string;
   /** Runs first, e.g. to close the mobile menu so its inert backdrop is gone. */
   onBeforeOpen?: () => void;
@@ -38,10 +29,10 @@ export function PortalCta({
 
   if (!dialog) {
     return (
-      <Link href={fallbackHref} className={className} onClick={onBeforeOpen} aria-label={fallbackAriaLabel}>
-        {fallbackLabel}
+      <a href={portalAuthHref(portalEntry.portalOrigin, "signin")} className={className} onClick={onBeforeOpen} aria-label={ariaLabel}>
+        {label}
         {children}
-      </Link>
+      </a>
     );
   }
 

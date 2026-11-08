@@ -78,7 +78,7 @@ test("rendered homepage exposes only marketing conversion destinations", async (
   assert.doesNotMatch(html, /Download SafeRedact|Download for Windows/i);
 });
 
-test("the demo anchor lands on the footer invitation, which leads to /book-a-demo", async () => {
+test("the demo anchor lands on the footer invitation, whose Get Started opens the Download dialog", async () => {
   const response = await fetch(baseUrl);
   assert.equal(response.status, 200);
   const html = await response.text();
@@ -86,8 +86,9 @@ test("the demo anchor lands on the footer invitation, which leads to /book-a-dem
   const invitation = html.match(/<section id="demo-enquiry"[^>]*aria-labelledby="footer-invitation-heading"[\s\S]*?<\/section>/);
   assert.ok(invitation, "the footer invitation should carry the enquiry anchor");
   assert.match(invitation[0], /Protect what matters\.[\s\S]*Share with confidence\./);
-  assert.equal((invitation[0].match(/<a /g) ?? []).length, 1);
-  assert.match(invitation[0], /href="\/book-a-demo"/);
+  assert.equal((invitation[0].match(/<button [^>]*data-download-cta/g) ?? []).length, 1);
+  assert.match(invitation[0], />Get Started</);
+  assert.doesNotMatch(invitation[0], /Contact Sales/);
   // The enquiry form itself now lives on /book-a-demo and /contact only.
   assert.doesNotMatch(html, /<form[^>]+aria-labelledby="demo-enquiry-heading"/);
 });

@@ -1,4 +1,4 @@
-import { demoHref, primaryNav } from "@/content/navigation";
+import { primaryNav } from "@/content/navigation";
 import { SiteHeader } from "./SiteHeader";
 
 /**
@@ -7,5 +7,5 @@ import { SiteHeader } from "./SiteHeader";
  * client bundle.
  */
 export function Header() {
-  return <SiteHeader items={primaryNav} demoHref={demoHref} />;
+  return <SiteHeader items={primaryNav} />;
 }

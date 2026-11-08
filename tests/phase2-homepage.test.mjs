@@ -79,7 +79,8 @@ test("footer contains only real destinations", async () => {
   assert.match(footer, /<Container/);
   assert.doesNotMatch(footer, /href="#"/);
   assert.match(footer, /mailto:/);
-  assert.match(footer, /fallbackHref={demoHref}/, "Get Started falls back to the sales enquiry");
+  assert.match(footer, /<PortalCta\s+label="Get Started"/, "Get Started opens the Download dialog");
+  assert.doesNotMatch(footer, /fallbackHref|Contact Sales/, "it never turns into a sales enquiry");
   assert.doesNotMatch(footer, /Request a Demo|Book a demo/i);
   assert.doesNotMatch(footer, /downloadUrl/);
 });

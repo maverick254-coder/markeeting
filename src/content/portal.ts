@@ -1,12 +1,9 @@
 /**
  * The customer portal (home.redactplus.io), where RedactPlus Desktop is downloaded after
  * signing in. Its origin is fixed into the build through NEXT_PUBLIC_PORTAL_URL, like the
- * documentation link.
- *
- * Until it is set, the marketing site shows no Download entry at all: the approved header is
- * unchanged, no unverified download link is published, and no visitor is sent to a portal that
- * is not live yet. Set, the header and mobile menu show a Download button that opens the
- * sign-in dialog.
+ * documentation link, and is https://home.redactplus.io when that is unset or not a valid
+ * origin. Every Download and Get Started button therefore always opens the sign-in dialog;
+ * there is no build in which they turn into a sales enquiry.
  *
  * The marketing site holds no session and handles no passwords. The dialog only links to the
  * portal's /auth/start, which hands over to the shared RedactPlus sign-in (Keycloak).
@@ -67,14 +64,13 @@ export function credentialSubmission(raw: string | undefined): CredentialSubmiss
   return raw?.trim() === "enabled" ? "live" : "disabled";
 }
 
-/** Null until the portal is configured; Download and Get Started buttons then fall back to "Contact Sales". */
-const configuredPortalOrigin = resolvePortalOrigin(process.env.NEXT_PUBLIC_PORTAL_URL);
-export const portalEntry: PortalEntry | null = configuredPortalOrigin
-  ? {
-      portalOrigin: configuredPortalOrigin,
-      submission: credentialSubmission(process.env.NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH),
-    }
-  : null;
+/** The production customer portal: the origin whenever NEXT_PUBLIC_PORTAL_URL is unset or not valid. */
+export const defaultPortalOrigin = "https://home.redactplus.io";
+
+export const portalEntry: PortalEntry = {
+  portalOrigin: resolvePortalOrigin(process.env.NEXT_PUBLIC_PORTAL_URL) ?? defaultPortalOrigin,
+  submission: credentialSubmission(process.env.NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH),
+};
 
 /** Same-origin check for the URL the portal returns after a successful sign-in. */
 export function isPortalRedirect(redirect: unknown, origin: string): redirect is string {

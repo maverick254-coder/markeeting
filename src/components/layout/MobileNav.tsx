@@ -17,12 +17,11 @@ interface MobileNavProps {
   /** The current path, so a route link highlights only for its own route. */
   pathname: string;
   items: readonly PrimaryNavItem[];
-  ctaHref: string;
 }
 
 const FOCUSABLE = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-export function MobileNav({ isOpen, onClose, pathname, items, ctaHref }: MobileNavProps) {
+export function MobileNav({ isOpen, onClose, pathname, items }: MobileNavProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
@@ -185,7 +184,7 @@ export function MobileNav({ isOpen, onClose, pathname, items, ctaHref }: MobileN
           </ul>
           <div className="mt-5 pt-1">
             <Button variant="primary" size="md" className="w-full" asChild>
-              <PortalCta label="Download" fallbackHref={ctaHref} fallbackLabel="Contact Sales" onBeforeOpen={() => onClose(false)} />
+              <PortalCta label="Download" onBeforeOpen={() => onClose(false)} />
             </Button>
           </div>
         </nav>

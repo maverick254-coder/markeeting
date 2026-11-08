@@ -105,15 +105,8 @@ export function PricingCards() {
               <div className="mt-6 flex flex-col justify-end gap-2.5">
                 <Button asChild variant={highlighted ? "primary" : "secondary"} size="md" className="w-full">
                   {plan.ctaAction === "register" ? (
-                    // Opens the shared Download/registration dialog. Without a configured portal the
-                    // site has no dialog, and the button stays the package's sales enquiry.
-                    <PortalCta
-                      label={plan.ctaLabel}
-                      ariaLabel={`${plan.ctaLabel} with the ${plan.name} package`}
-                      fallbackHref={packageEnquiryHref(plan.slug)}
-                      fallbackLabel="Contact Sales"
-                      fallbackAriaLabel={`Contact Sales: ${plan.name} package`}
-                    >
+                    // Opens the shared Download/registration dialog.
+                    <PortalCta label={plan.ctaLabel} ariaLabel={`${plan.ctaLabel} with the ${plan.name} package`}>
                       <Icon name="arrow" size={16} />
                     </PortalCta>
                   ) : (

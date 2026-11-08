@@ -90,9 +90,14 @@ routeTest("pricing presents Document, Document + Media and Enterprise with verif
   assert.doesNotMatch(text, /(?:^|\D)2 devices per (?:user|license)|two devices per (?:user|license)/i);
   assert.match(html, /<table/);
   assert.match(html, /<caption/);
-  // Package buttons carry the choice to the enquiry form on /book-a-demo.
+  // Standard packages open the Download dialog (Get Started); Enterprise carries its choice to the
+  // enquiry form on /book-a-demo.
   for (const slug of packages) {
-    assert.match(packageCard(html, slug), new RegExp(`href="/book-a-demo\\?package=${slug}"`));
+    if (slug === "enterprise") assert.match(packageCard(html, slug), /href="\/book-a-demo\?package=enterprise"/);
+    else {
+      assert.match(packageCard(html, slug), /data-download-cta/, slug);
+      assert.doesNotMatch(packageCard(html, slug), /href="\/book-a-demo/, slug);
+    }
   }
   assert.doesNotMatch(html, /name="packageInterest"/);
   assert.match(html, /id="footer-invitation-heading"/);
@@ -125,7 +130,9 @@ routeTest("pricing cards are compact and correctly scoped", async () => {
   assert.match(document, /PDF, PDF\/A and TIFF export/);
   assert.match(document, /Audio and video are not included/);
   assert.doesNotMatch(document.replace("Audio and video are not included", ""), /audio|speech|voice|waveform|transcri|video|media/i);
-  assert.match(cards.document.html, /aria-label="Contact Sales: Document package"/);
+  // Get Started always opens the Download dialog, even in a build without NEXT_PUBLIC_PORTAL_URL.
+  assert.match(cards.document.html, /aria-label="Get Started with the Document package"/);
+  assert.doesNotMatch(cards.document.html, /Contact Sales/);
 
   const media = cards["document-media"].text;
   assert.match(media, /^Most complete Document \+ Media Everything in Document, plus audio and video redaction/);

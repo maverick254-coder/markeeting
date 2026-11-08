@@ -11,9 +11,14 @@ import { releaseSchema, type Release } from "./schema";
  * path is accepted, and anything that does not validate is ignored: the bundled manifest is
  * always the fallback, and a fetch that fails or times out changes nothing.
  *
- * Off unless PORTAL_LATEST_RELEASE_URL is set, e.g.
- * https://github.com/Safe-Redact/redactplus-downloads/releases/latest/download/release.json
+ * On by default in production, reading DEFAULT_LATEST_RELEASE_URL (the latest release of
+ * github.com/Safe-Redact/redactplus-downloads). PORTAL_LATEST_RELEASE_URL points it elsewhere, and
+ * "off" switches it off. Outside production it is off unless the setting is given, so tests and
+ * local runs never reach the network.
  */
+
+export const DEFAULT_LATEST_RELEASE_URL =
+  "https://github.com/Safe-Redact/redactplus-downloads/releases/latest/download/release.json";
 
 const CACHE_MS = 10 * 60 * 1000;
 const TIMEOUT_MS = 5000;
@@ -23,7 +28,8 @@ let cached: { url: string; at: number; release: Release | null } | null = null;
 
 export function latestReleaseUrl(env: Record<string, string | undefined> = process.env): string | null {
   const raw = env.PORTAL_LATEST_RELEASE_URL?.trim();
-  if (!raw) return null;
+  if (raw?.toLowerCase() === "off") return null;
+  if (!raw) return env.NODE_ENV === "production" ? DEFAULT_LATEST_RELEASE_URL : null;
   try {
     const url = new URL(raw);
     return url.protocol === "https:" && !url.username && !url.password ? url.href : null;

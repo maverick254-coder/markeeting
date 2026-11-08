@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
-import { fromPublishedRecord, latestPublishedRelease, resetLatestReleaseCache } from "../src/lib/releases/latest";
+import { DEFAULT_LATEST_RELEASE_URL, fromPublishedRecord, latestPublishedRelease, latestReleaseUrl, resetLatestReleaseCache } from "../src/lib/releases/latest";
 import { parseManifest, withLatest } from "../src/lib/releases/manifest";
 
 // Issue #234: the download page follows the newest published release without a portal redeploy.
@@ -55,6 +55,12 @@ test("a newer published release is offered first, an older one changes nothing",
   const older = withLatest(bundled.manifest, fromPublishedRecord({ ...published, version: "0.1.0", artifacts: [{ ...published.artifacts[0], downloadUrl: "https://github.com/Safe-Redact/redactplus-downloads/releases/download/v0.1.0/RedactPlus-Setup.exe" }] }));
   assert.ok(older.ok);
   assert.deepEqual(older.manifest.releases.map((r) => r.version), bundled.manifest.releases.map((r) => r.version));
+});
+
+test("checks the downloads repository by default in production, and can be switched off", () => {
+  assert.equal(latestReleaseUrl({ NODE_ENV: "production" }), DEFAULT_LATEST_RELEASE_URL);
+  assert.equal(latestReleaseUrl({ NODE_ENV: "production", PORTAL_LATEST_RELEASE_URL: "off" }), null);
+  assert.equal(latestReleaseUrl({}), null);
 });
 
 test("off without the setting, and an unreachable or broken source falls back to the bundled list", async () => {

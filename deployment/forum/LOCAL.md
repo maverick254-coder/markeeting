@@ -71,7 +71,7 @@ All from `services/forum-bridge`.
    ```bash
    node --test test/unit.test.js
    ```
-2. The 68 integration checks (about three minutes, because NodeBB's posting delays stay on):
+2. The 69 integration checks (about three minutes, because NodeBB's posting delays stay on):
    ```bash
    FORUM_BRIDGE_KEY_FILE=../../../.nodebb-trial/bridge-key.txt node test/integration.mjs
    ```

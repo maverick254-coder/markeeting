@@ -21,14 +21,13 @@ const DARK_HERO = "[data-hero-dark]";
 /** The header's own band: the top 8% of the viewport. */
 const HEADER_BAND = "0px 0px -92% 0px";
 
-export function SiteHeader({ items, demoHref }: { items: readonly PrimaryNavItem[]; demoHref: string }) {
+export function SiteHeader({ items }: { items: readonly PrimaryNavItem[] }) {
   const pathname = usePathname();
   const isHomePage = pathname === "/";
   const [isOpen, setIsOpen] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [isScrolled, setIsScrolled] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const ctaHref = demoHref;
   const overDarkHero = useElementInView(DARK_HERO, { rootMargin: HEADER_BAND, key: pathname, initial: isHomePage });
   const menuOpen = Boolean(openMenu) || isOpen;
   // At rest the bar is open and transparent; scrolled (or with a menu open) it becomes a
@@ -135,13 +134,13 @@ export function SiteHeader({ items, demoHref }: { items: readonly PrimaryNavItem
 
             <div className="hidden items-center justify-self-end min-[992px]:flex">
               <Button variant="primary" size="sm" asChild>
-                <PortalCta label="Download" fallbackHref={ctaHref} fallbackLabel="Contact Sales" />
+                <PortalCta label="Download" />
               </Button>
             </div>
 
             <div className="flex items-center gap-2 justify-self-end min-[992px]:hidden">
               <Button variant="primary" size="sm" className="hidden sm:inline-flex" asChild>
-                <PortalCta label="Download" fallbackHref={ctaHref} fallbackLabel="Contact Sales" />
+                <PortalCta label="Download" />
               </Button>
               <button
                 ref={menuButtonRef}
@@ -158,7 +157,7 @@ export function SiteHeader({ items, demoHref }: { items: readonly PrimaryNavItem
         </div>
       </header>
 
-      <MobileNav isOpen={isOpen} onClose={closeMenu} pathname={pathname} items={items} ctaHref={ctaHref} />
+      <MobileNav isOpen={isOpen} onClose={closeMenu} pathname={pathname} items={items} />
     </>
   );
 }

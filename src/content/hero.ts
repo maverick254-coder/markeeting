@@ -8,14 +8,9 @@ export const heroContent = {
   headlineSecond: "Every decision stays yours.",
   subheadline:
     "Find and review sensitive information in documents and audio, with control over what gets shared.",
-  /** Shown when the customer portal is configured; opens the shared Download dialog. */
+  /** The primary action: opens the shared Download dialog. */
   downloadCta: {
     label: "Download RedactPlus",
-  },
-  /** The action for builds without the portal (NEXT_PUBLIC_PORTAL_URL unset): the sales enquiry. */
-  primaryCta: {
-    label: "Contact Sales",
-    href: "/book-a-demo",
   },
   secondaryCta: {
     label: "How It Works",

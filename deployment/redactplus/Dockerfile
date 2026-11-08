@@ -33,8 +33,8 @@ COPY . .
 
 # Read by the build and fixed into the output; changing any needs a new image.
 #   NEXT_PUBLIC_DOCUMENTATION_URL  inlined into the navigation bundle
-#   NEXT_PUBLIC_PORTAL_URL         customer portal origin: the Download dialog with Create
-#                                  account and Sign in (empty keeps the sales links, for CI)
+#   NEXT_PUBLIC_PORTAL_URL         customer portal origin for the Download dialog with Create
+#                                  account and Sign in (empty: https://home.redactplus.io)
 #   SITE_NOINDEX                  next.config.ts headers and the static /robots.txt
 #   SITE_CANONICAL_ORIGIN          canonical links, sitemap, robots.txt, structured data
 #                                  (also baked into the runtime ENV below, so the

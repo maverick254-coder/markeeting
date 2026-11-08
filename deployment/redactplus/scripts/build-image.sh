@@ -15,7 +15,7 @@
 #   NEXT_PUBLIC_DOCUMENTATION_URL=…   documentation link in the navigation
 #   NEXT_PUBLIC_PORTAL_URL=…          portal origin (https://home.redactplus.io): the Download
 #                                     dialog with Create account and Sign in. Production
-#                                     always sets it; unset keeps the sales links (CI checks)
+#                                     always sets it; unset, the site uses the same origin
 #   NEXT_PUBLIC_TURNSTILE_SITE_KEY=…  public Cloudflare Turnstile site key of the registration
 #                                     form; REQUIRED with the portal URL, because the backend
 #                                     refuses every registration without the security check

@@ -93,7 +93,10 @@ test("a long-form article exposes breadcrumbs, matching heading anchors, TOC, an
   assert.doesNotMatch(sidebar[1], /(?:max-h-|overflow-y-auto|overscroll-contain)/);
   assert.match(html, /data-toc-scroll-region="true"/);
   assert.doesNotMatch(html, /id="related-articles-heading"/);
-  assert.doesNotMatch(html, /download|sign in|log in|free trial/i);
+  // The article itself makes no download or sign-in claim; the shared header and dialog do offer Download.
+  const main = html.match(/<main\b[\s\S]*<\/main>/);
+  assert.ok(main, "the article has a main element");
+  assert.doesNotMatch(main[0], /download|sign in|log in|free trial/i);
 });
 
 test("search results are not indexed as duplicate editorial pages", async () => {

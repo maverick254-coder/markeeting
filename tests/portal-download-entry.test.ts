@@ -4,7 +4,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { heroContent } from "../src/content/hero";
 import { pricingPackages } from "../src/content/pricing";
-import { credentialSubmission, isPortalRedirect, portalAuthHref, portalDownloadReturnPath, resolvePortalOrigin } from "../src/content/portal";
+import { credentialSubmission, defaultPortalOrigin, isPortalRedirect, portalAuthHref, portalDownloadReturnPath, portalEntry, resolvePortalOrigin } from "../src/content/portal";
 import { validateAuthForm } from "../src/components/portal-entry/auth-validation";
 
 const read = (file: string) => readFileSync(path.join(process.cwd(), file), "utf8");
@@ -117,10 +117,10 @@ test("the simulated design preview exists only as a development page", () => {
 
 test("header, tablet bar, mobile menu and homepage hero all use the same Download trigger", () => {
   const header = read("src/components/layout/SiteHeader.tsx");
-  assert.equal((header.match(/<PortalCta label="Download" fallbackHref=\{ctaHref\} fallbackLabel="Contact Sales" \/>/g) ?? []).length, 2);
-  assert.doesNotMatch(header, /Request a Demo/, "no demo wording in the header");
+  assert.equal((header.match(/<PortalCta label="Download" \/>/g) ?? []).length, 2);
+  assert.doesNotMatch(header, /Request a Demo|Contact Sales/, "no demo or sales wording in the header");
   const mobile = read("src/components/layout/MobileNav.tsx");
-  assert.match(mobile, /<PortalCta label="Download" fallbackHref=\{ctaHref\} fallbackLabel="Contact Sales" onBeforeOpen=\{\(\) => onClose\(false\)\} \/>/);
+  assert.match(mobile, /<PortalCta label="Download" onBeforeOpen=\{\(\) => onClose\(false\)\} \/>/);
   assert.match(mobile, /closest\("dialog\[open\]"\)/);
   const hero = read("src/components/sections/Hero.tsx");
   assert.match(hero, /<PortalCta\s+label=\{heroContent\.downloadCta\.label\}/);
@@ -129,13 +129,19 @@ test("header, tablet bar, mobile menu and homepage hero all use the same Downloa
   assert.match(hero, /bg-white px-6 text-\[0\.9375rem\] font-semibold text-\[#1c1917\]/);
 });
 
-test("without a portal every trigger renders its original link, so the live site is unchanged", () => {
+test("Download buttons never turn into Contact Sales: the portal defaults to home.redactplus.io", () => {
+  assert.equal(defaultPortalOrigin, "https://home.redactplus.io");
+  // Built without NEXT_PUBLIC_PORTAL_URL (as these tests are), the dialog still has the production portal.
+  if (!process.env.NEXT_PUBLIC_PORTAL_URL) assert.equal(portalEntry.portalOrigin, defaultPortalOrigin);
+  assert.match(read("src/content/portal.ts"), /resolvePortalOrigin\(process\.env\.NEXT_PUBLIC_PORTAL_URL\) \?\? defaultPortalOrigin/);
   const cta = read("src/components/portal-entry/PortalCta.tsx");
-  assert.match(cta, /if \(!dialog\) \{\s+return \(\s+<Link href=\{fallbackHref\}/);
-  assert.match(read("src/components/portal-entry/PortalDialogProvider.tsx"), /if \(!entry\) return <>\{children\}<\/>;/);
-  assert.equal(heroContent.primaryCta.label, "Contact Sales", "without a portal the hero leads to sales, not a demo");
-  assert.equal(heroContent.primaryCta.href, "/book-a-demo");
-  assert.match(read("deployment/redactplus/Dockerfile"), /ARG NEXT_PUBLIC_PORTAL_URL=""/);
+  assert.doesNotMatch(cta, /fallback/i, "no alternative label or destination");
+  // Outside the provider (never in the site) it is still the same label, linking to the portal's sign-in.
+  assert.match(cta, /if \(!dialog\) \{\s+return \(\s+<a href=\{portalAuthHref\(portalEntry\.portalOrigin, "signin"\)\}[^>]*>\s+\{label\}/);
+  assert.equal("primaryCta" in heroContent, false, "the hero has no sales alternative");
+  for (const file of ["src/components/layout/SiteHeader.tsx", "src/components/layout/MobileNav.tsx", "src/components/layout/Footer.tsx", "src/components/sections/Hero.tsx"]) {
+    assert.doesNotMatch(read(file), /Contact Sales|fallback(Href|Label)/, file);
+  }
 });
 
 test("section CTAs are consolidated by purpose instead of repeating demo or download", () => {
@@ -152,9 +158,9 @@ test("section CTAs are consolidated by purpose instead of repeating demo or down
     assert.match(source, pattern, file);
     assert.doesNotMatch(source, /Request a Demo|PortalCta/, `${file} carries neither a repeated demo nor a Download button`);
   }
-  // The meaningful sales journeys stay: the footer invitation (Get Started, or Contact Sales
-  // without a portal), the article aside and both enquiry pages.
-  assert.match(read("src/components/layout/Footer.tsx"), /<PortalCta\s+label="Get Started"\s+fallbackHref=\{demoHref\}\s+fallbackLabel="Contact Sales"/);
+  // The meaningful journeys stay: the footer invitation (Get Started opens the Download dialog),
+  // the article aside and both enquiry pages.
+  assert.match(read("src/components/layout/Footer.tsx"), /<PortalCta\s+label="Get Started"\s+className=/);
   const aside = read("src/components/blog/ArticleAsideCta.tsx");
   assert.match(aside, /href="\/book-a-demo"/);
   assert.match(aside, /Contact sales/);
@@ -173,7 +179,7 @@ test("standard packages open the shared registration dialog; Enterprise keeps Co
   const cards = read("src/components/pricing/PricingCards.tsx");
   assert.match(cards, /plan\.ctaAction === "register" \? \(/);
   assert.match(cards, /<PortalCta\s+label=\{plan\.ctaLabel\}/, "Get Started uses the one shared dialog trigger");
-  assert.match(cards, /fallbackHref=\{packageEnquiryHref\(plan\.slug\)\}\s+fallbackLabel="Contact Sales"/, "without a portal it stays the package's sales enquiry");
+  assert.doesNotMatch(cards, /fallback/i, "Get Started is never swapped for a sales enquiry");
   assert.doesNotMatch(cards, /<dialog|fetch\(|\/api\//, "no new registration or purchase path");
   assert.match(read("src/components/pricing/PricingCards.tsx"), /\/book-a-demo\?package=\$\{slug\}/, "the package still preselects the enquiry form");
 });

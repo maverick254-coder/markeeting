@@ -14,7 +14,7 @@ interface PortalDialogApi {
 
 const PortalDialogContext = createContext<PortalDialogApi | null>(null);
 
-/** Null when no portal is configured: every Download trigger then renders its fallback link. */
+/** Null only outside the provider, which the root layout always mounts. */
 export function usePortalDialog() {
   return useContext(PortalDialogContext);
 }

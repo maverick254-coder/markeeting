@@ -23,7 +23,10 @@ test("the features overview and three allowlisted detail pages render distinct s
     assert.match(html, new RegExp(`rel="canonical" href="https://saferedact\\.io${path.replaceAll("/", "\\/")}"`));
     assert.match(html, /aria-label="Breadcrumb"/);
     assert.match(html, /href="\/contact"/);
-    assert.doesNotMatch(html, /download|sign in|log in|free trial/i);
+    // The page's own content makes no download or sign-in claim; the shared header and dialog do offer Download.
+    const main = html.match(/<main\b[\s\S]*<\/main>/);
+    assert.ok(main, `${path} has a main element`);
+    assert.doesNotMatch(main[0], /download|sign in|log in|free trial/i, path);
   }
 
   assert.equal(new Set(pages.map((html) => /<meta name="description" content="([^"]+)"/.exec(html)?.[1])).size, 3);

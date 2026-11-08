@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { demoHref, footerGroups } from "@/content/navigation";
+import { footerGroups } from "@/content/navigation";
 import { publicSupportEmail, siteConfig } from "@/content/site";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { PortalCta } from "@/components/portal-entry/PortalCta";
@@ -10,8 +10,8 @@ const linkClass =
 
 /**
  * Site footer, the same on every page. One continuous pale surface carries a centered
- * invitation (Get Started opens the shared Download/registration dialog; without a configured
- * portal it is the sales enquiry), the link groups, the legal line, and a quiet wordmark. Pages
+ * invitation (Get Started opens the shared Download/registration dialog), the link groups, the
+ * legal line, and a quiet wordmark. Pages
  * that already contain the enquiry form (/book-a-demo, /contact) pass invitation={false}.
  */
 export function Footer({ homePage = false, invitation = true }: { homePage?: boolean; invitation?: boolean }) {
@@ -37,8 +37,6 @@ export function Footer({ homePage = false, invitation = true }: { homePage?: boo
             </p>
             <PortalCta
               label="Get Started"
-              fallbackHref={demoHref}
-              fallbackLabel="Contact Sales"
               className="mt-9 inline-flex min-h-12 items-center justify-center rounded-full bg-accent-warm px-7 text-[0.9375rem] font-semibold text-on-accent shadow-action transition-colors hover:bg-accent-warm-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool focus-visible:ring-offset-2 motion-reduce:transition-none"
             />
           </section>

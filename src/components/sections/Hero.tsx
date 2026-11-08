@@ -40,8 +40,6 @@ export function Hero() {
             <div className="mt-9 flex w-full flex-col justify-center gap-3 sm:w-auto sm:flex-row sm:items-center">
               <PortalCta
                 label={heroContent.downloadCta.label}
-                fallbackHref={heroContent.primaryCta.href}
-                fallbackLabel={heroContent.primaryCta.label}
                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-[0.9375rem] font-semibold text-[#1c1917] shadow-[0_10px_30px_-8px_rgb(40_8_4/0.5)] transition-[background-color,transform] duration-200 hover:bg-[#fff1ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#a44116] motion-safe:hover:-translate-y-0.5 motion-reduce:transition-none"
               >
                 <Icon name="arrow" size={17} />

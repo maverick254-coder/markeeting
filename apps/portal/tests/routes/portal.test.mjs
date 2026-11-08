@@ -356,9 +356,8 @@ test("the home page shows the trial exactly as the Control Center reports it", a
   assert.match(html, /Your trial/);
   assert.match(html, /data-trial-status="not_started"/);
   assert.match(html, /Your seven days start when you first sign in to RedactPlus Desktop, or by themselves on /);
-  assert.match(html, /Documents cloud credits/);
-  assert.match(html, /40 <span[^>]*>of 40 left/);
-  assert.match(html, /Audio cloud credits/);
+  // The API still reports the trial's credits; the portal shows no balance, count or breakdown.
+  assert.doesNotMatch(html, /cloud credits|credits? left|of \d+ left|Video and images/i);
   assert.ok(html.indexOf("RedactPlus Desktop") < html.indexOf("Your trial"), "downloads stay first");
 });
 
@@ -370,7 +369,7 @@ test("individual trial states, paid customers, missing licences and outages are 
   const active = await page("active@example.test");
   assert.match(active, /data-trial-status="active"/);
   assert.match(active, /Your trial is active until /);
-  assert.match(active, /34 <span[^>]*>of 40 left/, "credits used are the backend's");
+  assert.doesNotMatch(active, /cloud credits|of \d+ left/i, "no credit balance, even while credits are used");
 
   const ended = await page("ended@example.test");
   assert.match(ended, /data-trial-status="ended"/);

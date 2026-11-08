@@ -156,7 +156,7 @@ E2, the registry clean-up (about 92 GB), is not part of this rollout. It needs t
 6. **Portal.** Pass:
    - header initials;
    - **Your trial · Not started**, with a start date about 14 days out and an end 7 days later;
-   - credits 40 / 40 / 20;
+   - no cloud credit balances or allocation figures anywhere on the page;
    - **Download RedactPlus Desktop** leads to the GitHub asset (321,387,989 bytes).
 7. **Desktop.** Install v0.3.8 on a test computer and sign in with the same email and password.
    Pass: the desktop is licensed, and the portal home now shows **Active** with an end date 7 days

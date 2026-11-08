@@ -58,8 +58,10 @@ for (const port of [3295, 3296, 3297, 3298, 3299]) {
 const shared = {
   NODE_ENV: "production",
   PORTAL_SESSION_SECRET: randomBytes(32).toString("base64url"),
-  // The route tests never reach GitHub for the latest release (src/lib/releases/latest.ts).
+  // The route tests never reach GitHub for the latest release or the release history
+  // (src/lib/releases/latest.ts, history.ts).
   PORTAL_LATEST_RELEASE_URL: "off",
+  PORTAL_RELEASE_HISTORY_URL: "off",
   PORTAL_MARKETING_ORIGIN: "http://localhost:3000",
 };
 

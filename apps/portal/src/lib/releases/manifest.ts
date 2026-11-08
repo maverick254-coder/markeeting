@@ -1,5 +1,6 @@
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import { latestPublishedRelease } from "./latest";
 import { compareVersions, releaseManifestSchema, type Release, type ReleaseManifest } from "./schema";
 
 export type ManifestResult = { ok: true; manifest: ReleaseManifest } | { ok: false; error: string };
@@ -26,8 +27,26 @@ export function parseManifest(raw: unknown): ManifestResult {
   return { ok: false, error: `${first.path.join(".") || "manifest"}: ${first.message}` };
 }
 
-/** Reads and validates the manifest. An invalid manifest offers nothing rather than something wrong. */
+/**
+ * Reads and validates the manifest, then adds the newest published release when it is newer
+ * than everything listed (issue #234; see ./latest). An invalid manifest offers nothing rather
+ * than something wrong.
+ */
 export async function loadManifest(file: string = defaultManifestPath()): Promise<ManifestResult> {
+  const bundled = await loadBundledManifest(file);
+  if (!bundled.ok) return bundled;
+  return withLatest(bundled.manifest, await latestPublishedRelease());
+}
+
+/** The bundled manifest with the published release first, when it is newer than every listed one. */
+export function withLatest(manifest: ReleaseManifest, latest: Release | null): ManifestResult {
+  if (!latest || manifest.releases.some((release) => compareVersions(release.version, latest.version) >= 0)) {
+    return { ok: true, manifest };
+  }
+  return parseManifest({ ...manifest, releases: [latest, ...manifest.releases] });
+}
+
+async function loadBundledManifest(file: string): Promise<ManifestResult> {
   try {
     const { mtimeMs } = await stat(file);
     if (cache?.file === file && cache.mtimeMs === mtimeMs) return cache.result;

@@ -56,14 +56,14 @@ const stories: readonly Story[] = [
 ];
 
 /**
- * Product stories on the bounded warm band (hairline dividers top and bottom). Each
- * story is one balanced row: text on one side, the product window on the other,
+ * Product stories, on the warm band the homepage shares with Workflow (src/app/page.tsx).
+ * Each story is one balanced row: text on one side, the product window on the other,
  * mirrored for the second story. Both visual columns share one width and crop ratio,
  * so the document and audio windows are always the same size.
  */
 export function WhySafeRedact() {
   return (
-    <section id="why-saferedact" aria-label="Document and audio redaction" className="story-surface section-y text-ink">
+    <section id="why-saferedact" aria-label="Document and audio redaction" className="section-y text-ink">
       <Container>
         <div className="space-y-20 sm:space-y-24 lg:space-y-32">
           {stories.map((story, index) => {

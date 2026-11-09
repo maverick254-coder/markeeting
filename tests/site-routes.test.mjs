@@ -18,6 +18,7 @@ const routes = [
   ["/industries/media-journalism", "Protect sources in recorded interviews and obtained documents."],
   ["/how-it-works", "How RedactPlus takes a file from source to reviewed output."],
   ["/why-redactplus", "Why RedactPlus: one review-led workflow for documents and audio."],
+  ["/redaction-services", "Professional Redaction Services. Handled by Experts."],
   ["/contact", "Contact RedactPlus."],
   ["/book-a-demo", "Talk to sales about RedactPlus."],
 ];
@@ -96,6 +97,28 @@ test("industry pages link into features, related industries, the lifecycle page,
   const legal = (await page("/industries/legal")).html;
   assert.ok(legal.indexOf('id="legal-sensitive"') < legal.indexOf('id="legal-workflows"'));
   assert.match(legal, /href="\/blog\/understanding-document-redaction"/);
+});
+
+test("the on-demand services page is email-only, covers every category and promises nothing unconfirmed", async () => {
+  const { html } = await page("/redaction-services");
+  const quote = 'href="mailto:admin@redactplus.io?subject=Redaction%20Services%20Quote%20Request"';
+  assert.ok(html.split(quote).length - 1 >= 2, "hero and closing CTAs open the quote email");
+  assert.match(html, />Request a Redaction Quote</);
+  assert.match(html, />Request a Quote</);
+  const visible = html.replace(/<script[\s\S]*?<\/script>/g, " ").replace(/<[^>]+>/g, " ");
+  for (const category of ["Document Redaction", "Audio Redaction", "Bulk Redaction"]) {
+    assert.match(visible, new RegExp(category), category);
+  }
+  // Video and image redaction are not offered or teased.
+  assert.doesNotMatch(visible, /\bvideos?\b|\bimages?\b|\bfootage\b|coming soon/i);
+  assert.doesNotMatch(/<meta name="description" content="([^"]+)"/.exec(html)?.[1] ?? "", /\bvideo\b|\bimage\b/i);
+  assert.doesNotMatch(html, /<form\b|type="file"/);
+  assert.doesNotMatch(visible, /guarantee|certified|compliant|testimonial|\$\s?\d|within \d+ (?:hours?|days?)/i);
+  for (const href of ["/industries/legal", "/industries/media-journalism", "/features"]) assert.match(html, new RegExp(`href="${escape(href)}"`), href);
+
+  const header = html.slice(html.indexOf('aria-controls="nav-menu-resources"'), html.indexOf("</header>"));
+  assert.match(header, /href="\/redaction-services"/);
+  assert.doesNotMatch(html.slice(0, html.indexOf('id="nav-menu-resources"')), />Services</);
 });
 
 test("the contact page reuses the single enquiry form", async () => {

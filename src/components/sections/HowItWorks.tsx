@@ -49,7 +49,7 @@ export function HowItWorks() {
   const visual = stepVisuals[activeIndex];
 
   return (
-    <section id="how-it-works" className="section-y relative bg-canvas text-ink">
+    <section id="how-it-works" className="section-y relative pt-0 text-ink">
       <Container>
         <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-16">
           <AnimateOnScroll>

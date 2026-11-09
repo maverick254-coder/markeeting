@@ -42,3 +42,7 @@ export function resolveCanonicalOrigin(
 
 export const publicSiteUrl = resolveCanonicalOrigin(process.env.SITE_CANONICAL_ORIGIN);
 export const publicSupportEmail = siteConfig.externalCoordinates.email;
+
+/** On-demand redaction services take enquiries by email only; there is no upload or quote backend. */
+export const redactionServicesEmail = "admin@redactplus.io";
+export const redactionQuoteHref = `mailto:${redactionServicesEmail}?subject=Redaction%20Services%20Quote%20Request`;

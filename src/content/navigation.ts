@@ -42,6 +42,7 @@ export const documentationLink: NavMenuLink | null = documentationUrl
 const resourceLinks: readonly NavMenuLink[] = [
   { label: "How It Works", href: "/how-it-works", description: "The review lifecycle from source file to inspected output", icon: "layers" },
   { label: "Why RedactPlus", href: "/why-redactplus", description: "Where the workflow fits, and its stated limits", icon: "shield-check" },
+  { label: "On-Demand Redaction Services", href: "/redaction-services", description: "Outsource a redaction project to the RedactPlus team", icon: "users" },
   ...(documentationLink ? [documentationLink] : []),
 ];
 
@@ -108,6 +109,7 @@ export const footerGroups: readonly FooterGroup[] = [
     links: [
       { label: "How it works", href: "/how-it-works" },
       { label: "Why RedactPlus", href: "/why-redactplus" },
+      { label: "Redaction services", href: "/redaction-services" },
       ...(documentationLink ? [{ label: documentationLink.label, href: documentationLink.href }] : []),
       { label: "Blog", href: "/blog" },
       { label: "Common questions", href: "#faq" },

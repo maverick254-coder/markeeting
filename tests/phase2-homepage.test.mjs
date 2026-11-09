@@ -101,8 +101,37 @@ test("document and audio stories share one product frame on the warm band", asyn
   assert.match(section, /href: "\/features\/document-redaction"/);
   assert.match(section, /href: "\/features\/audio-redaction"/);
   assert.match(section, /aria-labelledby=\{`story-\$\{story\.id\}`\}/);
-  // A bounded band: hairline dividers mark where it starts and ends.
-  assert.match(section, /className="story-surface/);
+  // A bounded band shared with Workflow: one wrapper owns it, so no boundary falls between them.
+  const page = await read("src/app/page.tsx");
+  assert.match(page, /<div className="story-surface">\s*<WhySafeRedact \/>\s*<HowItWorks \/>\s*<\/div>\s*<Services \/>/);
+  assert.doesNotMatch(section, /story-surface/);
+  assert.doesNotMatch(await read("src/components/sections/HowItWorks.tsx"), /bg-canvas/);
+});
+
+test("the hero gradient joins without a visible seam", async () => {
+  const globals = await read("src/app/globals.css");
+  const glow = /radial-gradient\(60% (\d+)% at 50% (\d+)%, rgb\(255 138 104 \/ 0\.38\), transparent 72%\)/g;
+  const matches = [...globals.matchAll(glow)];
+  assert.ok(matches.length >= 2, "both the fallback and OKLab stage backgrounds carry the glow");
+  // The glow must reach zero before the stage's top edge, or that edge clips it into a line.
+  for (const [, radius, centre] of matches) assert.ok(Number(radius) * 0.72 < Number(centre));
+  // Stops either side of the join are measured from the join, so slopes match at every width.
+  assert.match(globals, /\.hero-ember,\s*\.showcase-stage \{\s*--hero-u:/);
+});
+
+test("Why RedactPlus is editorial rows and Use Cases are independent cards", async () => {
+  const services = await read("src/components/sections/Services.tsx");
+  const industries = await read("src/components/sections/Industries.tsx");
+
+  assert.match(services, /Built for the review, not just the redaction\./);
+  assert.match(services, /href="\/why-redactplus"/);
+  assert.doesNotMatch(services, /rounded-\[|feature-card/);
+
+  assert.match(industries, /feature-card feature-card-link/);
+  assert.match(industries, /href=\{industryHref\(page\.slug\)\}/);
+  assert.match(industries, /focus-visible:ring-2/);
+  assert.match(industries, /sm:grid-cols-2[^"]*lg:grid-cols-3/);
+  assert.doesNotMatch(industries, /gap-px/);
 });
 
 test("homepage storytelling sections are light", async () => {

@@ -11,9 +11,9 @@ import { Faq } from "@/components/sections/Faq";
 
 /**
  * The homepage story (docs/design/homepage-storytelling-revision.md): the promise with
- * the product in the first screen, the problem, document and audio evidence on a warm
- * band, the shared workflow, why RedactPlus, who it is for, questions, the blog, then
- * the footer's closing invitation.
+ * the product in the first screen, the problem, document and audio evidence and the
+ * shared workflow on one warm band, why RedactPlus, who it is for, questions, the blog,
+ * then the footer's closing invitation.
  */
 export default function HomePage() {
   return (
@@ -22,8 +22,10 @@ export default function HomePage() {
       <main id="main-content" data-home-page>
         <Hero />
         <ProblemStatement />
-        <WhySafeRedact />
-        <HowItWorks />
+        <div className="story-surface">
+          <WhySafeRedact />
+          <HowItWorks />
+        </div>
         <Services />
         <Industries />
         <Faq />

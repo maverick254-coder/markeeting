@@ -6,7 +6,7 @@ import { Eyebrow } from "@/components/ui/Eyebrow";
 import { Icon } from "@/components/ui/Icon";
 import { cn } from "@/lib/utils";
 
-type Cta = { label: string; href: string };
+type Cta = { label: string; href: string; ariaLabel?: string };
 
 /**
  * Page hero for every non-home route: centred copy on a calm orange light that fades
@@ -52,7 +52,7 @@ export function PageHero({
           <p className="type-lede mx-auto mt-5 max-w-2xl">{summary}</p>
           <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:flex-wrap">
             <Button variant="primary" size="lg" asChild>
-              <Link href={primaryCta.href}>{primaryCta.label}<Icon name="arrow" size={17} /></Link>
+              <Link href={primaryCta.href} aria-label={primaryCta.ariaLabel}>{primaryCta.label}<Icon name="arrow" size={17} /></Link>
             </Button>
             <Button variant="secondary" size="lg" asChild>
               <Link href={secondaryCta.href}>{secondaryCta.label}</Link>

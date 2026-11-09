@@ -281,22 +281,40 @@
 
   /*
    * Homepage hero: one continuous atmosphere from deep burnt orange through coral into
-   * off-white. White text only ever sits on the upper field (5.8:1 or better at every
-   * stop it can reach); the brightest coral glows behind the showcase card. OKLab
-   * interpolation keeps the blend free of visible bands; the sRGB declaration is the
-   * fallback. .hero-ember ends on exactly the colour .showcase-stage starts with.
+   * off-white. White text only ever sits on the upper field; the brightest coral glows
+   * behind the showcase card.
+   *
+   * The field spans two boxes whose heights are unrelated (.hero-ember follows the copy,
+   * .showcase-stage follows the product window), so the stops either side of the join are
+   * measured from the join in --hero-u, not as percentages of each box. Both sides then
+   * trace one eased colour curve with the same slope at every width, and the join has
+   * nothing to show. The stage's glow must also fade out before its box's top edge (its
+   * vertical reach, 24% x 0.72, is less than its 18% centre) or that edge clips it into
+   * a horizontal line. The sRGB declarations are the fallback for browsers without
+   * OKLab gradients; @supports guards the var() versions, which would otherwise
+   * replace the fallback and then fail.
    */
+  .hero-ember,
+  .showcase-stage {
+    --hero-u: clamp(72px, 9.2vw, 132px);
+  }
   .hero-ember {
-    background: linear-gradient(180deg, #5a1f0c 0%, #6e2710 25%, #8a3311 50%, #a44116 72%, #b44a19 88%, #c2532a 100%);
-    background: linear-gradient(in oklab 180deg, #5a1f0c 0%, #6e2710 25%, #8a3311 50%, #a44116 72%, #b44a19 88%, #c2532a 100%);
+    background: linear-gradient(180deg, #5a1f0c 0%, #6e2710 25%, #8a3311 50%, #a44116 calc(100% - var(--hero-u) * 1.4), #ab451a calc(100% - var(--hero-u) * 1.05), #b2491e calc(100% - var(--hero-u) * 0.7), #b94d23 calc(100% - var(--hero-u) * 0.35), #c2532a 100%);
   }
   .showcase-stage {
     background:
-      radial-gradient(60% 34% at 50% 14%, rgb(255 138 104 / 0.38), transparent 72%),
-      linear-gradient(180deg, #c2532a 0%, #e46640 8%, #ff7a5c 16%, #ff9e85 26%, #ffc9b8 36%, #ffe8e0 46%, #fff6f2 56%, #ffffff 66%);
-    background:
-      radial-gradient(60% 34% at 50% 14%, rgb(255 138 104 / 0.38), transparent 72%),
-      linear-gradient(in oklab 180deg, #c2532a 0%, #e46640 8%, #ff7a5c 16%, #ff9e85 26%, #ffc9b8 36%, #ffe8e0 46%, #fff6f2 56%, #ffffff 66%);
+      radial-gradient(60% 24% at 50% 18%, rgb(255 138 104 / 0.38), transparent 72%),
+      linear-gradient(180deg, #c2532a 0, #cb5832 calc(var(--hero-u) * 0.25), #d85f3b calc(var(--hero-u) * 0.5), #e66846 calc(var(--hero-u) * 0.75), #f37151 var(--hero-u), #ff7a5c calc(var(--hero-u) * 1.25), #ff9e85 30%, #ffc9b8 39%, #ffe8e0 48%, #fff6f2 57%, #ffffff 66%);
+  }
+  @supports (background: linear-gradient(in oklab 180deg, red, blue)) {
+    .hero-ember {
+      background: linear-gradient(in oklab 180deg, #5a1f0c 0%, #6e2710 25%, #8a3311 50%, #a44116 calc(100% - var(--hero-u) * 1.4), #ab451a calc(100% - var(--hero-u) * 1.05), #b2491e calc(100% - var(--hero-u) * 0.7), #b94d23 calc(100% - var(--hero-u) * 0.35), #c2532a 100%);
+    }
+    .showcase-stage {
+      background:
+        radial-gradient(60% 24% at 50% 18%, rgb(255 138 104 / 0.38), transparent 72%),
+        linear-gradient(in oklab 180deg, #c2532a 0, #cb5832 calc(var(--hero-u) * 0.25), #d85f3b calc(var(--hero-u) * 0.5), #e66846 calc(var(--hero-u) * 0.75), #f37151 var(--hero-u), #ff7a5c calc(var(--hero-u) * 1.25), #ff9e85 30%, #ffc9b8 39%, #ffe8e0 48%, #fff6f2 57%, #ffffff 66%);
+    }
   }
 
   /*
@@ -353,11 +371,33 @@
   /*
    * The homepage product-story band: the same warm near-white, bounded by hairline
    * dividers so its start and end are visible, with no inner slab behind screenshots.
+   * One wrapper holds the document and audio stories and the Workflow section, so they
+   * read as a single region that closes just before Why RedactPlus.
    */
   .story-surface {
     background: #f7f6f4;
     border-top: 1px solid rgb(28 25 23 / 0.1);
     border-bottom: 1px solid rgb(28 25 23 / 0.1);
+  }
+
+  /* Independent white cards (homepage Use Cases, service categories). */
+  .feature-card {
+    border-radius: 18px;
+    border: 1px solid rgb(28 25 23 / 0.08);
+    background: rgb(var(--or-midnight));
+    box-shadow: 0 1px 2px rgb(28 25 23 / 0.03), 0 18px 40px -30px rgb(60 30 20 / 0.32);
+  }
+  .feature-card-link {
+    transition: border-color 200ms var(--or-ease-standard), box-shadow 200ms var(--or-ease-standard), transform 200ms var(--or-ease-standard);
+  }
+  .feature-card-link:hover {
+    border-color: rgb(var(--or-coral-ink) / 0.3);
+    box-shadow: 0 1px 2px rgb(28 25 23 / 0.04), 0 24px 44px -26px rgb(120 40 12 / 0.42);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .feature-card-link:hover {
+      transform: translateY(-2px);
+    }
   }
 
   /* Problem section: illustrative cards around one review step (decorative). */

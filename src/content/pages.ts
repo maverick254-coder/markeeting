@@ -1,5 +1,6 @@
 import type { ClaimId, MarketingFaq, SeoFields } from "@/lib/marketing/content";
 import type { MediaFormat } from "@/lib/marketing/industries";
+import { redactionServicesEmail } from "@/content/site";
 
 /** Supporting marketing pages. Each owns one search intent and one H1. */
 export type SupportingPageContent = {
@@ -295,4 +296,63 @@ export const bookDemoPage = {
     "No sensitive files needed. Describe your records in general terms",
   ],
   nextStep: "We reply by email. Sending the form does not book a meeting or purchase anything.",
+} satisfies SupportingPageContent & Record<string, unknown>;
+
+/**
+ * On-demand redaction performed by the RedactPlus team, the outsourced counterpart to the
+ * desktop application. Like the application, it covers documents and audio only. Prices,
+ * turnaround, security arrangements and formats are settled during quotation, so nothing
+ * here states them as a standing commitment.
+ */
+export const redactionServicesPage = {
+  eyebrow: "On-demand redaction services",
+  h1: "Professional Redaction Services. Handled by Experts.",
+  summary:
+    "Need sensitive information removed from your documents or audio recordings? RedactPlus offers professional, on-demand redaction services for organizations and individuals who prefer to outsource their redaction work.",
+  seo: {
+    title: "On-Demand Redaction Services by the RedactPlus Team",
+    description:
+      "Outsource document, audio, and bulk redaction to the RedactPlus team. Describe your project by email and receive a quotation and proposed turnaround.",
+    canonicalPath: "/redaction-services",
+    primaryIntent: "redaction services",
+    secondaryThemes: ["outsourced redaction", "document redaction service", "audio redaction service", "bulk redaction service"],
+  },
+  lastReviewed: "2026-11-09",
+  ways: [
+    {
+      label: "Use the application",
+      title: "Redact files yourself",
+      description: "RedactPlus is a Windows desktop application for reviewing and redacting documents and audio within your own team.",
+      link: { label: "Explore the desktop application", href: "/features" },
+    },
+    {
+      label: "Use our team",
+      title: "Outsource the project",
+      description: "Prefer not to do the work in-house? Hand your documents or recordings to the RedactPlus team.",
+      link: { label: "See how the service works", href: "#service-process" },
+    },
+  ],
+  offerings: [
+    { icon: "document", title: "Document Redaction", description: "PDFs, Word documents, spreadsheets, presentations and other document records." },
+    { icon: "audio", title: "Audio Redaction", description: "Names, contact details and sensitive spoken information in recordings." },
+    { icon: "layers", title: "Bulk Redaction", description: "Large collections of documents, recordings or a mix of both." },
+  ],
+  reasons: [
+    { icon: "credit-card", title: "Fair, project-based pricing", description: "Each quotation is based on the scope of your project: the file types, the volume and the work involved." },
+    { icon: "layers", title: "Support for multiple file formats", description: "Documents and recordings can be brought together in one project. Tell us what you have and we will confirm what we can take on." },
+    { icon: "clock", title: "Flexible turnaround", description: "Timing is proposed in your quotation and agreed around the deadline you are working to." },
+    { icon: "check-circle", title: "Attention to accuracy and review", description: "A missed detail travels with every copy, so careful review is central to the work. Review steps are agreed for each project." },
+    { icon: "lock", title: "Confidential handling", description: "How your files are transferred, handled and returned is agreed with you before any work begins." },
+    { icon: "settings", title: "Tailored to your requirements", description: "What needs to be removed, and how it should appear in the finished files, is set by your project." },
+  ],
+  steps: [
+    { title: "Tell Us About Your Project", description: `Contact ${redactionServicesEmail} with the file types, approximate volume, deadline and redaction requirements.` },
+    { title: "Receive a Quote", description: "Our team reviews the requirements and provides a quotation and proposed turnaround." },
+    { title: "Receive Your Redacted Files", description: "Following project approval and processing, the completed files are delivered through an agreed method." },
+  ],
+  attachmentNotice: "Please do not attach confidential source files to your first email. Describe them in general terms, and a transfer method will be agreed for the project.",
+  closing: {
+    title: "Have a Redaction Project? Let Us Handle It.",
+    description: "Whether you're working with a small collection of files or a large redaction workload, our team can help you assess the project and discuss a suitable approach.",
+  },
 } satisfies SupportingPageContent & Record<string, unknown>;

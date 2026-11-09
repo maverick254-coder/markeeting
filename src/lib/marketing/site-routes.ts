@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { featureOverview, publishedFeaturePages } from "@/content/features";
 import { industryPages, liveIndustryPages } from "@/content/industries";
-import { bookDemoPage, contactPage, howItWorksPage, industriesHub, whyRedactPlusPage } from "@/content/pages";
+import { bookDemoPage, contactPage, howItWorksPage, industriesHub, redactionServicesPage, whyRedactPlusPage } from "@/content/pages";
 import type { CapabilityClaims, SeoFields } from "@/lib/marketing/content";
 import { blockedIndustryCopy } from "@/lib/marketing/industries";
 
@@ -49,6 +49,7 @@ export function marketingRoutes(): MarketingRoute[] {
     })),
     { path: "/how-it-works", seo: howItWorksPage.seo, h1: howItWorksPage.h1, lastModified: howItWorksPage.lastReviewed, changeFrequency: "monthly", priority: 0.8 },
     { path: "/why-redactplus", seo: whyRedactPlusPage.seo, h1: whyRedactPlusPage.h1, lastModified: whyRedactPlusPage.lastReviewed, changeFrequency: "monthly", priority: 0.7 },
+    { path: "/redaction-services", seo: redactionServicesPage.seo, h1: redactionServicesPage.h1, lastModified: redactionServicesPage.lastReviewed, changeFrequency: "monthly", priority: 0.8 },
     { path: "/book-a-demo", seo: bookDemoPage.seo, h1: bookDemoPage.h1, lastModified: bookDemoPage.lastReviewed, changeFrequency: "yearly", priority: 0.7 },
     { path: "/contact", seo: contactPage.seo, h1: contactPage.h1, lastModified: contactPage.lastReviewed, changeFrequency: "yearly", priority: 0.6 },
   ];
@@ -88,7 +89,7 @@ export function validateMarketingRoutes(routes: readonly MarketingRoute[]): stri
  */
 export function validateSupportingContent(claims: CapabilityClaims): string[] {
   const errors: string[] = [];
-  const pages = { industriesHub, howItWorksPage, whyRedactPlusPage, contactPage, bookDemoPage };
+  const pages = { industriesHub, howItWorksPage, whyRedactPlusPage, redactionServicesPage, contactPage, bookDemoPage };
 
   for (const [name, page] of Object.entries(pages)) {
     const copy = JSON.stringify(page);

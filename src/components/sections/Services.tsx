@@ -32,30 +32,42 @@ const reasons = [
   },
 ] as const;
 
+/**
+ * Editorial feature rows: type and hairlines carry the section, so it reads as a pause
+ * between the warm Workflow band and the Use Cases cards rather than another card grid.
+ */
 export function Services() {
   return (
-    <section id="services" aria-labelledby="why-heading" className="story-band section-y text-ink">
+    <section id="services" aria-labelledby="why-heading" className="section-y-sm bg-canvas text-ink">
       <Container>
-        <AnimateOnScroll className="mx-auto max-w-[44rem] text-center">
-          <p className="type-eyebrow">Why RedactPlus</p>
-          <h2 id="why-heading" className="mt-4 font-heading text-[clamp(2rem,1.4rem+2.1vw,3.25rem)] font-medium leading-[1.06] tracking-[-0.035em] text-ink text-balance">
-            Built for the review, not just the redaction.
-          </h2>
+        <AnimateOnScroll className="grid gap-4 lg:grid-cols-[1.75rem_minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-end lg:gap-x-8">
+          <div className="lg:col-span-2">
+            <p className="type-eyebrow">Why RedactPlus</p>
+            <h2 id="why-heading" className="type-h2 mt-4 max-w-[24ch]">
+              Built for the review, not just the redaction.
+            </h2>
+          </div>
+          <p className="type-body max-w-[30rem]">
+            Detection can propose what to remove. The decision stays with a reviewer, from the first mark to the file you share.
+          </p>
         </AnimateOnScroll>
-        <div className="mx-auto mt-14 grid max-w-[64rem] gap-4 sm:grid-cols-2 sm:gap-5">
-          {reasons.map((reason, index) => (
-            <AnimateOnScroll key={reason.title} delay={index * 70}>
-              <article className="h-full rounded-[20px] border border-[rgb(28_25_23/0.07)] bg-canvas p-7 sm:p-8">
-                <span className="grid h-10 w-10 place-items-center rounded-[12px] bg-accent-warm/10 text-accent-ink">
-                  <Icon name={reason.icon} size={18} />
-                </span>
-                <h3 className="mt-6 font-heading text-[1.25rem] font-semibold tracking-[-0.02em] text-ink">{reason.title}</h3>
-                <p className="mt-2 text-[0.9375rem] leading-7 text-ink-muted">{reason.description}</p>
-              </article>
-            </AnimateOnScroll>
-          ))}
-        </div>
-        <div className="mt-10 text-center">
+
+        <AnimateOnScroll className="mt-10 lg:mt-12">
+          <ul className="border-t border-ink/15">
+            {reasons.map((reason) => (
+              <li
+                key={reason.title}
+                className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-4 gap-y-1.5 border-b border-ink/10 py-6 lg:grid-cols-[1.75rem_minmax(0,0.85fr)_minmax(0,1.15fr)] lg:gap-x-8 lg:py-7"
+              >
+                <Icon name={reason.icon} size={20} className="mt-0.5 text-accent-ink" />
+                <h3 className="type-h3">{reason.title}</h3>
+                <p className="col-start-2 max-w-[34rem] text-[0.9375rem] leading-6 text-ink-muted lg:col-start-3">{reason.description}</p>
+              </li>
+            ))}
+          </ul>
+        </AnimateOnScroll>
+
+        <div className="mt-7">
           <Link href="/why-redactplus" className="inline-flex items-center gap-2 text-sm font-semibold text-accent-ink transition-colors hover:text-accent-ink-hover motion-reduce:transition-none">
             How RedactPlus describes its limits
             <Icon name="arrow" size={16} />

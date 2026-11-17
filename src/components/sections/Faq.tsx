@@ -26,7 +26,7 @@ export function Faq() {
             </p>
           </AnimateOnScroll>
           <AnimateOnScroll delay={100}>
-            <Accordion items={items} />
+            <Accordion items={items} headingLevel={3} />
           </AnimateOnScroll>
         </div>
       </Container>

@@ -9,7 +9,9 @@ import { Container } from "@/components/ui/Container";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { brandAssets } from "@/content/brand";
-import { pricingLicensingSteps } from "@/content/pricing";
+import { pricingFaqs, pricingLicensingSteps } from "@/content/pricing";
+import { StructuredData } from "@/components/marketing/StructuredData";
+import { buildBreadcrumbJsonLd, buildFaqPageJsonLd } from "@/lib/seo/structured-data";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -31,6 +33,8 @@ export default function PricingPage() {
     <>
       <Header />
       <main id="main-content" className="min-h-screen bg-canvas text-ink">
+        <StructuredData data={buildBreadcrumbJsonLd([{ name: "Home", path: "/" }, { name: "Pricing", path: "/pricing" }])} />
+        <StructuredData data={buildFaqPageJsonLd(pricingFaqs.map((faq) => ({ question: faq.title, answer: faq.description })))} />
         <section className="page-glow pt-[7.5rem] sm:pt-[8.5rem]">
           <Container className="pb-4 sm:pb-6">
             <div className="mx-auto max-w-3xl text-center">

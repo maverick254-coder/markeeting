@@ -10,6 +10,8 @@ import {
   loadPublishedArticles,
   queryArticles,
 } from "@/lib/blog/content";
+import { StructuredData } from "@/components/marketing/StructuredData";
+import { buildBreadcrumbJsonLd } from "@/lib/seo/structured-data";
 
 export const dynamic = "force-dynamic";
 
@@ -46,6 +48,13 @@ export default async function CategoryPage({ params, searchParams }: CategoryPag
 
   return (
     <>
+      <StructuredData
+        data={buildBreadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Blog", path: "/blog" },
+          { name: category.name, path: `/blog/category/${category.slug}` },
+        ])}
+      />
       <section className="blog-hero pt-[8.75rem] sm:pt-[10rem] lg:pt-[11.5rem]">
         <Container className="pb-12 sm:pb-16">
           <Eyebrow>Blog category</Eyebrow>

@@ -232,6 +232,17 @@ function directives(policy) {
   );
 }
 
+// Mirrors GA_IMG_ORIGINS and GA_CONNECT_ORIGINS in src/lib/analytics.ts, in order.
+const gaImgOrigins = ["https://www.google-analytics.com", "https://www.googletagmanager.com"];
+const gaConnectOrigins = [
+  "https://www.google-analytics.com",
+  "https://region1.google-analytics.com",
+  "https://analytics.google.com",
+  "https://region1.analytics.google.com",
+  "https://www.googletagmanager.com",
+  "https://www.google.com",
+];
+
 function expectedChatwootSources(parsed, route) {
   const frameSrc = parsed.get("frame-src");
 
@@ -244,8 +255,13 @@ function expectedChatwootSources(parsed, route) {
   assert.equal(frameSrc, origin, `${route} must not grant a path or trailing slash in frame-src`);
 
   const socketOrigin = origin.replace(/^https:/, "wss:");
-  assert.equal(parsed.get("img-src"), `'self' data: ${origin}`, route);
-  assert.equal(parsed.get("connect-src"), `'self' ${origin} ${socketOrigin}`, route);
+  // Production builds that load GA4 append its exact origins (src/lib/analytics.ts) after
+  // the chat origins; they appear only when script-src also admits gtag.js.
+  const analytics = (parsed.get("script-src") ?? "").split(" ").includes("https://www.googletagmanager.com");
+  const gaImg = analytics ? ` ${gaImgOrigins.join(" ")}` : "";
+  const gaConnect = analytics ? ` ${gaConnectOrigins.join(" ")}` : "";
+  assert.equal(parsed.get("img-src"), `'self' data: ${origin}${gaImg}`, route);
+  assert.equal(parsed.get("connect-src"), `'self' ${origin} ${socketOrigin}${gaConnect}`, route);
 
   return origin;
 }
@@ -265,9 +281,11 @@ test("every public route serves the strict nonce-based policy", async () => {
     const parsed = directives(policy);
     const chatwootOrigin = expectedChatwootSources(parsed, route);
     const scriptSrc = parsed.get("script-src");
+    // Production builds load Google Analytics 4 from exactly one named origin (src/lib/analytics.ts).
+    const analytics = "( https://www\\.googletagmanager\\.com)?";
     const expectedScript = chatwootOrigin
-      ? new RegExp(`^'self' 'nonce-[A-Za-z0-9+/]{22}==' ${chatwootOrigin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`)
-      : /^'self' 'nonce-[A-Za-z0-9+/]{22}=='$/;
+      ? new RegExp(`^'self' 'nonce-[A-Za-z0-9+/]{22}=='${analytics} ${chatwootOrigin.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`)
+      : new RegExp(`^'self' 'nonce-[A-Za-z0-9+/]{22}=='${analytics}$`);
     assert.match(scriptSrc ?? "", expectedScript, route);
   }
 });

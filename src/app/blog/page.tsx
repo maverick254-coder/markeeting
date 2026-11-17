@@ -20,6 +20,19 @@ import {
 import { ContentTypeFilter, CONTENT_FILTERS, filterHref } from "@/components/blog/ContentTypeFilter";
 import { ARTICLE_TYPES } from "@/lib/blog/types";
 import type { ArticleType } from "@/lib/blog/types";
+import { StructuredData } from "@/components/marketing/StructuredData";
+import { buildBreadcrumbJsonLd } from "@/lib/seo/structured-data";
+
+const HUB_DESCRIPTION =
+  "RedactPlus company news, product updates, industry insights, and practical guides about responsible redaction workflows.";
+
+/** Each type filter is indexed on its own, so each needs its own description. */
+const TYPE_DESCRIPTIONS: Record<ArticleType, string> = {
+  news: "Company news from RedactPlus: announcements, milestones and updates about the team behind the redaction software.",
+  "product-update": "RedactPlus product updates: new redaction features, file-format support and workflow improvements in each release.",
+  article: "Industry insights on redaction, privacy and disclosure: how legal, public-sector and regulated teams handle sensitive records.",
+  guide: "Practical redaction guides and tutorials: step-by-step help for reviewing, redacting and exporting documents and audio safely.",
+};
 
 interface BlogPageProps {
   searchParams: Promise<{
@@ -59,8 +72,7 @@ export async function generateMetadata({ searchParams }: BlogPageProps): Promise
 
   return {
     title: type && label ? `${label} | Blog` : "Blog",
-    description:
-      "RedactPlus company news, product updates, industry insights, and practical guides about responsible redaction workflows.",
+    description: type ? TYPE_DESCRIPTIONS[type] : HUB_DESCRIPTION,
     alternates: { canonical },
     // Search results and deeper pages are refinements of a page that is already
     // indexed; indexing them would compete with it.
@@ -114,6 +126,7 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
 
   return (
     <>
+      <StructuredData data={buildBreadcrumbJsonLd([{ name: "Home", path: "/" }, { name: "Blog", path: "/blog" }])} />
       <EditorialHero />
 
       {featured ? (

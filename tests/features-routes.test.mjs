@@ -49,14 +49,15 @@ test("unknown feature slugs fail closed and approved routes appear in the sitema
   }
 });
 
-test("feature pages expose visible FAQs and breadcrumb structured data only", async () => {
+test("feature pages expose visible FAQs with matching FAQPage and breadcrumb structured data", async () => {
   const response = await get("/features/audio-redaction");
   const html = await response.text();
 
   assert.equal(response.status, 200);
   assert.match(html, /Frequently asked questions/);
   assert.match(html, /"@type":"BreadcrumbList"/);
-  assert.doesNotMatch(html, /"@type":"FAQPage"/);
+  // FAQPage is emitted for answer engines (AEO); it must describe the visible FAQ only.
+  assert.equal((html.match(/"@type":"FAQPage"/g) ?? []).length, 1);
 });
 
 test("navigation and footer discover Features without removing homepage workflow anchors", async () => {

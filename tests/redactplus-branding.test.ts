@@ -137,7 +137,7 @@ test("favicons, manifest and structured data use the RedactPlus assets", async (
   const layout = await read("src/app/layout.tsx");
   assert.match(layout, /icons:\s*\{/);
   assert.match(layout, /manifest: brandAssets\.manifest/);
-  assert.match(layout, /logo: new URL\(brandAssets\.mark, publicSiteUrl\)/);
+  assert.match(layout, /logoPath: brandAssets\.mark/);
   assert.doesNotMatch(layout, /OpenRedakt/);
 
   const manifest = JSON.parse(await read("public/site.webmanifest"));

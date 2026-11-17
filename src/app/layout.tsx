@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import { brandAssets } from "@/content/brand";
 import { contentSecurityPolicyNonce } from "@/lib/csp";
 import { SupportChat } from "@/components/support/SupportChat";
@@ -11,6 +12,9 @@ import {
   siteConfig,
 } from "@/content/site";
 import { resolveChatwootPublicConfig } from "@/lib/support/chatwoot-config";
+import { resolveGaMeasurementId } from "@/lib/analytics";
+import { buildSiteJsonLd, serializeJsonLd } from "@/lib/seo/structured-data";
+import { pricingPackages } from "@/content/pricing";
 import "@/components/support/chatwoot-widget.css";
 import "./globals.css";
 
@@ -33,6 +37,15 @@ const geistMono = Geist_Mono({
  * none on its inline scripts, so nothing below this layout may be prerendered.
  */
 export const dynamic = "force-dynamic";
+
+const siteJsonLd = buildSiteJsonLd({
+  name: siteConfig.name,
+  description: siteConfig.description,
+  supportEmail: publicSupportEmail,
+  logoPath: brandAssets.mark,
+  imagePath: brandAssets.openGraphImage.url,
+  offers: pricingPackages.flatMap((pkg) => (pkg.price.kind === "list" ? [{ name: `${siteConfig.name} ${pkg.name}`, annualUsd: pkg.price.annualUsd }] : [])),
+});
 
 export const metadata: Metadata = {
   title: {
@@ -90,6 +103,7 @@ export default async function RootLayout({
 }) {
   const nonce = await contentSecurityPolicyNonce();
   const chatwootConfig = resolveChatwootPublicConfig(process.env);
+  const gaMeasurementId = resolveGaMeasurementId(process.env);
 
   return (
     <html lang="en" className={`${geist.variable} ${geistMono.variable}`}>
@@ -98,27 +112,22 @@ export default async function RootLayout({
           type="application/ld+json"
           suppressHydrationWarning
           nonce={nonce}
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "SoftwareApplication",
-              name: siteConfig.name,
-              description: siteConfig.description,
-              url: publicSiteUrl,
-              image: new URL(brandAssets.openGraphImage.url, publicSiteUrl).toString(),
-              applicationCategory: "BusinessApplication",
-              operatingSystem: "Windows",
-              publisher: {
-                "@type": "Organization",
-                name: siteConfig.name,
-                url: publicSiteUrl,
-                logo: new URL(brandAssets.mark, publicSiteUrl).toString(),
-              },
-            }),
-          }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(siteJsonLd) }}
         />
       </head>
       <body className="font-sans antialiased">
+        {gaMeasurementId ? (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`}
+              strategy="afterInteractive"
+              nonce={nonce}
+            />
+            <Script id="ga4-init" strategy="afterInteractive" nonce={nonce}>
+              {`window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${gaMeasurementId}');`}
+            </Script>
+          </>
+        ) : null}
         <PortalDialogProvider entry={portalEntry}>{children}</PortalDialogProvider>
         {chatwootConfig ? (
           <SupportChat config={chatwootConfig} fallbackEmail={publicSupportEmail} />

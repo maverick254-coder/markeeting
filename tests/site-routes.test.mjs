@@ -47,7 +47,9 @@ test("new marketing routes render one H1, a canonical, Open Graph, and breadcrum
     assert.match(html, new RegExp(`<meta property="og:url" content="https://saferedact\\.io${escape(path)}"`), path);
     assert.match(html, /aria-label="Breadcrumb"/, path);
     assert.match(html, /<script type="application\/ld\+json" nonce="[^"]+">\{"@context":"https:\/\/schema\.org","@type":"BreadcrumbList"/, path);
-    assert.doesNotMatch(html, /"@type":"FAQPage"/, path);
+    // A page with a visible FAQ carries exactly one FAQPage; a page without one carries none.
+    const faqPages = (html.match(/"@type":"FAQPage"/g) ?? []).length;
+    assert.equal(faqPages, /Frequently asked questions/.test(html) ? 1 : 0, path);
     assert.doesNotMatch(html, /<meta name="robots" content="noindex/, path);
     titles.add(/<title>([^<]+)<\/title>/.exec(html)?.[1]);
     descriptions.add(/<meta name="description" content="([^"]+)"/.exec(html)?.[1]);

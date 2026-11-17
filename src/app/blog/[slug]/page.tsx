@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { StructuredData } from "@/components/marketing/StructuredData";
+import { buildBreadcrumbJsonLd } from "@/lib/seo/structured-data";
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -57,6 +59,14 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         suppressHydrationWarning
         nonce={nonce}
         dangerouslySetInnerHTML={{ __html: jsonLd }}
+      />
+      <StructuredData
+        data={buildBreadcrumbJsonLd([
+          { name: "Home", path: "/" },
+          { name: "Blog", path: "/blog" },
+          { name: article.category, path: `/blog/category/${article.categorySlug}` },
+          { name: article.title, path: `/blog/${article.slug}` },
+        ])}
       />
       <header className="blog-hero pt-[7.5rem] sm:pt-[8.25rem]">
         <Container className="max-w-[76rem] pb-10 sm:pb-14 lg:pb-16">

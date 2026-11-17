@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { turnstileSiteKey } from "@/content/onboarding";
 import { portalEntry } from "@/content/portal";
-
-const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
+import { GA_CONNECT_ORIGINS, GA_IMG_ORIGINS, GA_SCRIPT_ORIGINS, resolveGaMeasurementId } from "@/lib/analytics";
 import {
   chatwootWebSocketOrigin,
   resolveChatwootPublicConfig,
   type ChatwootPublicConfig,
 } from "@/lib/support/chatwoot-config";
+
+const TURNSTILE_ORIGIN = "https://challenges.cloudflare.com";
 
 /**
  * The App Router ships its flight payload and hydration bootstrap as inline
@@ -86,12 +87,20 @@ export function middleware(request: NextRequest) {
   // Cloudflare Turnstile (the registration security check) loads its script and its frame from
   // one origin, on every build that has the Download dialog and a site key.
   const turnstileOrigin = portalEntry && turnstileSiteKey ? TURNSTILE_ORIGIN : null;
-  const scopedScriptDirective = [scriptDirective, chatwootOrigin, turnstileOrigin].filter(Boolean).join(" ");
+  // Google Analytics origins are allowed only where the layout actually loads gtag.js.
+  const analytics = resolveGaMeasurementId(process.env) !== null;
+  const scopedScriptDirective = [scriptDirective, ...(analytics ? GA_SCRIPT_ORIGINS : []), chatwootOrigin, turnstileOrigin].filter(Boolean).join(" ");
   // The Download dialog submits credentials to the portal only in live mode; only then may
   // scripts on this site connect to the portal origin.
   const portalConnect = portalEntry?.submission === "live" ? portalEntry.portalOrigin : null;
   const policy = [scopedScriptDirective, ...sharedDirectives(chatwoot)]
     .map((directive) => (portalConnect && directive.startsWith("connect-src ") ? `${directive} ${portalConnect}` : directive))
+    .map((directive) => {
+      if (!analytics) return directive;
+      if (directive.startsWith("connect-src ")) return `${directive} ${GA_CONNECT_ORIGINS.join(" ")}`;
+      if (directive.startsWith("img-src ")) return `${directive} ${GA_IMG_ORIGINS.join(" ")}`;
+      return directive;
+    })
     .map((directive) => {
       if (!turnstileOrigin || !directive.startsWith("frame-src ")) return directive;
       return directive === "frame-src 'none'" ? `frame-src ${turnstileOrigin}` : `${directive} ${turnstileOrigin}`;

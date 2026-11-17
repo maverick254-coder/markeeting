@@ -262,10 +262,14 @@ jobs:
       # Build and test tooling: high or critical fails; moderate is reported only. On 6 Nov 2026
       # there were moderate advisories in ESLint's TypeScript plugins (minimatch) and Tailwind's
       # postcss-selector-parser, none in runtime code.
+      # Root and portal go through scripts/audit-dev.mjs: same high/critical gate, with one
+      # time-boxed exception for picomatch GHSA-fc5q-39xc-vjpf (no patched release exists; dev
+      # tooling only). It expires on 2027-01-31 and ends early once a real fix is published; the
+      # script records the reason beside the advisory ID.
       - name: Full dependency audit (development tooling)
         run: |
-          npm audit --audit-level=high
-          npm --prefix apps/portal audit --audit-level=high
+          node scripts/audit-dev.mjs
+          node scripts/audit-dev.mjs apps/portal
           npm --prefix services/cms-oauth-broker audit --audit-level=high
 
   deploy:

@@ -34,7 +34,7 @@ async function waitForServer(baseUrl, processHandle) {
   throw new Error("Timed out waiting for the production server.");
 }
 
-function runTests(baseUrl) {
+function runTests(baseUrl, cmsEnabledBaseUrl) {
   const testFiles = [
     "tests/marketing-only.test.mjs",
     "tests/features-routes.test.mjs",
@@ -47,7 +47,7 @@ function runTests(baseUrl) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, ["--test", ...testFiles], {
       cwd: repositoryRoot,
-      env: { ...process.env, TEST_BASE_URL: baseUrl },
+      env: { ...process.env, TEST_BASE_URL: baseUrl, TEST_CMS_ENABLED_BASE_URL: cmsEnabledBaseUrl },
       stdio: "inherit",
     });
     child.once("error", reject);
@@ -58,23 +58,33 @@ function runTests(baseUrl) {
   });
 }
 
-const port = await availablePort();
-const baseUrl = `http://127.0.0.1:${port}`;
 const nextBin = path.join(repositoryRoot, "node_modules", "next", "dist", "bin", "next");
-const server = spawn(process.execPath, [nextBin, "start", "-H", "127.0.0.1", "-p", String(port)], {
-  cwd: repositoryRoot,
-  // Route acceptance must exercise the deterministic fail-closed CMS profile,
-  // never a developer's ignored .env.local deployment coordinates.
-  env: { ...process.env, PORT: String(port), CMS_ENABLED: "false" },
-  stdio: ["ignore", "pipe", "pipe"],
-});
 
-server.stdout.on("data", (chunk) => process.stdout.write(chunk));
-server.stderr.on("data", (chunk) => process.stderr.write(chunk));
+async function startServer(cmsEnabled, avoidPort) {
+  let port = await availablePort();
+  // Both ports are probed before either server binds, so never take the first one twice.
+  while (port === avoidPort) port = await availablePort();
+  const baseUrl = `http://127.0.0.1:${port}`;
+  const server = spawn(process.execPath, [nextBin, "start", "-H", "127.0.0.1", "-p", String(port)], {
+    cwd: repositoryRoot,
+    // Route acceptance must exercise the deterministic fail-closed CMS profile,
+    // never a developer's ignored .env.local deployment coordinates. A second server
+    // switches only CMS_ENABLED on, so /admin is checked in both states.
+    env: { ...process.env, PORT: String(port), CMS_ENABLED: cmsEnabled ? "true" : "false" },
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  server.stdout.on("data", (chunk) => process.stdout.write(chunk));
+  server.stderr.on("data", (chunk) => process.stderr.write(chunk));
+  return { baseUrl, port, server };
+}
+
+const disabled = await startServer(false);
+const enabled = await startServer(true, disabled.port);
 
 try {
-  await waitForServer(baseUrl, server);
-  await runTests(baseUrl);
+  await Promise.all([waitForServer(disabled.baseUrl, disabled.server), waitForServer(enabled.baseUrl, enabled.server)]);
+  await runTests(disabled.baseUrl, enabled.baseUrl);
 } finally {
-  server.kill("SIGTERM");
+  disabled.server.kill("SIGTERM");
+  enabled.server.kill("SIGTERM");
 }

@@ -2,11 +2,8 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import YAML from "yaml";
 
-import { TagNavigation } from "../src/components/blog/TagNavigation";
 import {
   getArticleTags,
   getPublishedArticleBySlug,
@@ -230,7 +227,7 @@ test("queries filter by content type and by tag", () => {
   assert.equal(queryArticles(articles, {}).totalItems, 4);
 });
 
-test("tag navigation exposes usable filtered links and a single active state", () => {
+test("tags are counted across articles for tag views", () => {
   const tags = getArticleTags([
     {
       title: "First",
@@ -272,15 +269,4 @@ test("tag navigation exposes usable filtered links and a single active state", (
     { name: "Privacy", slug: "privacy", count: 2 },
     { name: "Review", slug: "review", count: 1 },
   ]);
-
-  const html = renderToStaticMarkup(createElement(TagNavigation, {
-    tags,
-    activeSlug: "privacy",
-    query: "careful review",
-    type: "guide",
-  }));
-  assert.match(html, /aria-label="Filter content by tag"/);
-  assert.match(html, /href="\/blog\?type=guide&amp;tag=privacy&amp;query=careful\+review"/);
-  assert.match(html, /aria-current="page"[^>]*>Privacy <span[^>]*>2<\/span>/);
-  assert.equal((html.match(/aria-current="page"/g) ?? []).length, 1);
 });

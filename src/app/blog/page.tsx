@@ -4,14 +4,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArticleArchive } from "@/components/blog/ArticleArchive";
 import { ArticleSearch } from "@/components/blog/ArticleSearch";
-import { CategoryNavigation } from "@/components/blog/CategoryNavigation";
 import { EditorialHero } from "@/components/blog/EditorialHero";
 import { FeaturedArticle } from "@/components/blog/FeaturedArticle";
 import { Pagination } from "@/components/blog/Pagination";
-import { TagNavigation } from "@/components/blog/TagNavigation";
 import { Container } from "@/components/ui/Container";
 import {
-  getArticleCategories,
   getArticleTags,
   groupArticlesByMonth,
   loadPublishedArticles,
@@ -98,7 +95,8 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
   // Insights is the single content hub: company news and product updates sit here
   // alongside editorial writing, and the type filter is how a reader narrows it.
   const articles = await loadPublishedArticles();
-  const categories = getArticleCategories(articles);
+  // Tags are not offered as a row here, but each post page links its tags to /blog?tag=…,
+  // so a tag view still has to resolve.
   const tags = getArticleTags(articles);
   const availableTypes = [...new Set(articles.map((article) => article.type))];
   const activeTag = requestedTag ? tags.find((tag) => tag.slug === requestedTag) : undefined;
@@ -146,28 +144,17 @@ export default async function BlogPage({ searchParams }: BlogPageProps) {
             <div>
               <ArticleSearch query={query} type={type ?? undefined} tag={activeTag?.slug} />
             </div>
-            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            {/* Search and the content-type filters are the hub's only controls. Categories
+                keep their own pages (/blog/category/…), and each post lists its category
+                and tags. */}
+            <div className="mt-4">
               <ContentTypeFilter
                 activeType={type}
                 query={query || undefined}
                 tag={activeTag?.slug}
                 availableTypes={availableTypes}
               />
-              {categories.length > 1 ? <div className="min-w-0 sm:ml-auto">
-                <p className="sr-only">Categories</p>
-                <CategoryNavigation categories={categories} showAllLink={false} />
-              </div> : null}
             </div>
-            {articles.length > 3 || activeTag ? (
-              <div className="mt-4">
-                <TagNavigation
-                  tags={tags}
-                  activeSlug={activeTag?.slug}
-                  query={query || undefined}
-                  type={type ?? undefined}
-                />
-              </div>
-            ) : null}
           </div>
 
           {results.items.length ? (

@@ -3,8 +3,16 @@ import test from "node:test";
 
 const baseUrl = process.env.TEST_BASE_URL || "http://127.0.0.1:3000";
 
+// The same build started with CMS_ENABLED=true (scripts/run-route-tests.mjs), for the Decap
+// shell, which the disabled profile no longer serves.
+const cmsEnabledBaseUrl = process.env.TEST_CMS_ENABLED_BASE_URL || baseUrl;
+
 async function get(pathname, options) {
   return fetch(`${baseUrl}${pathname}`, { redirect: "manual", ...options });
+}
+
+async function getCmsEnabled(pathname, options) {
+  return fetch(`${cmsEnabledBaseUrl}${pathname}`, { redirect: "manual", ...options });
 }
 
 test("the published CMS article renders and remains discoverable across Insights", async () => {
@@ -33,15 +41,17 @@ test("the published CMS article renders and remains discoverable across Insights
   assert.doesNotMatch(hubHtml, /Practical guidance for safer redaction/);
   assert.match(hubHtml, /aria-label="Featured insight"/);
   assert.match(hubHtml, /%2Fimages%2Fproduct%2Feditorial-document-cover\.png/);
-  // Four published stories across two types (article, guide) and four categories: the
-  // hub offers the type, category and tag rows, but never a filter for an empty type.
+  // Four published stories across two types (article, guide): the hub's only controls are
+  // the search and the type filters, never a filter for an empty type, and no category
+  // or tag rows (categories keep their own pages; posts list their category and tags).
   assert.match(hubHtml, /aria-label="Filter content by type"/);
   assert.match(hubHtml, />\s*Industry Insights\s*</);
   assert.match(hubHtml, />\s*Guides &amp; Tutorials\s*</);
   assert.doesNotMatch(hubHtml, />\s*Company News\s*</);
   assert.doesNotMatch(hubHtml, />\s*Product Updates\s*</);
-  assert.match(hubHtml, /aria-label="Article categories"/);
-  assert.match(hubHtml, /aria-label="Filter content by tag"/);
+  assert.doesNotMatch(hubHtml, /aria-label="Article categories"/);
+  assert.doesNotMatch(hubHtml, /aria-label="Filter content by tag"/);
+  assert.doesNotMatch(hubHtml, />\s*Topics\s*</);
   assert.match(hubHtml, /Understanding Document Redaction and Why It Matters/);
   assert.match(hubHtml, /Why Audio Redaction Is Reviewed on a Timeline/);
   assert.match(hubHtml, /A Reviewer&#x27;s Checklist Before You Share a Redacted File/);
@@ -56,6 +66,25 @@ test("the published CMS article renders and remains discoverable across Insights
   assert.match(hubHtml, /<form[^>]+role="search"/);
   assert.match(tagHtml, /<form[^>]+role="search"/);
   assert.match(tagHtml, /aria-label="Filter content by type"/);
+  assert.doesNotMatch(tagHtml, /aria-label="Filter content by tag"/);
+});
+
+test("categories keep their pages and sitemap entries; posts still show category and tags", async () => {
+  const [category, article, sitemap] = await Promise.all([
+    get("/blog/category/data-privacy"),
+    get("/blog/understanding-document-redaction"),
+    get("/sitemap.xml"),
+  ]);
+  const [categoryHtml, articleHtml, sitemapXml] = await Promise.all([category.text(), article.text(), sitemap.text()]);
+
+  assert.equal(category.status, 200);
+  assert.match(categoryHtml, /aria-label="Article categories"/);
+  assert.match(categoryHtml, /Understanding Document Redaction and Why It Matters/);
+  for (const slug of ["data-privacy", "audio-redaction", "redaction-practice", "document-redaction"]) {
+    assert.match(sitemapXml, new RegExp(`/blog/category/${slug}</loc>`));
+  }
+  assert.match(articleHtml, /href="\/blog\/category\/data-privacy"/);
+  assert.match(articleHtml, /<nav aria-label="Article topics"[\s\S]*?href="\/blog\?tag=data-privacy"/);
 });
 
 test("an empty Insights search explains the result and offers a server-rendered reset", async () => {
@@ -138,30 +167,52 @@ test("public navigation and footer link to the blog without exposing CMS login",
   assert.doesNotMatch(html, /href="\/admin/);
 });
 
-test("admin foundation is noindexed and redirects to the static Decap shell", async () => {
-  const redirect = await get("/admin");
-  const shell = await get("/admin/index.html");
-  const config = await get("/admin/config.yml");
+test("with the CMS enabled, /admin redirects to the noindexed static Decap shell as before", async () => {
+  const redirect = await getCmsEnabled("/admin");
+  const shell = await getCmsEnabled("/admin/index.html");
   const html = await shell.text();
-  const configText = await config.text();
 
   assert.ok([307, 308].includes(redirect.status));
   assert.equal(redirect.headers.get("location"), "/admin/index.html");
   assert.equal(shell.status, 200);
-  assert.equal(config.status, 200);
   assert.match(html, /<meta name="robots" content="noindex, nofollow"/);
   assert.match(html, /decap-cms@3\.17\.1/);
-  assert.match(configText, /base_url:\s*https:\/\/cms-auth\.invalid/);
-  assert.doesNotMatch(configText, /api\.netlify\.com|client_secret|access_token/i);
   assert.match(shell.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
   assert.equal(shell.headers.get("x-frame-options"), "DENY");
+});
+
+test("with the CMS disabled, /admin explains how posts are published and offers no login", async () => {
+  const [admin, shell, config] = await Promise.all([get("/admin"), get("/admin/index.html"), get("/admin/config.yml")]);
+  const [html, configText] = await Promise.all([admin.text(), config.text()]);
+
+  assert.equal(admin.status, 200);
+  assert.match(html, /<meta name="robots" content="noindex, nofollow"/);
+  assert.match(html, /<h1[^>]*>The Content Studio isn(?:&#x27;|’|&rsquo;)t enabled<\/h1>/);
+  assert.match(html, /published through the repository/);
+  assert.doesNotMatch(html, /Login with GitHub|cms-auth\.invalid|decap-cms/i);
+  assert.match(admin.headers.get("content-security-policy") ?? "", /frame-ancestors 'none'/);
+  assert.equal(admin.headers.get("x-frame-options"), "DENY");
+  assert.equal(admin.headers.get("cache-control")?.includes("s-maxage"), false, "rendered per request");
+
+  // A bookmark of the shell shows the notice in place (a rewrite: no Location header that
+  // could name the container's address), never a login against .invalid.
+  const shellHtml = await shell.text();
+  assert.equal(shell.status, 200);
+  assert.equal(shell.headers.get("location"), null);
+  assert.match(shellHtml, /The Content Studio isn(?:&#x27;|’|&rsquo;)t enabled/);
+  assert.doesNotMatch(shellHtml, /Login with GitHub|decap-cms/i);
+
+  // The configuration keeps failing closed for anything that still asks for it.
+  assert.equal(config.status, 200);
+  assert.match(configText, /base_url:\s*https:\/\/cms-auth\.invalid/);
+  assert.doesNotMatch(configText, /api\.netlify\.com|client_secret|access_token/i);
 });
 
 test("only the admin document receives the eval exception; public routes receive none", async () => {
   const [home, blog, shell, config] = await Promise.all([
     get("/"),
     get("/blog"),
-    get("/admin/index.html"),
+    getCmsEnabled("/admin/index.html"),
     get("/admin/config.yml"),
   ]);
   const [homeHtml, blogHtml, shellHtml, configText] = await Promise.all([
@@ -359,7 +410,7 @@ test("rendered documents carry no script or style the policy would block", async
 
 test("the admin tree keeps its own policy and is never given the public one", async () => {
   const [shell, config, redirect] = await Promise.all([
-    get("/admin/index.html"),
+    getCmsEnabled("/admin/index.html"),
     get("/admin/config.yml"),
     get("/admin"),
   ]);
@@ -380,7 +431,7 @@ test("the admin blob allowance never leaks into a response header", async () => 
   const [home, blog, shell, config] = await Promise.all([
     get("/"),
     get("/blog"),
-    get("/admin/index.html"),
+    getCmsEnabled("/admin/index.html"),
     get("/admin/config.yml"),
   ]);
 

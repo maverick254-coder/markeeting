@@ -157,3 +157,30 @@ test("authorizeStaff denies unapproved, removed, read-only, malformed, and unava
     );
   }
 });
+
+test("a repo-scoped broker accepts only a token granted exactly repo", async () => {
+  const repoConfig = loadConfig({
+    GITHUB_OAUTH_CLIENT_ID: "development-client-id",
+    GITHUB_OAUTH_CLIENT_SECRET: "development-client-secret",
+    OAUTH_PUBLIC_ORIGIN: "https://auth.dev.example:8443",
+    OAUTH_CALLBACK_URL: "https://auth.dev.example:8443/callback",
+    OAUTH_ALLOWED_ORIGINS: "https://cms.dev.example:3000",
+    OAUTH_ALLOWED_REPOSITORY: "Safe-Redact/Marketing-Site",
+    OAUTH_ALLOWED_GITHUB_USER_IDS: "101",
+    OAUTH_STATE_SECRET: Buffer.alloc(32, 7).toString("base64url"),
+    OAUTH_GITHUB_SCOPE: "repo",
+  });
+  assert.equal(buildAuthorizationUrl({ state: "s".repeat(43), codeChallenge: "c".repeat(43), config: repoConfig })
+    .searchParams.get("scope"), "repo");
+
+  const exchange = (scope) => exchangeCode({
+    code: "approved-code",
+    codeVerifier: "v".repeat(86),
+    config: repoConfig,
+    fetchImpl: async () => jsonResponse({ access_token: "t", token_type: "bearer", scope, expires_in: 28_800 }),
+  });
+  assert.deepEqual(await exchange("repo"), { accessToken: "t", expiresIn: 28_800 });
+  for (const granted of ["public_repo", "repo,user", "repo,admin:org", ""]) {
+    await assert.rejects(exchange(granted), /token exchange failed/i, granted);
+  }
+});

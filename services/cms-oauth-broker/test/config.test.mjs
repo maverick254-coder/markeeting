@@ -120,10 +120,13 @@ test("loadConfig requires the exact configured callback and rejects alternate Gi
 });
 
 test("loadConfig rejects broad scopes, unsafe repositories, and invalid staff identifiers", () => {
-  assert.throws(
-    () => loadConfig(validEnvironment({ OAUTH_GITHUB_SCOPE: "repo,user" })),
-    /public_repo/i
-  );
+  for (const scope of ["repo,user", "repo user", "user", "admin:org", "write:repo_hook", "REPO", " repo"]) {
+    if (scope.trim() === "repo") continue; // surrounding whitespace is trimmed like every value
+    assert.throws(() => loadConfig(validEnvironment({ OAUTH_GITHUB_SCOPE: scope })), /public_repo or repo/i, scope);
+  }
+  // A private content repository needs repo; both accepted scopes round-trip.
+  assert.equal(loadConfig(validEnvironment({ OAUTH_GITHUB_SCOPE: "repo" })).scope, "repo");
+  assert.equal(loadConfig(validEnvironment({ OAUTH_GITHUB_SCOPE: "public_repo" })).scope, "public_repo");
   assert.throws(
     () => loadConfig(validEnvironment({ OAUTH_ALLOWED_REPOSITORY: "invalid repository" })),
     /owner\/repository/i

@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
-import { createServer } from "node:https";
+import { createServer as createHttpServer } from "node:http";
+import { createServer as createTlsServer } from "node:https";
 
 function required(environment, name) {
   const value = environment[name];
@@ -9,9 +10,19 @@ function required(environment, name) {
   return value.trim();
 }
 
+/**
+ * Where TLS ends:
+ * - "broker" (default): the broker serves HTTPS itself from OAUTH_TLS_CERT_PATH/KEY_PATH.
+ * - "proxy": a reverse proxy on the same host terminates HTTPS and forwards over a
+ *   loopback-only connection (deployment/cms-oauth: nginx to 127.0.0.1, container port
+ *   published on loopback only). The public origin stays HTTPS: loadConfig still
+ *   requires an https OAUTH_PUBLIC_ORIGIN, and every URL and cookie is built from it.
+ */
 export function loadServerConfig(environment = {}) {
-  const certificatePath = required(environment, "OAUTH_TLS_CERT_PATH");
-  const privateKeyPath = required(environment, "OAUTH_TLS_KEY_PATH");
+  const termination = environment.OAUTH_TLS_TERMINATION?.trim() || "broker";
+  if (termination !== "broker" && termination !== "proxy") {
+    throw new Error("OAuth HTTPS server configuration error: OAUTH_TLS_TERMINATION must be broker or proxy.");
+  }
   const port = Number(environment.OAUTH_PORT?.trim() || "8787");
   if (!Number.isSafeInteger(port) || port < 1 || port > 65_535) {
     throw new Error("OAuth HTTPS server configuration error: OAUTH_PORT must be from 1 to 65535.");
@@ -20,6 +31,14 @@ export function loadServerConfig(environment = {}) {
   if (!/^[A-Za-z0-9.:[\]_-]+$/.test(host)) {
     throw new Error("OAuth HTTPS server configuration error: OAUTH_BIND_HOST is invalid.");
   }
+  if (termination === "proxy") {
+    if (environment.OAUTH_TLS_CERT_PATH?.trim() || environment.OAUTH_TLS_KEY_PATH?.trim()) {
+      throw new Error("OAuth HTTPS server configuration error: TLS files are not used when the proxy terminates TLS.");
+    }
+    return { termination, port, host };
+  }
+  const certificatePath = required(environment, "OAUTH_TLS_CERT_PATH");
+  const privateKeyPath = required(environment, "OAUTH_TLS_KEY_PATH");
   return { certificatePath, privateKeyPath, port, host };
 }
 
@@ -40,12 +59,7 @@ export function createHttpsBrokerServer({ environment = process.env, handler }) 
     throw new Error("OAuth HTTPS server requires a request handler.");
   }
   const serverConfig = loadServerConfig(environment);
-  const tls = {
-    cert: readFileSync(serverConfig.certificatePath),
-    key: readFileSync(serverConfig.privateKeyPath),
-    minVersion: "TLSv1.2",
-  };
-  const server = createServer(tls, async (request, response) => {
+  const listener = async (request, response) => {
     try {
       const incomingUrl = new URL(request.url ?? "/", environment.OAUTH_PUBLIC_ORIGIN);
       const result = await handler(new Request(incomingUrl, {
@@ -61,7 +75,13 @@ export function createHttpsBrokerServer({ environment = process.env, handler }) 
       response.setHeader("Content-Type", "text/plain; charset=utf-8");
       response.end("Authentication service error.");
     }
-  });
+  };
+  const server = serverConfig.termination === "proxy"
+    ? createHttpServer(listener)
+    : createTlsServer({
+      cert: readFileSync(serverConfig.certificatePath),
+      key: readFileSync(serverConfig.privateKeyPath),
+      minVersion: "TLSv1.2",
+    }, listener);
   return { server, serverConfig };
 }
-

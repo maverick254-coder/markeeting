@@ -59,7 +59,7 @@ The editor is served at `/admin/index.html` (`/admin` redirects there). `/admin/
 - `CMS_OAUTH_AUTH_ENDPOINT`
 - `CMS_GITHUB_REPOSITORY`
 - `CMS_PUBLISH_BRANCH`
-- `CMS_AUTH_SCOPE` (currently exactly `public_repo`)
+- `CMS_AUTH_SCOPE` (`public_repo`, or `repo` for a private repository; must equal the broker's `OAUTH_GITHUB_SCOPE`)
 
 `npm run cms:config` validates these values without writing a static file. Development may target `feat/saferedact-publishing-and-comments`; after this code is reviewed and merged, the production application must set `CMS_PUBLISH_BRANCH=master`. OAuth authentication does not replace branch protection or independent approval.
 
@@ -88,6 +88,8 @@ The broker requires `GITHUB_OAUTH_CLIENT_ID`, `GITHUB_OAUTH_CLIENT_SECRET`, `OAU
 The current in-memory OAuth transaction store supports one long-running HTTPS process only. Do not deploy it to multiple replicas or an ephemeral serverless runtime until an atomic shared consume-once TTL store is implemented. Organization approval and real CMS repository writes have been confirmed externally; every new broker deployment still requires exact-origin/callback acceptance with approved credentials.
 
 Decap's GitHub workflow does not provide separate Writer, Reviewer, and Publisher roles. All CMS users need repository push access, and a user who clicks Publish asks GitHub to merge the editorial pull request. Enforce separation with GitHub teams and `master` protection: require a pull request, at least one approval from someone other than the last pusher, current required checks, resolved conversations, no force pushes/deletion, and no bypass permission for ordinary CMS staff.
+
+Production setup for redactplus.io (the broker at `https://cms-auth.redactplus.io` behind host nginx, the GitHub OAuth App, and the marketing `app.env` settings) is in `deployment/cms-oauth/README.md`.
 
 ## Visitor comments and moderation
 

@@ -16,6 +16,12 @@ const nextConfig: NextConfig = {
   pageExtensions: isDevelopment ? ["dev.tsx", "tsx", "ts", "jsx", "js"] : ["tsx", "ts", "jsx", "js"],
   output: "standalone",
   outputFileTracingRoot: applicationRoot,
+  // scripts/render-cms-config.mjs reads this template with a computed path at request time,
+  // which the tracer cannot follow. Declared here so every standalone package (the Docker
+  // image and the release bundle) carries it; check-runtime-tree.mjs requires it.
+  outputFileTracingIncludes: {
+    "/admin/config.yml": ["./config/decap-cms.yml"],
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     localPatterns: [{ pathname: "/images/product/**" }],

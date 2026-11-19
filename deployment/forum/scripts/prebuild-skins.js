@@ -23,6 +23,10 @@ if (!configFile) {
 }
 process.chdir(APP);
 
+// What NodeBB's CLI loads first (src/cli/index.js): plugins resolve NodeBB modules through these.
+require(path.join(APP, 'require-main'));
+require(path.join(APP, 'nodebb-global'));
+
 // NodeBB's own nconf instance, configured exactly as `./nodebb build` configures it.
 const nconf = require(require.resolve('nconf', { paths: [APP] }));
 nconf.argv().env({ separator: '__' });

@@ -53,7 +53,7 @@ COPY deployment/forum/scripts/write-config.js deployment/forum/scripts/bootstrap
 # Build-time only (not copied into the runtime image). At runtime the root filesystem is
 # read-only, so nothing may write into build/: the Harmony theme's startup skin rebuild is removed,
 # and every skin is built here, so a skin request never triggers NodeBB's on-demand build.
-COPY deployment/forum/scripts/patch-harmony.js deployment/forum/scripts/prebuild-skins.js /opt/redactplus-build/
+COPY deployment/forum/scripts/patch-harmony.js deployment/forum/scripts/prebuild-skins.js deployment/forum/scripts/verify-assets.js /opt/redactplus-build/
 RUN node /opt/redactplus-build/patch-harmony.js
 RUN redis-server --daemonize yes --save '' --appendonly no \
  && FORUM_DATABASE=redis REDACTPLUS_CONFIG_PATH=/tmp/build-config.json FORUM_URL=http://localhost:4567 FORUM_SECRET=build-only \
@@ -81,6 +81,10 @@ COPY --from=build /opt/redactplus /opt/redactplus
 # Uploads are the only data NodeBB keeps on disk; they live on a volume (see compose.yaml).
 RUN mkdir -p public/uploads/files /run/nodebb && chown -R node:node public/uploads /run/nodebb \
  && chmod 755 /opt/redactplus/entrypoint.sh
+# Fails the build unless this final filesystem already holds every asset NodeBB would otherwise
+# copy or build into build/public at runtime (read-only: EROFS). The script is mounted, not shipped.
+RUN --mount=type=bind,from=build,source=/opt/redactplus-build,target=/opt/redactplus-build \
+    node /opt/redactplus-build/verify-assets.js /usr/src/app
 ENV NODE_ENV=production \
     REDACTPLUS_CONFIG_PATH=/run/nodebb/config.json \
     REDACTPLUS_FORUM_COMMIT=${GIT_COMMIT}

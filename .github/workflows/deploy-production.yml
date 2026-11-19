@@ -14,13 +14,18 @@
 #      no shell, no file access, no nginx, Keycloak, database or Cloudflare changes.
 #   6. Health and smoke checks run on the server after each deployment; on failure the previous
 #      image digest is restored automatically.
+#   7. The forum image is only published, never deployed: the forced command does not know the
+#      forum, and installing or upgrading it stays a reviewed manual step
+#      (deployment/forum/RUNBOOK.md). It is tagged with the last commit that changed its inputs,
+#      and a run publishes it only when that tag is missing from the registry.
 #
 # Environment "production" (Settings → Environments):
 #   deployment branches: main only;  required reviewers: none (automatic) or as agreed
 #   secrets:   REGISTRY_USERNAME, REGISTRY_PASSWORD   push account for registry.safaridesk.io
 #              DEPLOY_SSH_KEY, DEPLOY_SSH_KNOWN_HOSTS  forced-command key, pinned host key
 #              DEPLOY_NOTIFY_WEBHOOK                   optional, Slack-compatible incoming webhook
-#   variables: CD_ENABLED ("true" to deploy), CD_COMPONENTS ("portal" or "marketing,portal"),
+#   variables: CD_ENABLED ("true" to deploy), CD_COMPONENTS ("portal" or "marketing,portal";
+#              add "forum" to publish the forum image),
 #              DEPLOY_HOST, PORTAL_EXPECTED_ACCESS (default "staff-preview"),
 #              TURNSTILE_SITE_KEY (public site key of the registration security check; required)
 #
@@ -45,6 +50,8 @@ jobs:
       enabled: ${{ steps.gate.outputs.enabled }}
       marketing: ${{ steps.decide.outputs.marketing }}
       portal: ${{ steps.decide.outputs.portal }}
+      forum: ${{ steps.decide.outputs.forum }}
+      forum_revision: ${{ steps.decide.outputs.forum_revision }}
     steps:
       - name: Gate (main push, switch, current head)
         id: gate
@@ -117,11 +124,19 @@ jobs:
             enabled_for "$c" || want=false
             echo "${c}=${want}" >> "$GITHUB_OUTPUT"
           done
+          # The forum image is published (never deployed) when it is switched on; its job checks
+          # the registry and does nothing if this forum revision is already there.
+          forum_rev=$(decision 'd.forum.revision || ""')
+          forum=false
+          if enabled_for forum && [[ "$forum_rev" =~ ^[0-9a-f]{40}$ ]]; then forum=true; fi
+          echo "forum=${forum}" >> "$GITHUB_OUTPUT"
+          echo "forum_revision=${forum_rev}" >> "$GITHUB_OUTPUT"
           {
             echo "### Plan for ${SHA}"
             echo "- automation enabled for: \`${CD_COMPONENTS:-none}\`"
             echo "- marketing: $(decision 'd.marketing.deploy+" ("+d.marketing.reason+")"')"
             echo "- portal: $(decision 'd.portal.deploy+" ("+d.portal.reason+")"')"
+            echo "- forum image (publish only, revision \`${forum_rev:-none}\`): ${forum}"
           } >> "$GITHUB_STEP_SUMMARY"
           server=$(decision 'd.serverConfig.join(", ")')
           if [ -n "$server" ]; then
@@ -234,9 +249,77 @@ jobs:
           EXPECT_ACCESS: ${{ vars.PORTAL_EXPECTED_ACCESS || 'staff-preview' }}
         run: bash .github/scripts/remote-deploy.sh
 
+  # The forum backend image, published to the registry only. Nothing on the server changes:
+  # installing or upgrading the forum is a manual, reviewed step (deployment/forum/RUNBOOK.md).
+  forum:
+    name: deploy / forum image (publish only)
+    needs: plan
+    if: needs.plan.outputs.enabled == 'true' && needs.plan.outputs.forum == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    concurrency:
+      group: production-forum
+      cancel-in-progress: false
+    steps:
+      - name: Check out the exact commit
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Is this forum revision already published?
+        id: registry
+        env:
+          REV: ${{ needs.plan.outputs.forum_revision }}
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        run: |
+          [[ "$REV" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::bad forum revision"; exit 1; }
+          image="registry.safaridesk.io/safari/redactplus-forum:${REV}"
+          echo "TAG=$REV" >> "$GITHUB_ENV"
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+          printf '%s' "$REGISTRY_PASSWORD" | docker login registry.safaridesk.io --username "$REGISTRY_USERNAME" --password-stdin >/dev/null
+          trap 'docker logout registry.safaridesk.io >/dev/null 2>&1 || true' EXIT
+          if out=$(docker manifest inspect "$image" 2>&1); then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "Forum image \`$image\` is already in the registry; nothing was built or pushed." >> "$GITHUB_STEP_SUMMARY"
+          elif grep -qiE 'no such manifest|manifest unknown|not found' <<<"$out"; then
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::the registry could not be asked about $image"
+            exit 1
+          fi
+      - name: Build the forum image
+        if: steps.registry.outputs.published == 'false'
+        run: |
+          # Built from this commit, whose forum inputs are identical to $TAG's (that is what the
+          # revision means), and labelled with $TAG.
+          docker build --platform linux/amd64 -f deployment/forum/Dockerfile --build-arg GIT_COMMIT="$TAG" -t "$IMAGE" .
+          [ "$(docker image inspect "$IMAGE" --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}')" = "$TAG" ] \
+            || { echo "::error::revision label does not match $TAG"; exit 1; }
+          # No bridge tests or local settings may ship.
+          docker run --rm --network none --entrypoint sh "$IMAGE" -c \
+            'for p in node_modules/nodebb-plugin-redactplus-bridge/test .env config.json; do [ -e "/usr/src/app/$p" ] && { echo "unexpected $p"; exit 1; }; done; exit 0'
+      - name: Publish (digest-addressed)
+        if: steps.registry.outputs.published == 'false'
+        env:
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        run: bash .github/scripts/publish-image.sh
+      - name: How to install it
+        if: steps.registry.outputs.published == 'false'
+        run: |
+          {
+            echo "Not deployed. To install or upgrade the forum by hand (deployment/forum/RUNBOOK.md), set in its \`.env\`:"
+            echo '```'
+            echo "RELEASE_SHA=$TAG"
+            echo "RELEASE_DIGEST=$DIGEST"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   notify:
     name: deploy / notify
-    needs: [plan, marketing, portal]
+    needs: [plan, marketing, portal, forum]
     if: always() && needs.plan.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -248,11 +331,12 @@ jobs:
           SHA: ${{ github.sha }}
           MARKETING: ${{ needs.marketing.result }}
           PORTAL: ${{ needs.portal.result }}
+          FORUM: ${{ needs.forum.result }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           status="succeeded"
-          case "$MARKETING $PORTAL" in *failure*|*cancelled*) status="FAILED" ;; esac
-          text="RedactPlus production deployment ${status} for ${SHA:0:12}: marketing=${MARKETING:-skipped}, portal=${PORTAL:-skipped}. ${RUN_URL}"
+          case "$MARKETING $PORTAL $FORUM" in *failure*|*cancelled*) status="FAILED" ;; esac
+          text="RedactPlus production deployment ${status} for ${SHA:0:12}: marketing=${MARKETING:-skipped}, portal=${PORTAL:-skipped}, forum image=${FORUM:-skipped}. ${RUN_URL}"
           echo "$text" >> "$GITHUB_STEP_SUMMARY"
           if [ -n "$WEBHOOK" ]; then
             payload=$(node -e 'console.log(JSON.stringify({ text: process.argv[1] }))' "$text")

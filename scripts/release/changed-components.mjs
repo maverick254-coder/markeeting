@@ -7,6 +7,10 @@
  *     --marketing-base <deployed sha|""> --portal-base <deployed sha|""> \
  *     --marketing-flags-changed <true|false>
  *
+ * The forum image is only ever published, never deployed (deployment/forum/RUNBOOK.md). It is
+ * tagged with the last commit that changed one of its inputs ("forum.revision" in the output),
+ * so the same forum source always maps to the same tag and a run publishes only a missing one.
+ *
  * A component is rebuilt and deployed when anything that can reach its image changed since the
  * commit that production is actually running (reported by the server, not the previous push),
  * or when its build flags changed. Unknown or unrelated history (first deployment, a rollback to
@@ -38,6 +42,22 @@ export const PORTAL_INPUTS = ["apps/portal/", "deployment/portal/Dockerfile"];
 export const PORTAL_EXCLUDED = ["apps/portal/tests/", "apps/portal/dev/", "apps/portal/public/dev-fixtures/", "apps/portal/README.md"];
 
 /**
+ * The forum image (deployment/forum/Dockerfile, built from the repository root): its
+ * Dockerfile.dockerignore allowlist plus the Dockerfile and that ignore file themselves.
+ */
+export const FORUM_INPUTS = [
+  "deployment/forum/Dockerfile",
+  "deployment/forum/Dockerfile.dockerignore",
+  "deployment/forum/scripts/",
+  "services/forum-bridge/package.json",
+  "services/forum-bridge/plugin.json",
+  "services/forum-bridge/library.js",
+  "services/forum-bridge/categories.json",
+  "services/forum-bridge/lib/",
+  "services/forum-bridge/scripts/",
+];
+
+/**
  * Server-side configuration the pipeline deliberately does NOT apply. A change here deploys no
  * image by itself; the workflow reports it so someone applies it by hand after review.
  */
@@ -51,8 +71,13 @@ export const SERVER_CONFIG = [
   "deployment/portal/nginx/",
   "deployment/portal/scripts/",
   "deployment/portal/compose.forum.yaml",
-  // The forum backend is installed by hand (deployment/forum/RUNBOOK.md); the pipeline never deploys it.
-  "deployment/forum/",
+  // The forum backend is installed by hand (deployment/forum/RUNBOOK.md); the pipeline only
+  // publishes its image. Its host files are server configuration.
+  "deployment/forum/compose.yaml",
+  "deployment/forum/forum.env.example",
+  "deployment/forum/db.env.example",
+  "deployment/forum/scripts/backup.sh",
+  "deployment/forum/scripts/restore.sh",
   "deployment/shared/",
   "deployment/cd/",
 ];
@@ -65,6 +90,10 @@ export function affectsMarketing(file) {
 
 export function affectsPortal(file) {
   return matches(file, PORTAL_INPUTS) && !matches(file, PORTAL_EXCLUDED);
+}
+
+export function affectsForum(file) {
+  return matches(file, FORUM_INPUTS);
 }
 
 export function serverConfigFiles(files) {
@@ -101,6 +130,12 @@ export function changedFiles(base, head) {
   return out ? out.split("\n") : [];
 }
 
+/** The last commit at or before head that changed a forum image input (null if none ever did). */
+export function forumRevision(head) {
+  const out = git("log", "-1", "--format=%H", head, "--", ...FORUM_INPUTS.map((rule) => rule.replace(/\/$/, "")));
+  return /^[0-9a-f]{40}$/.test(out) ? out : null;
+}
+
 function argument(name) {
   const index = process.argv.indexOf(`--${name}`);
   return index > 0 ? process.argv[index + 1] ?? "" : "";
@@ -119,6 +154,7 @@ if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith
     head,
     marketing: decide("marketing", { files: marketingFiles, flagsChanged: argument("marketing-flags-changed") === "true" }),
     portal: decide("portal", { files: portalFiles }),
+    forum: { revision: forumRevision(head) },
     serverConfig: serverConfigFiles([...new Set([...(marketingFiles ?? []), ...(portalFiles ?? [])])]),
   };
   console.log(JSON.stringify(result));

@@ -86,3 +86,24 @@ test("logs never carry credentials, and nothing touches Keycloak, Cloudflare, ng
   assert.doesNotMatch(scripts, /keycloak|cloudflare\.com\/client|api\.cloudflare|systemctl|nginx -s|registry garbage-collect|docker (rmi|system prune|volume)/i);
   assert.match(text, /if: always\(\) && needs\.plan\.outputs\.enabled == 'true'/, "the team hears about every attempted deployment");
 });
+
+test("the forum image is published only: never deployed, and only when its revision is missing", () => {
+  const forum = jobs.forum;
+  assert.match(forum.if, /needs\.plan\.outputs\.enabled == 'true'/);
+  assert.match(forum.if, /needs\.plan\.outputs\.forum == 'true'/);
+  assert.equal(forum.environment, "production");
+  assert.equal(forum.concurrency.group, "production-forum");
+  assert.equal(forum.concurrency["cancel-in-progress"], false);
+  const runs = forum.steps.map((s) => s.run ?? "").join("\n");
+  assert.doesNotMatch(runs, /remote-deploy\.sh|ssh /, "the forum is installed by hand (deployment/forum/RUNBOOK.md)");
+  assert.doesNotMatch(JSON.stringify(forum), /DEPLOY_SSH_KEY|DEPLOY_HOST/);
+  assert.match(runs, /docker manifest inspect "\$image"/, "an existing tag is never rebuilt or overwritten");
+  for (const s of forum.steps.filter((s) => /docker build|publish-image\.sh/.test(s.run ?? ""))) {
+    assert.equal(s.if, "steps.registry.outputs.published == 'false'");
+  }
+  assert.match(runs, /--build-arg GIT_COMMIT="\$TAG"/);
+  const decide = jobs.plan.steps.find((s) => s.id === "decide").run;
+  assert.match(decide, /if enabled_for forum && /, "CD_COMPONENTS must name the forum");
+  assert.deepEqual(jobs.notify.needs, ["plan", "marketing", "portal", "forum"]);
+  assert.match(jobs.notify.steps[0].run, /\$MARKETING \$PORTAL \$FORUM/);
+});

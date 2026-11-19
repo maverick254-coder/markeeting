@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { turnstileSiteKey } from "@/content/onboarding";
 import { portalEntry } from "@/content/portal";
 import { GA_CONNECT_ORIGINS, GA_IMG_ORIGINS, GA_SCRIPT_ORIGINS, resolveGaMeasurementId } from "@/lib/analytics";
+import { cmsEnabled } from "@/lib/cms/enabled";
 import {
   chatwootWebSocketOrigin,
   resolveChatwootPublicConfig,
@@ -71,6 +72,17 @@ function createNonce() {
 }
 
 export function middleware(request: NextRequest) {
+  // With the CMS disabled, the static Decap shell could only offer a GitHub login against
+  // a reserved .invalid origin, so a bookmark of it shows /admin's notice instead. A
+  // rewrite, not a redirect: a middleware redirect needs an absolute URL, and behind the
+  // proxy that would name the container's own address. Enabled, the shell is served as before.
+  if (request.nextUrl.pathname === "/admin/index.html" && !cmsEnabled()) {
+    const notice = request.nextUrl.clone();
+    notice.pathname = "/admin";
+    notice.search = "";
+    return NextResponse.rewrite(notice);
+  }
+
   if (isUnprotected(request.nextUrl.pathname)) {
     return NextResponse.next();
   }

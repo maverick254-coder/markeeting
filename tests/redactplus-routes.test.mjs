@@ -66,7 +66,8 @@ test("the renamed why page answers at its new path and the old path redirects", 
 });
 
 test("the staff CMS shell carries the RedactPlus identity", async () => {
-  const response = await fetch(`${baseUrl}/admin/index.html`);
+  // The shell is served only with the CMS enabled (scripts/run-route-tests.mjs).
+  const response = await fetch(`${process.env.TEST_CMS_ENABLED_BASE_URL || baseUrl}/admin/index.html`);
   assert.equal(response.status, 200);
   const page = await response.text();
   assert.match(page, /RedactPlus Content Studio/);

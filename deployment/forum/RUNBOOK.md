@@ -80,8 +80,12 @@ Expect `{"ok":true,"data":{"status":"ready","categories":6,"acceptedAnswers":tru
 Only for administrators, over SSH:
 
 ```bash
-ssh -L 6097:127.0.0.1:6097 root@<server>
+ssh -L 6097:172.30.97.10:4567 root@<server>
 ```
+
+NodeBB has no host port: Docker publishes none for a container that is only on internal networks.
+The tunnel goes to its fixed address on the internal network `redactplus-forum` (`compose.yaml`).
+Keep the local side on port 6097: `FORUM_URL` is `http://localhost:6097`.
 
 Then open `http://localhost:6097/login` and sign in with the first administrator. Immediately:
 1. turn on two-factor authentication for that account (2factor plugin);

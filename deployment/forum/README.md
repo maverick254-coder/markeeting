@@ -10,7 +10,7 @@ RedactPlus sign-in. NodeBB stores and enforces everything behind it and is never
 browser ──https──> portal (home.redactplus.io)  ──private network──>  NodeBB + RedactPlus bridge  ──>  PostgreSQL
            session cookie, CSRF token            bridge key + verified identity        own database, own volume
                                                  (server to server only)
-staff admin ──SSH tunnel──> 127.0.0.1:6097 ──> NodeBB's own admin UI (local administrator accounts, 2FA)
+staff admin ──SSH tunnel──> 172.30.97.10:4567 (internal network) ──> NodeBB's own admin UI (local administrator accounts, 2FA)
 ```
 
 | Piece | Where |
@@ -38,8 +38,9 @@ admin UI. Changing any version is a deliberate change in the Dockerfile and `scr
 
 ## Security model
 
-- **Not published.** NodeBB listens only on the internal Docker network `redactplus-forum`, which
-  only the portal joins, and on host loopback `127.0.0.1:6097` for administrators over SSH.
+- **Not published.** NodeBB listens only on the internal Docker networks: `redactplus-forum`,
+  which only the portal joins, at the fixed address `172.30.97.10`, which administrators reach
+  through an SSH tunnel. No port is published on the host, and the forum has no route off it.
   Customers cannot reach NodeBB, its API, its sign-in or its uploads.
 - **One trusted caller.** The bridge answers only requests carrying `REDACTPLUS_BRIDGE_KEY`
   (32+ characters, compared in constant time). The key lives in the portal's and NodeBB's env

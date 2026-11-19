@@ -8,7 +8,9 @@
 # Two services, nothing published to the internet:
 #   redactplus-forum      NodeBB + the RedactPlus bridge. The portal reaches it by name on the
 #                         private network "redactplus-forum". Administrators reach NodeBB's own
-#                         UI only through an SSH tunnel to 127.0.0.1:6097 (RUNBOOK.md).
+#                         UI only through an SSH tunnel to its fixed address on that network,
+#                         172.30.97.10:4567 (RUNBOOK.md §4). No port is published on the host:
+#                         Docker publishes none for a container on internal networks only.
 #   redactplus-forum-db   its own PostgreSQL, no published port, durable named volume
 name: redactplus-forum
 
@@ -33,9 +35,8 @@ services:
       NODE_OPTIONS: --max-old-space-size=448
     secrets:
       - admin-password
-    # Loopback only, for administrators over an SSH tunnel. Customers never reach NodeBB.
-    ports:
-      - "127.0.0.1:6097:4567"
+    # No `ports:`: the host reaches NodeBB at 172.30.97.10 on the internal network (the SSH tunnel
+    # in RUNBOOK.md §4). Customers never reach NodeBB.
     read_only: true
     tmpfs:
       - /tmp:size=64m,mode=1777
@@ -62,9 +63,11 @@ services:
       com.centurylinklabs.watchtower.enable: "false"
       io.safaridesk.service: redactplus-forum
     networks:
-      # Shared with the portal only: internal, no route off the host.
-      - redactplus-forum
-      - redactplus-forum-db
+      # Shared with the portal only: internal, no route off the host. A fixed address, outside
+      # the network's dynamic range, so the admin tunnel target never moves.
+      redactplus-forum:
+        ipv4_address: 172.30.97.10
+      redactplus-forum-db: {}
 
   redactplus-forum-db:
     container_name: redactplus-forum-db
@@ -123,6 +126,13 @@ networks:
   redactplus-forum:
     name: redactplus-forum
     internal: true
+    # Outside the host's Docker address pool (10.0.0.0/8), so no other network can take it.
+    # Dynamic addresses (the portal) come from .0/29; the forum is pinned at .10.
+    ipam:
+      config:
+        - subnet: 172.30.97.0/28
+          ip_range: 172.30.97.0/29
+          gateway: 172.30.97.1
   redactplus-forum-db:
     name: redactplus-forum-db
     internal: true

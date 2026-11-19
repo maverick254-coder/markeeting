@@ -38,6 +38,25 @@ push to main ──► CI: marketing / verify, portal / verify, images / build,
                  deploy / notify    job summary, optional webhook; fails if a deployment failed
 ```
 
+### The forum image: published, never deployed
+
+With `forum` in `CD_COMPONENTS`, the job `deploy / forum image (publish only)` keeps
+`registry.safaridesk.io/safari/redactplus-forum` up to date. It never contacts the server, and
+the forced command does not know the forum: installing and upgrading the forum stays a reviewed,
+manual step (`deployment/forum/RUNBOOK.md`).
+
+- The image is tagged with the **forum revision**: the last commit that changed one of its inputs
+  (`FORUM_INPUTS` in `changed-components.mjs`, which mirrors `deployment/forum/Dockerfile.dockerignore`;
+  a test enforces that). Docs, tests and portal changes do not move it.
+- If that tag is already in the registry, nothing is built or pushed. Otherwise the job builds it
+  from the exact commit (whose forum inputs equal the revision's), checks the revision label and
+  that no bridge tests or local settings ship, pushes it, and writes `RELEASE_SHA` and
+  `RELEASE_DIGEST` for the forum's `.env` into the job summary.
+- CI's `images / build` has already built the same Dockerfile for this commit and run the bridge
+  integration test against it, with a restart, before this job can start.
+- Forum host files (`compose.yaml`, the `*.env.example` files, `backup.sh`, `restore.sh`) are
+  server configuration: a change is reported, never applied.
+
 On the server, `redactplus-deploy deploy …`:
 1. validates every argument against a strict pattern; refuses anything else;
 2. refuses a run number that is not newer than the last deployed run (an older run can never
@@ -139,7 +158,7 @@ Residual risks, accepted for now:
      | Variable | Value |
      |---|---|
      | `CD_ENABLED` | Leave unset (off). `true` switches automation on |
-     | `CD_COMPONENTS` | `portal` first; later `marketing,portal` |
+     | `CD_COMPONENTS` | `portal` first; later `marketing,portal`. Add `forum` to publish the forum image (never deployed) |
      | `DEPLOY_HOST` | The production server's address |
      | `PORTAL_EXPECTED_ACCESS` | Unset (= `staff-preview`). Change only after public access is separately approved |
      | `TURNSTILE_SITE_KEY` | Public site key of the registration security check (required for marketing builds) |

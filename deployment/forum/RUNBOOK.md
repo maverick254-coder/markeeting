@@ -22,13 +22,24 @@ explicit go-ahead. The portal keeps the forum off until the last step.
      trial registration already verifies them.
 4. **Registry access** for `registry.safaridesk.io/safari/redactplus-forum`.
 
-## 2. Build (CI or a build machine, never the server)
+## 2. Build and publish (CI, never the server)
+
+CI builds this Dockerfile on every pull request and push to `main` and runs the bridge
+integration test against it (`images / build`). Publishing is part of the deployment workflow:
+with `forum` in the production environment's `CD_COMPONENTS`, each push to `main` publishes
+`registry.safaridesk.io/safari/redactplus-forum:<revision>` if it is not there yet, where the
+revision is the last commit that changed the image's inputs (`deployment/cd/README.md`, "The forum
+image"). That job's summary gives the `RELEASE_SHA` and `RELEASE_DIGEST` to use in §3. It never
+touches the server.
+
+Without CI (a build machine, never the server), use the same revision and push the result:
 
 ```bash
-docker build --platform linux/amd64 -f deployment/forum/Dockerfile --build-arg GIT_COMMIT="$(git rev-parse HEAD)" -t registry.safaridesk.io/safari/redactplus-forum:"$(git rev-parse HEAD)" .
+rev=$(node scripts/release/changed-components.mjs --head "$(git rev-parse HEAD)" | node -e 'process.stdin.on("data",d=>console.log(JSON.parse(d).forum.revision))')
+docker build --platform linux/amd64 -f deployment/forum/Dockerfile --build-arg GIT_COMMIT="$rev" -t registry.safaridesk.io/safari/redactplus-forum:"$rev" .
 ```
 
-Push it and record the digest. The build checks the NodeBB release commit and builds NodeBB's
+Record the digest after pushing. The build checks the NodeBB release commit and builds NodeBB's
 assets with a throwaway Redis that is not in the final image.
 
 ## 3. Install (files and secrets)
@@ -133,8 +144,9 @@ counts.
 
 ## 9. Upgrades and rollback
 
-- **Upgrade:** change the pinned versions in the Dockerfile, build in CI, run the bridge
-  integration test against the new image locally (LOCAL.md), then update `.env` (keep the old one
+- **Upgrade:** change the pinned versions in the Dockerfile and merge; CI runs the bridge
+  integration test against the new image and publishes it (§2). Then update `.env` from that job's
+  summary (keep the old one
   as `.env.previous`) and `docker compose up -d`. The schema upgrade runs on start.
 - **Rollback:** restore `.env.previous` and `docker compose up -d`. If the new version upgraded the
   schema, restore the backup taken before the upgrade (§8).
@@ -145,8 +157,8 @@ counts.
 
 - Keycloak `forum-moderator` role and its userinfo mapping (§1.3), confirmed by the Admin Panel team.
 - Disk space on the host (§1.2).
-- The image built and its digest recorded (§2); the Dockerfile has not been built yet, so the first
-  CI build is its first test.
+- The image published and its digest recorded (§2): switch it on with `forum` in
+  `CD_COMPONENTS`, then take `RELEASE_SHA` and `RELEASE_DIGEST` from the next run's summary.
 - Product sign-off on forum rules:
   - posting delays;
   - verified email required to post;

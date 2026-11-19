@@ -90,6 +90,13 @@ Then open `http://localhost:6097/login` and sign in with the first administrator
 Day-to-day moderation happens in the portal (`/forum/moderation`), by people with the Keycloak
 `forum-moderator` role. Do not make customers or moderators NodeBB administrators.
 
+**The image is read-only, so its assets are fixed.** Every built-in skin is pre-built into it, and
+the theme's startup rebuild is removed (`scripts/patch-harmony.js`, `scripts/prebuild-skins.js`;
+CI checks it with `test/skins-readonly.sh`). In NodeBB's admin UI, do not use **Rebuild & Restart**,
+create **custom skins**, or change theme or plugin styles: each of these makes NodeBB write into the
+image, which fails with `EROFS` and can stop the forum. Change assets in the Dockerfile and release a
+new image instead (§9).
+
 ## 5. Launch (turning the forum on in the portal)
 
 1. Add the `PORTAL_FORUM_*` settings to the portal's `app.env` (see `app.env.example`), with the

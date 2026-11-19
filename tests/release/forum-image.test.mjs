@@ -131,3 +131,31 @@ test("the check runs on the final runtime filesystem, without shipping the scrip
   assert.match(runtime.slice(check), /node \/opt\/redactplus-build\/verify-assets\.js \/usr\/src\/app/);
   assert.match(dockerfile, /^# syntax=docker\/dockerfile:1$/m, "RUN --mount needs BuildKit's Dockerfile syntax");
 });
+
+// Docker publishes no port for a container that is only on internal networks (Engine 28+), so the
+// administrators' tunnel goes to NodeBB's fixed address on its internal network (2026-11-19).
+test("NodeBB has no host port, only internal networks, and a fixed address the admin tunnel targets", () => {
+  const compose = YAML.parse(read("deployment/forum/compose.yaml"));
+  const forum = compose.services["redactplus-forum"];
+  assert.equal(forum.ports, undefined, "a published port would not work on internal networks and must not be relied on");
+  assert.equal(compose.services["redactplus-forum-db"].ports, undefined);
+  for (const name of Object.keys(forum.networks)) assert.equal(compose.networks[name].internal, true, `${name} is internal`);
+
+  const ip = forum.networks["redactplus-forum"].ipv4_address;
+  const { subnet, ip_range: range, gateway } = compose.networks["redactplus-forum"].ipam.config[0];
+  const toInt = (a) => a.split(".").reduce((n, o) => n * 256 + Number(o), 0);
+  const inside = (addr, cidr) => {
+    const [base, bits] = cidr.split("/");
+    const mask = bits === "0" ? 0 : (0xffffffff << (32 - Number(bits))) >>> 0;
+    return ((toInt(addr) & mask) >>> 0) === ((toInt(base) & mask) >>> 0);
+  };
+  assert.ok(inside(ip, subnet), `${ip} is in ${subnet}`);
+  assert.ok(!inside(ip, range), `${ip} is outside the dynamic range ${range}, so the portal can never take it`);
+  assert.ok(inside(gateway, range) || inside(gateway, subnet));
+  assert.ok(!inside(subnet.split("/")[0], "10.0.0.0/8"), "outside the host's Docker address pool (10.0.0.0/8)");
+
+  const runbook = read("deployment/forum/RUNBOOK.md");
+  assert.match(runbook, new RegExp(`ssh -L 6097:${ip.replace(/\./g, "\.")}:4567 root@`), "RUNBOOK §4 tunnels to that address");
+  assert.doesNotMatch(runbook + read("deployment/forum/README.md"), /127\.0\.0\.1:6097/);
+  assert.match(read("deployment/forum/forum.env.example"), /^FORUM_URL=http:\/\/localhost:6097$/m, "the tunnel's local port is FORUM_URL's");
+});

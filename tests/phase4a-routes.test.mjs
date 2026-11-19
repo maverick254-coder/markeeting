@@ -33,13 +33,19 @@ test("the published CMS article renders and remains discoverable across Insights
   assert.doesNotMatch(hubHtml, /Practical guidance for safer redaction/);
   assert.match(hubHtml, /aria-label="Featured insight"/);
   assert.match(hubHtml, /%2Fimages%2Fproduct%2Feditorial-document-cover\.png/);
-  assert.doesNotMatch(hubHtml, /aria-label="Filter content by type"/);
+  // Four published stories across two types (article, guide) and four categories: the
+  // hub offers the type, category and tag rows, but never a filter for an empty type.
+  assert.match(hubHtml, /aria-label="Filter content by type"/);
+  assert.match(hubHtml, />\s*Industry Insights\s*</);
+  assert.match(hubHtml, />\s*Guides &amp; Tutorials\s*</);
   assert.doesNotMatch(hubHtml, />\s*Company News\s*</);
   assert.doesNotMatch(hubHtml, />\s*Product Updates\s*</);
-  assert.doesNotMatch(hubHtml, />\s*Guides &amp; Tutorials\s*</);
-  assert.doesNotMatch(hubHtml, /aria-label="Article categories"/);
-  assert.doesNotMatch(hubHtml, /aria-label="Filter content by tag"/);
+  assert.match(hubHtml, /aria-label="Article categories"/);
+  assert.match(hubHtml, /aria-label="Filter content by tag"/);
   assert.match(hubHtml, /Understanding Document Redaction and Why It Matters/);
+  assert.match(hubHtml, /Why Audio Redaction Is Reviewed on a Timeline/);
+  assert.match(hubHtml, /A Reviewer&#x27;s Checklist Before You Share a Redacted File/);
+  assert.match(hubHtml, /Redacting Scanned Documents: Where OCR Helps and Where to Look Twice/);
   assert.doesNotMatch(hubHtml, /No content has been published yet/i);
   assert.doesNotMatch(hubHtml, /coming soon|sample article|untitled article/i);
   assert.match(articleHtml, /rel="canonical" href="https:\/\/saferedact\.io\/blog\/understanding-document-redaction"/);
@@ -49,7 +55,7 @@ test("the published CMS article renders and remains discoverable across Insights
   assert.doesNotMatch(sitemapXml, /cms-publishing-test/);
   assert.match(hubHtml, /<form[^>]+role="search"/);
   assert.match(tagHtml, /<form[^>]+role="search"/);
-  assert.doesNotMatch(tagHtml, /aria-label="Filter content by type"/);
+  assert.match(tagHtml, /aria-label="Filter content by type"/);
 });
 
 test("an empty Insights search explains the result and offers a server-rendered reset", async () => {
@@ -92,7 +98,8 @@ test("a long-form article exposes breadcrumbs, matching heading anchors, TOC, an
   assert.ok(sidebar, "the sticky article sidebar should have an explicit scroll-owner boundary");
   assert.doesNotMatch(sidebar[1], /(?:max-h-|overflow-y-auto|overscroll-contain)/);
   assert.match(html, /data-toc-scroll-region="true"/);
-  assert.doesNotMatch(html, /id="related-articles-heading"/);
+  // Other published stories exist, so the article closes with related posts.
+  assert.match(html, /id="related-articles-heading"/);
   // The article itself makes no download or sign-in claim; the shared header and dialog do offer Download.
   const main = html.match(/<main\b[\s\S]*<\/main>/);
   assert.ok(main, "the article has a main element");
@@ -398,7 +405,7 @@ test("the legacy newsroom URL permanently redirects into the Insights news filte
   assert.equal(response.headers.get("location"), "/blog?type=news");
 });
 
-test("Insights hides redundant controls on the one-story hub and keeps an escape on filtered views", async () => {
+test("Insights offers only the content types it has and keeps an escape on filtered views", async () => {
   const [response, filteredResponse] = await Promise.all([
     get("/blog"),
     get("/blog?type=article"),
@@ -407,11 +414,12 @@ test("Insights hides redundant controls on the one-story hub and keeps an escape
 
   assert.equal(response.status, 200);
   assert.equal(filteredResponse.status, 200);
-  for (const label of ["All content", "Industry Insights"]) {
-    assert.ok(!html.includes(label), `the one-story hub must hide the redundant ${label} filter`);
+  // Articles and guides are published, so both filters and All content are offered.
+  for (const label of ["All content", "Industry Insights", "Guides &amp; Tutorials"]) {
+    assert.ok(html.includes(label), `the hub must offer the ${label} filter`);
     assert.ok(filteredHtml.includes(label), `a filtered view must offer the ${label} control`);
   }
-  for (const label of ["Company News", "Product Updates", "Guides &amp; Tutorials"]) {
+  for (const label of ["Company News", "Product Updates"]) {
     assert.ok(!html.includes(label), `the hub must not offer an empty ${label} filter`);
   }
 
@@ -419,8 +427,8 @@ test("Insights hides redundant controls on the one-story hub and keeps an escape
   assert.match(html, /href="\/blog"/);
   assert.doesNotMatch(html, /href="\/news"/);
 
-  // With one published article, neither the content-type nor category row adds useful
-  // choice on the hub. A deliberate filtered URL still retains an escape to all content.
+  // The category row never adds a redundant "All posts" link; a deliberate filtered URL
+  // still retains an escape to all content.
   assert.doesNotMatch(html, /All posts/);
   assert.match(
     filteredHtml,

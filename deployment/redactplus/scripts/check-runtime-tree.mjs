@@ -44,6 +44,8 @@ for (const required of [
   "public/favicon.svg",
   "public/images/product",
   "src/lib/comments/postgres/schema.sql",
+  // Read at request time by /admin/config.yml; without it the route answers ENOENT.
+  "config/decap-cms.yml",
 ]) {
   if (!(await exists(required))) fail(`missing ${required}`);
 }
@@ -91,7 +93,9 @@ for (const name of retiredImages) {
 }
 
 const forbidden = [
-  [/^(assets|docs|tests|services|deployment|scripts|config)\//, "source-tree directory"],
+  [/^(assets|docs|tests|services|deployment|scripts)\//, "source-tree directory"],
+  // Only the public Decap template is shipped from config/.
+  [/^config\/(?!decap-cms\.yml$)./, "source-tree config file"],
   [/^\.git\//, "Git metadata"],
   [/(^|\/)product-screenshots\//, "screenshot masters"],
   [/(^|\/)\.env(\.|$)/, "environment file"],

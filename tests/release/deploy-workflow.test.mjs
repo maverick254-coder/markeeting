@@ -1,6 +1,8 @@
 // Guards the automatic deployment workflow's safety properties (docs/ci/README.md).
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
@@ -106,4 +108,34 @@ test("the forum image is published only: never deployed, and only when its revis
   assert.match(decide, /if enabled_for forum && /, "CD_COMPONENTS must name the forum");
   assert.deepEqual(jobs.notify.needs, ["plan", "marketing", "portal", "forum"]);
   assert.match(jobs.notify.steps[0].run, /\$MARKETING \$PORTAL \$FORUM/);
+});
+
+// Runs one of the plan job's steps for real with bash, as GitHub would, and returns its outputs.
+function runPlanStep(id, env) {
+  const dir = mkdtempSync(path.join(tmpdir(), "rp-plan-"));
+  const files = { GITHUB_OUTPUT: path.join(dir, "output"), GITHUB_STEP_SUMMARY: path.join(dir, "summary") };
+  for (const file of Object.values(files)) writeFileSync(file, "");
+  const step = jobs.plan.steps.find((s) => s.id === id);
+  execFileSync("bash", ["-c", step.run], { cwd: root, env: { ...process.env, RUNNER_TEMP: dir, ...files, ...env }, stdio: ["ignore", "ignore", "pipe"] });
+  const outputs = Object.fromEntries(readFileSync(files.GITHUB_OUTPUT, "utf8").trim().split("\n").filter(Boolean).map((l) => l.split(/=(.*)/s, 2)));
+  return { outputs, summary: readFileSync(files.GITHUB_STEP_SUMMARY, "utf8") };
+}
+
+test("a forum-only run never asks the server, so it needs no SSH secrets", () => {
+  const ask = jobs.plan.steps.find((s) => /ssh /.test(s.run ?? ""));
+  assert.equal(ask.if, "steps.gate.outputs.enabled == 'true' && steps.scope.outputs.server == 'true'");
+  const cases = { forum: "false", "": "false", portal: "true", "marketing,portal": "true", "forum, portal": "true", "marketing,forum": "true", portals: "false" };
+  for (const [components, server] of Object.entries(cases)) {
+    assert.equal(runPlanStep("scope", { CD_COMPONENTS: components }).outputs.server, server, `CD_COMPONENTS=${JSON.stringify(components)}`);
+  }
+});
+
+test("without the server's status, the plan publishes the forum and deploys nothing", () => {
+  const sha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+  const { outputs, summary } = runPlanStep("decide", { SHA: sha, CD_COMPONENTS: "forum", SERVER: "false" });
+  assert.equal(outputs.marketing, "false");
+  assert.equal(outputs.portal, "false");
+  assert.equal(outputs.forum, "true");
+  assert.match(outputs.forum_revision, /^[0-9a-f]{40}$/);
+  assert.match(summary, /marketing, portal: not enabled; the server was not asked/);
 });

@@ -17,7 +17,8 @@
 #   7. The forum image is only published, never deployed: the forced command does not know the
 #      forum, and installing or upgrading it stays a reviewed manual step
 #      (deployment/forum/RUNBOOK.md). It is tagged with the last commit that changed its inputs,
-#      and a run publishes it only when that tag is missing from the registry.
+#      and a run publishes it only when that tag is missing from the registry. A run whose
+#      CD_COMPONENTS names only "forum" never connects to the server at all (no SSH secrets).
 #
 # Environment "production" (Settings → Environments):
 #   deployment branches: main only;  required reviewers: none (automatic) or as agreed
@@ -85,8 +86,22 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Ask the server what is deployed
+      # Publish-only components (the forum image) never touch the server. A run that enables
+      # only those skips the SSH status call below, so it needs no deploy key or DEPLOY_HOST.
+      - name: Which components need the server?
         if: steps.gate.outputs.enabled == 'true'
+        id: scope
+        env:
+          CD_COMPONENTS: ${{ vars.CD_COMPONENTS }}
+        run: |
+          server=false
+          for c in marketing portal; do
+            [[ ",${CD_COMPONENTS// /}," == *",$c,"* ]] && server=true
+          done
+          echo "server=${server}" >> "$GITHUB_OUTPUT"
+
+      - name: Ask the server what is deployed
+        if: steps.gate.outputs.enabled == 'true' && steps.scope.outputs.server == 'true'
         env:
           DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
           DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
@@ -108,7 +123,10 @@ jobs:
         env:
           SHA: ${{ github.sha }}
           CD_COMPONENTS: ${{ vars.CD_COMPONENTS }}
+          SERVER: ${{ steps.scope.outputs.server }}
         run: |
+          # The server was not asked: marketing and portal are not enabled (masked below).
+          if [ "$SERVER" != "true" ]; then : > "$RUNNER_TEMP/status-marketing"; : > "$RUNNER_TEMP/status-portal"; fi
           field() { grep -E "^$2=" "$RUNNER_TEMP/status-$1" | head -1 | cut -d= -f2-; }
           # Production marketing images always carry the Download dialog (Create account and
           # Sign in). One built before that (no portal URL label) is replaced whatever changed.
@@ -134,8 +152,12 @@ jobs:
           {
             echo "### Plan for ${SHA}"
             echo "- automation enabled for: \`${CD_COMPONENTS:-none}\`"
-            echo "- marketing: $(decision 'd.marketing.deploy+" ("+d.marketing.reason+")"')"
-            echo "- portal: $(decision 'd.portal.deploy+" ("+d.portal.reason+")"')"
+            if [ "$SERVER" = "true" ]; then
+              echo "- marketing: $(decision 'd.marketing.deploy+" ("+d.marketing.reason+")"')"
+              echo "- portal: $(decision 'd.portal.deploy+" ("+d.portal.reason+")"')"
+            else
+              echo "- marketing, portal: not enabled; the server was not asked"
+            fi
             echo "- forum image (publish only, revision \`${forum_rev:-none}\`): ${forum}"
           } >> "$GITHUB_STEP_SUMMARY"
           server=$(decision 'd.serverConfig.join(", ")')

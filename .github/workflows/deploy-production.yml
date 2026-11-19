@@ -35,8 +35,22 @@
 # registration switch; the server refuses a release whose registration route is not configured.
 name: Deploy production
 
+# A called workflow sees only the secrets its caller passes, environment secrets included: an
+# unpassed one is silently empty. ci.yml passes exactly these, by name (never `inherit`); each
+# still resolves from the "production" environment of the job that reads it.
 on:
   workflow_call:
+    secrets:
+      REGISTRY_USERNAME:
+        required: false
+      REGISTRY_PASSWORD:
+        required: false
+      DEPLOY_SSH_KEY:
+        required: false
+      DEPLOY_SSH_KNOWN_HOSTS:
+        required: false
+      DEPLOY_NOTIFY_WEBHOOK:
+        required: false
 
 permissions:
   contents: read
@@ -297,20 +311,31 @@ jobs:
           REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         run: |
           [[ "$REV" =~ ^[0-9a-f]{40}$ ]] || { echo "::error::bad forum revision"; exit 1; }
+          if [ -z "$REGISTRY_USERNAME" ] || [ -z "$REGISTRY_PASSWORD" ]; then
+            echo "::error::REGISTRY_USERNAME or REGISTRY_PASSWORD is empty (set in the production environment, and passed by ci.yml's deploy job?)"
+            exit 1
+          fi
           image="registry.safaridesk.io/safari/redactplus-forum:${REV}"
           echo "TAG=$REV" >> "$GITHUB_ENV"
           echo "IMAGE=$image" >> "$GITHUB_ENV"
-          printf '%s' "$REGISTRY_PASSWORD" | docker login registry.safaridesk.io --username "$REGISTRY_USERNAME" --password-stdin >/dev/null
-          trap 'docker logout registry.safaridesk.io >/dev/null 2>&1 || true' EXIT
-          if out=$(docker manifest inspect "$image" 2>&1); then
-            echo "published=true" >> "$GITHUB_OUTPUT"
-            echo "Forum image \`$image\` is already in the registry; nothing was built or pushed." >> "$GITHUB_STEP_SUMMARY"
-          elif grep -qiE 'no such manifest|manifest unknown|not found' <<<"$out"; then
-            echo "published=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "::error::the registry could not be asked about $image"
-            exit 1
-          fi
+          # HEAD the manifest and decide on the HTTP status only: 200 = published, 404 = build,
+          # anything else (401, 5xx, no answer) = fail. The credentials reach curl on stdin as a
+          # config file, never on its command line.
+          quote() { local v=$1 bs='\' dq='"'; v=${v//"$bs"/"$bs$bs"}; printf '%s' "${v//"$dq"/"$bs$dq"}"; }
+          status=$(printf 'user = "%s:%s"\n' "$(quote "$REGISTRY_USERNAME")" "$(quote "$REGISTRY_PASSWORD")" \
+            | curl --config - --silent --head --output /dev/null --write-out '%{http_code}' --max-time 30 \
+                -H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json' \
+                "https://registry.safaridesk.io/v2/safari/redactplus-forum/manifests/${REV}") || status=000
+          case "$status" in
+            200)
+              echo "published=true" >> "$GITHUB_OUTPUT"
+              echo "Forum image \`$image\` is already in the registry; nothing was built or pushed." >> "$GITHUB_STEP_SUMMARY" ;;
+            404)
+              echo "published=false" >> "$GITHUB_OUTPUT" ;;
+            *)
+              echo "::error::the registry answered HTTP ${status} for $image (expected 200 or 404)"
+              exit 1 ;;
+          esac
       - name: Build the forum image
         if: steps.registry.outputs.published == 'false'
         run: |

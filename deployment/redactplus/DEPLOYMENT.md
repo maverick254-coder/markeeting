@@ -55,6 +55,14 @@ Later releases are recorded in `releases.log` on the server, not here.
 Before step 8, snapshot the current state for step 12:
 `docker ps --format '{{.Names}} {{.Status}}' | sort > /root/deploy/redactplus-landing/pre-release-ps.txt`.
 
+### Steps 3–5 without a local build machine
+
+With `marketing-publish` in the production environment's `CD_COMPONENTS` (and `TURNSTILE_SITE_KEY` set),
+CI does steps 3–5 for every push to main that changes a marketing image input: `build-image.sh` with
+the production settings, the smoke test, and a digest-addressed push. It never deploys. The run's
+summary ("publish / marketing image") gives the `RELEASE_SHA` and `RELEASE_DIGEST` for step 7; the
+approval for step 5 is the merge to main. Continue from step 6 by hand.
+
 ## Design switch (A ↔ B)
 
 This is a normal release of a different commit. Steps 1–9 and 11 apply, and step 10 doesn't: DNS, Nginx and the certificate stay as they are.

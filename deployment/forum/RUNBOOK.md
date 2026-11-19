@@ -54,7 +54,10 @@ Copy `compose.yaml`, `scripts/backup.sh` and `scripts/restore.sh` there. Then cr
 - `.env` with `RELEASE_SHA` and `RELEASE_DIGEST`;
 - `forum.env` from `forum.env.example` (mode 600);
 - `db.env` from `db.env.example` (mode 600, the same password as `FORUM_DB_PASSWORD`);
-- `secrets/admin-password` (mode 600, 20+ random characters, used only on the first start).
+- `secrets/admin-password` (20+ random characters, used only on the first start; mode 600 and
+  owned by uid 1000, NodeBB's user in the container, which reads it:
+  `chown 1000:1000 secrets/admin-password && chmod 600 secrets/admin-password`. `/root` and this
+  directory are root-only, so no host user can reach it).
 
 Generate every secret on the server: `openssl rand -base64 48 | tr -d '\n=' | tr '+/' '-_'`.
 
@@ -80,16 +83,27 @@ Expect `{"ok":true,"data":{"status":"ready","categories":6,"acceptedAnswers":tru
 Only for administrators, over SSH:
 
 ```bash
-ssh -L 6097:172.30.97.10:4567 root@<server>
+ssh -L 6097:172.30.97.10:4567 root@31.97.42.73
 ```
 
-NodeBB has no host port: Docker publishes none for a container that is only on internal networks.
-The tunnel goes to its fixed address on the internal network `redactplus-forum` (`compose.yaml`).
-Keep the local side on port 6097: `FORUM_URL` is `http://localhost:6097`.
+NodeBB has no host port. Docker 29 (the server runs Engine 29.2.1) does not publish ports for a
+container that is only on internal networks: a `ports:` entry would be recorded and silently
+ignored. The tunnel therefore goes to NodeBB's fixed address on the internal network
+`redactplus-forum` (`compose.yaml`). Keep the local side on port 6097: `FORUM_URL` is
+`http://localhost:6097`.
 
 Then open `http://localhost:6097/login` and sign in with the first administrator. Immediately:
-1. turn on two-factor authentication for that account (2factor plugin);
-2. remove `secrets/admin-password` from the server.
+1. turn on two-factor authentication for that account (2factor plugin), and change its password;
+2. empty the first-start password file, keeping the file:
+
+   ```bash
+   cd /root/deploy/redactplus-forum && : > secrets/admin-password
+   ```
+
+   Do not delete it. Compose mounts it as a secret every time it creates the container (an
+   upgrade, `docker compose up -d` after a change, `down` and `up`), and refuses to create the
+   container if the file is missing. Emptied, it holds nothing: the forum reads it only when the
+   database is empty, and then refuses to start without a password (`scripts/bootstrap.js`).
 
 Day-to-day moderation happens in the portal (`/forum/moderation`), by people with the Keycloak
 `forum-moderator` role. Do not make customers or moderators NodeBB administrators.

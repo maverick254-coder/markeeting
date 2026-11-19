@@ -3,6 +3,7 @@
 // deployment/forum/test/skins-readonly.sh; these checks keep its pieces in place.
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -158,4 +159,71 @@ test("NodeBB has no host port, only internal networks, and a fixed address the a
   assert.match(runbook, new RegExp(`ssh -L 6097:${ip.replace(/\./g, "\.")}:4567 root@`), "RUNBOOK §4 tunnels to that address");
   assert.doesNotMatch(runbook + read("deployment/forum/README.md"), /127\.0\.0\.1:6097/);
   assert.match(read("deployment/forum/forum.env.example"), /^FORUM_URL=http:\/\/localhost:6097$/m, "the tunnel's local port is FORUM_URL's");
+});
+
+// First start: the administrator is created only with a real password (2026-11-19: the runbook told
+// operators to delete the password file, which then broke every container recreate).
+const { firstAdmin, MIN_PASSWORD } = createRequire(import.meta.url)("../../deployment/forum/scripts/bootstrap.js");
+
+test("first-time setup refuses a missing, empty or short administrator password with a clear error", () => {
+  const dir = mkdtempSync(path.join(tmpdir(), "rp-admin-"));
+  const file = (name, body) => { const p = path.join(dir, name); writeFileSync(p, body); return p; };
+  const env = (passwordFile) => ({ FORUM_ADMIN_USERNAME: "forum-admin", FORUM_ADMIN_EMAIL: "admin@forum.test", FORUM_ADMIN_PASSWORD_FILE: passwordFile });
+  const good = "x".repeat(MIN_PASSWORD + 8);
+
+  assert.deepEqual(firstAdmin(env(file("good", `${good}\n`))), { username: "forum-admin", email: "admin@forum.test", password: good });
+  const refused = [
+    [env(path.join(dir, "missing")), /cannot read the administrator password file .*missing \(ENOENT\)/],
+    [env(file("empty", "")), /is empty, but the database is empty too.*No administrator was created/],
+    [env(file("blank", "  \n\t\n")), /is empty, but the database is empty too/],
+    [env(file("short", "x".repeat(MIN_PASSWORD - 1))), /shorter than 12 characters\. No administrator was created/],
+    [{ ...env(file("ok1", good)), FORUM_ADMIN_PASSWORD_FILE: "" }, /needs FORUM_ADMIN_PASSWORD_FILE/],
+    [{ ...env(file("ok2", good)), FORUM_ADMIN_USERNAME: " " }, /needs FORUM_ADMIN_USERNAME/],
+    [{ ...env(file("ok3", good)), FORUM_ADMIN_EMAIL: "" }, /needs FORUM_ADMIN_EMAIL/],
+  ];
+  for (const [input, message] of refused) assert.throws(() => firstAdmin(input), message);
+});
+
+test("bootstrap checks the password only on an empty database, and guards NodeBB setup itself", () => {
+  const source = read("deployment/forum/scripts/bootstrap.js");
+  const emptyBranch = source.slice(source.indexOf("if (!installed) {"), source.indexOf("} else {", source.indexOf("if (!installed) {")));
+  assert.ok(emptyBranch.indexOf("firstAdmin()") > 0, "read only when the database is empty");
+  assert.ok(emptyBranch.indexOf("firstAdmin()") < emptyBranch.indexOf("run(['app.js'"), "before NodeBB setup runs");
+  assert.match(emptyBranch, /setup\['admin:password'\]\.length < MIN_PASSWORD\) \{\s*console\.error\([^)]*\);\s*process\.exit\(1\);/, "a last guard right before setup");
+  assert.equal(source.split("firstAdmin()").length - 1, 1, "an existing database never reads the file");
+  assert.match(source, /if \(require\.main === module\) \(async \(\) => \{/, "requiring it (tests) starts nothing");
+});
+
+// Every file compose.yaml needs on the host must survive the runbook: Compose refuses to create a
+// container whose secret or required env_file is missing.
+function runbookDeletes(runbook, file) {
+  const names = [file, path.basename(file)];
+  return runbook.split(/\r?\n/).filter((line) =>
+    names.some((name) => line.includes(name)) &&
+    /\b(rm|remove|delete|unlink|shred)\b/i.test(line) &&
+    !/\b(do not|don't|never)\b/i.test(line));
+}
+
+test("the runbook never deletes a file compose.yaml needs, and empties the password file instead", () => {
+  const compose = YAML.parse(read("deployment/forum/compose.yaml"));
+  const needed = [
+    ...Object.values(compose.secrets).map((s) => s.file),
+    ...Object.values(compose.services).flatMap((s) => (s.env_file ?? []).filter((e) => e.required !== false).map((e) => e.path ?? e)),
+  ].map((p) => p.replace(/^\.\//, ""));
+  assert.ok(needed.includes("secrets/admin-password") && needed.includes("forum.env") && needed.includes("db.env"), needed.join(", "));
+
+  const runbook = read("deployment/forum/RUNBOOK.md");
+  for (const file of needed) assert.deepEqual(runbookDeletes(runbook, file), [], `RUNBOOK deletes ${file}`);
+  assert.match(runbook, /: > secrets\/admin-password/, "the password file is emptied, not deleted");
+  assert.match(runbook, /Compose mounts it as a secret every time it creates the container/);
+
+  // The check catches the instruction that broke the 2026-11-19 recreate.
+  assert.equal(runbookDeletes("2. remove `secrets/admin-password` from the server.", "secrets/admin-password").length, 1);
+  assert.equal(runbookDeletes("rm -f /root/deploy/redactplus-forum/db.env", "db.env").length, 1);
+});
+
+test("RUNBOOK §4 tunnels to the production server and explains why there is no host port", () => {
+  const runbook = read("deployment/forum/RUNBOOK.md");
+  assert.match(runbook, /^ssh -L 6097:172\.30\.97\.10:4567 root@31\.97\.42\.73$/m);
+  assert.match(runbook, /Docker 29 .*does not publish ports for a\s+container that is only on internal networks/s);
 });

@@ -1,6 +1,6 @@
 // Guards the automatic deployment workflow's safety properties (docs/ci/README.md).
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -99,7 +99,7 @@ test("the forum image is published only: never deployed, and only when its revis
   const runs = forum.steps.map((s) => s.run ?? "").join("\n");
   assert.doesNotMatch(runs, /remote-deploy\.sh|ssh /, "the forum is installed by hand (deployment/forum/RUNBOOK.md)");
   assert.doesNotMatch(JSON.stringify(forum), /DEPLOY_SSH_KEY|DEPLOY_HOST/);
-  assert.match(runs, /docker manifest inspect "\$image"/, "an existing tag is never rebuilt or overwritten");
+  assert.match(runs, /--head .*\n.*\n.*\/v2\/safari\/redactplus-forum\/manifests\/\$\{REV\}/, "an existing tag is never rebuilt or overwritten");
   for (const s of forum.steps.filter((s) => /docker build|publish-image\.sh/.test(s.run ?? ""))) {
     assert.equal(s.if, "steps.registry.outputs.published == 'false'");
   }
@@ -116,7 +116,9 @@ function runPlanStep(id, env) {
   const files = { GITHUB_OUTPUT: path.join(dir, "output"), GITHUB_STEP_SUMMARY: path.join(dir, "summary") };
   for (const file of Object.values(files)) writeFileSync(file, "");
   const step = jobs.plan.steps.find((s) => s.id === id);
-  execFileSync("bash", ["-c", step.run], { cwd: root, env: { ...process.env, RUNNER_TEMP: dir, ...files, ...env }, stdio: ["ignore", "ignore", "pipe"] });
+  // From a file, not `bash -c`: Windows command-line quoting would mangle \' and \" in the script.
+  writeFileSync(path.join(dir, "step.sh"), step.run);
+  execFileSync("bash", [path.join(dir, "step.sh")], { cwd: root, env: { ...process.env, RUNNER_TEMP: dir, ...files, ...env }, stdio: ["ignore", "ignore", "pipe"] });
   const outputs = Object.fromEntries(readFileSync(files.GITHUB_OUTPUT, "utf8").trim().split("\n").filter(Boolean).map((l) => l.split(/=(.*)/s, 2)));
   return { outputs, summary: readFileSync(files.GITHUB_STEP_SUMMARY, "utf8") };
 }
@@ -138,4 +140,68 @@ test("without the server's status, the plan publishes the forum and deploys noth
   assert.equal(outputs.forum, "true");
   assert.match(outputs.forum_revision, /^[0-9a-f]{40}$/);
   assert.match(summary, /marketing, portal: not enabled; the server was not asked/);
+});
+
+test("every secret the deployment reads is declared and passed by name from CI (or it is silently empty)", () => {
+  // A called workflow sees only the secrets its caller passes, environment secrets included.
+  const used = [...new Set([...text.matchAll(/secrets\.([A-Z0-9_]+)/g)].map((m) => m[1]))].sort();
+  assert.ok(used.includes("REGISTRY_USERNAME") && used.includes("REGISTRY_PASSWORD"));
+  assert.deepEqual(Object.keys(wf.on.workflow_call.secrets ?? {}).sort(), used, "declared under on.workflow_call.secrets");
+  const ciText = read(".github/workflows/ci.yml");
+  const caller = YAML.parse(ciText).jobs.deploy;
+  assert.equal(caller.uses, "./.github/workflows/deploy-production.yml");
+  assert.equal(typeof caller.secrets, "object", "CI passes them by name, never `inherit`");
+  assert.deepEqual(Object.keys(caller.secrets).sort(), used);
+  for (const name of used) assert.equal(caller.secrets[name], `\${{ secrets.${name} }}`);
+  assert.doesNotMatch(ciText, /secrets:\s*inherit/);
+});
+
+// Runs the forum job's registry check for real with bash, against a stand-in curl that answers
+// with the given HTTP status and records how it was called.
+function registryCheck({ status, curlExit = 0, username = "ci-user", password = 'p"a\\ss:word' }) {
+  const dir = mkdtempSync(path.join(tmpdir(), "rp-registry-"));
+  const files = { GITHUB_OUTPUT: path.join(dir, "output"), GITHUB_STEP_SUMMARY: path.join(dir, "summary"), GITHUB_ENV: path.join(dir, "env") };
+  for (const file of Object.values(files)) writeFileSync(file, "");
+  // Credentials are read from files, as plain data the step receives in its environment.
+  writeFileSync(path.join(dir, "user"), username);
+  writeFileSync(path.join(dir, "pass"), password);
+  const creds = 'REGISTRY_USERNAME=$(cat "$RUNNER_TEMP/user"); REGISTRY_PASSWORD=$(cat "$RUNNER_TEMP/pass")\n';
+  const stub = creds + `curl() { printf '%s\n' "$@" > "$RUNNER_TEMP/curl-args"; cat > "$RUNNER_TEMP/curl-config"; printf '%s' "$STUB_STATUS"; return "$STUB_EXIT"; }\n`;
+  const step = jobs.forum.steps.find((s) => s.id === "registry");
+  writeFileSync(path.join(dir, "step.sh"), stub + step.run);
+  const result = spawnSync("bash", [path.join(dir, "step.sh")], {
+    cwd: root,
+    encoding: "utf8",
+    env: { ...process.env, ...files, RUNNER_TEMP: dir, REV: "a".repeat(40), STUB_STATUS: status, STUB_EXIT: String(curlExit) },
+  });
+  const maybe = (file) => { try { return readFileSync(path.join(dir, file), "utf8"); } catch { return null; } };
+  return { code: result.status, stdout: result.stdout, output: readFileSync(files.GITHUB_OUTPUT, "utf8"), args: maybe("curl-args"), config: maybe("curl-config") };
+}
+
+test("the registry check decides on the HTTP status of HEAD /v2/<repo>/manifests/<tag> only", () => {
+  const found = registryCheck({ status: "200" });
+  assert.equal(found.code, 0);
+  assert.match(found.output, /^published=true$/m);
+  assert.ok(found.args.split("\n").includes(`https://registry.safaridesk.io/v2/safari/redactplus-forum/manifests/${"a".repeat(40)}`));
+  assert.ok(found.args.split("\n").includes("--head"));
+  assert.doesNotMatch(found.args, /ci-user|ss:word/, "credentials never on curl's command line");
+  assert.equal(found.config.trim(), 'user = "ci-user:p\\"a\\\\ss:word"', "credentials reach curl on stdin, quoted for its config syntax");
+
+  const missing = registryCheck({ status: "404" });
+  assert.equal(missing.code, 0);
+  assert.match(missing.output, /^published=false$/m);
+
+  for (const [status, curlExit] of [["401", 0], ["500", 0], ["000", 7], ["", 28]]) {
+    const failed = registryCheck({ status, curlExit });
+    assert.notEqual(failed.code, 0, `HTTP "${status}" (curl exit ${curlExit}) must fail`);
+    assert.doesNotMatch(failed.output, /published=/);
+  }
+  assert.doesNotMatch(jobs.forum.steps.find((s) => s.id === "registry").run, /manifest inspect|grep/, "no error-wording matching");
+});
+
+test("an empty registry username fails with a clear message before asking the registry", () => {
+  const empty = registryCheck({ status: "200", username: "" });
+  assert.notEqual(empty.code, 0);
+  assert.equal(empty.args, null, "curl was never called");
+  assert.match(empty.stdout, /REGISTRY_USERNAME or REGISTRY_PASSWORD is empty/);
 });

@@ -35,7 +35,11 @@ test("CI is read-only, SHA-pinned, complete, and contains no deployment path", a
   }
 
   assert.doesNotMatch(workflow, /\b(?:deploy|release|publish)\b.*(?:run:|uses:)/i);
-  assert.doesNotMatch(workflow, /secrets\s*\.|NETLIFY_|VERCEL_|CLOUDFLARE_/i);
+  // The checks use no secrets. Only the final deploy job (the last job) names any: it passes the
+  // deployment secrets by name to deploy-production.yml (tests/release-pipeline.test.mjs).
+  const [checks, deployJob = ""] = workflow.split(/^  deploy:\s*$/m);
+  assert.doesNotMatch(checks, /secrets\s*\.|NETLIFY_|VERCEL_|CLOUDFLARE_/i);
+  assert.doesNotMatch(deployJob, /NETLIFY_|VERCEL_|CLOUDFLARE_|run:/i);
 });
 
 test("Decap source configuration is provider-neutral and generated from public deployment settings", async () => {

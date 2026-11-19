@@ -45,7 +45,12 @@ test("CI runs for main (PRs, pushes, merge queue, manual), stays read-only, and 
   assert.equal(deploy.if, "github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'Safe-Redact/Marketing-Site'");
   assert.equal(deploy.uses, "./.github/workflows/deploy-production.yml");
   assert.deepEqual(deploy.permissions, { contents: "read" });
-  assert.equal(deploy.secrets, undefined, "no secrets are handed down; they live in the production environment");
+  // A called workflow sees only the secrets its caller passes (environment secrets included), so
+  // exactly the deployment secrets are passed, by name and never `inherit`. They still resolve only
+  // in deploy-production.yml's jobs that run in the main-only "production" environment.
+  const passed = ["DEPLOY_NOTIFY_WEBHOOK", "DEPLOY_SSH_KEY", "DEPLOY_SSH_KNOWN_HOSTS", "REGISTRY_PASSWORD", "REGISTRY_USERNAME"];
+  assert.deepEqual(Object.keys(deploy.secrets).sort(), passed);
+  for (const name of passed) assert.equal(deploy.secrets[name], `\${{ secrets.${name} }}`);
   for (const [id, job] of Object.entries(ci.jobs)) {
     if (id !== "deploy") assert.ok(job.steps, `${id} runs steps, not a deployment`);
   }
@@ -61,8 +66,11 @@ test("CI runs for main (PRs, pushes, merge queue, manual), stays read-only, and 
     }
   }
 
-  // No credential, no registry write, no server access, no deployment.
-  assert.doesNotMatch(ciText, /\$\{\{\s*secrets\./);
+  // No credential, no registry write, no server access, no deployment. The only secrets are the
+  // five the deploy job (the last job) passes by name, checked above.
+  const checksText = ciText.split(/^  deploy:\s*$/m)[0];
+  assert.doesNotMatch(checksText, /\$\{\{\s*secrets\./);
+  assert.equal((ciText.match(/\$\{\{\s*secrets\./g) ?? []).length, passed.length);
   assert.doesNotMatch(ciText, /docker\s+(push|login)|--push\b|\bssh\b|scp\b|kubectl|deploy-hook|NETLIFY|VERCEL/i);
   assert.match(ciText, /build-image\.sh/, "images are built the way releases build them");
   assert.match(ciText, /gitleaks .*--redact/, "secret matches never reach the log");

@@ -279,3 +279,12 @@ jobs:
     permissions:
       contents: read
     uses: ./.github/workflows/deploy-production.yml
+    # Passed by name, never `inherit`: a called workflow gets no secret its caller does not pass,
+    # environment secrets included. Each resolves only in deploy-production.yml's jobs that run in
+    # the main-only "production" environment.
+    secrets:
+      REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+      REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+      DEPLOY_NOTIFY_WEBHOOK: ${{ secrets.DEPLOY_NOTIFY_WEBHOOK }}

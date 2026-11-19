@@ -45,6 +45,10 @@ With `forum` in `CD_COMPONENTS`, the job `deploy / forum image (publish only)` k
 the forced command does not know the forum: installing and upgrading the forum stays a reviewed,
 manual step (`deployment/forum/RUNBOOK.md`).
 
+When `CD_COMPONENTS` names only `forum`, the plan skips the `status` call as well, so publishing the
+forum image needs only `REGISTRY_USERNAME` and `REGISTRY_PASSWORD`: no deploy key, pinned host key
+or `DEPLOY_HOST`. Adding `marketing` or `portal` brings the server call (and those secrets) back.
+
 - The image is tagged with the **forum revision**: the last commit that changed one of its inputs
   (`FORUM_INPUTS` in `changed-components.mjs`, which mirrors `deployment/forum/Dockerfile.dockerignore`;
   a test enforces that). Docs, tests and portal changes do not move it.

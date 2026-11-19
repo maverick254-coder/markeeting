@@ -193,6 +193,11 @@ jobs:
           docker restart forum-ci
           healthy
           FORUM_BRIDGE_URL=http://127.0.0.1:4567 FORUM_BRIDGE_KEY="$key" node services/forum-bridge/test/integration.mjs --verify-persisted
+      # Production conditions the integration test does not have: more than 2 CPUs (GitHub's
+      # runners here have 2, production 4) and every skin stylesheet requested. Nothing at runtime
+      # may write into the read-only image (deployment/forum/test/skins-readonly.sh).
+      - name: Forum image on a read-only filesystem with production CPUs, every skin
+        run: bash deployment/forum/test/skins-readonly.sh "registry.safaridesk.io/safari/redactplus-forum:${GITHUB_SHA}"
       - name: Forum container logs
         if: failure()
         run: docker logs --tail 200 forum-ci 2>&1 || true

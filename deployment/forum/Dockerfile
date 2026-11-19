@@ -50,10 +50,16 @@ COPY services/forum-bridge/package.json services/forum-bridge/plugin.json servic
 COPY services/forum-bridge/lib node_modules/nodebb-plugin-redactplus-bridge/lib
 COPY services/forum-bridge/scripts node_modules/nodebb-plugin-redactplus-bridge/scripts
 COPY deployment/forum/scripts/write-config.js deployment/forum/scripts/bootstrap.js deployment/forum/scripts/entrypoint.sh /opt/redactplus/
+# Build-time only (not copied into the runtime image). At runtime the root filesystem is
+# read-only, so nothing may write into build/: the Harmony theme's startup skin rebuild is removed,
+# and every skin is built here, so a skin request never triggers NodeBB's on-demand build.
+COPY deployment/forum/scripts/patch-harmony.js deployment/forum/scripts/prebuild-skins.js /opt/redactplus-build/
+RUN node /opt/redactplus-build/patch-harmony.js
 RUN redis-server --daemonize yes --save '' --appendonly no \
  && FORUM_DATABASE=redis REDACTPLUS_CONFIG_PATH=/tmp/build-config.json FORUM_URL=http://localhost:4567 FORUM_SECRET=build-only \
     node /opt/redactplus/write-config.js \
  && node ./nodebb build --config /tmp/build-config.json --series \
+ && node /opt/redactplus-build/prebuild-skins.js /tmp/build-config.json \
  && redis-cli shutdown nosave \
  && rm -f /tmp/build-config.json \
  && rm -rf /root/.npm /tmp/*

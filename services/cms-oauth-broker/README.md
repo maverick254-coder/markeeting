@@ -2,7 +2,7 @@
 
 This is an isolated, independently deployable Node.js 22 HTTPS service for the Decap CMS GitHub authorization-code flow. It is not imported by the Next.js application and has no runtime dependencies.
 
-The broker accepts exact HTTPS CMS origins, requires an exact HTTPS callback equal to `OAUTH_PUBLIC_ORIGIN/callback`, uses PKCE S256 and signed single-use state, requests exactly `public_repo`, verifies immutable staff IDs plus repository push access, and posts the Decap result only to the transaction-bound opener origin. Client secrets, state keys, codes, and token exchange remain server-side; refresh tokens are neither stored nor returned.
+The broker accepts exact HTTPS CMS origins, requires an exact HTTPS callback equal to `OAUTH_PUBLIC_ORIGIN/callback`, uses PKCE S256 and signed single-use state, requests exactly the configured scope (`public_repo` for a public repository, `repo` for a private one), verifies immutable staff IDs plus repository push access, and posts the Decap result only to the transaction-bound opener origin. Client secrets, state keys, codes, and token exchange remain server-side; refresh tokens are neither stored nor returned.
 
 Copy `.env.example` to the ignored `.env.local` for development. Configure the GitHub OAuth App Homepage URL as the exact CMS origin and its sole Authorization callback URL as the exact `OAUTH_CALLBACK_URL`. Wildcard callback matching must remain disabled and expiring access tokens must remain enabled.
 
@@ -12,6 +12,8 @@ npm --prefix services/cms-oauth-broker run check
 npm --prefix services/cms-oauth-broker test
 npm run oauth:dev
 ```
+
+In production a reverse proxy on the same host may terminate HTTPS instead (`OAUTH_TLS_TERMINATION=proxy`, no certificate paths); the public origin and callback stay HTTPS. The RedactPlus deployment does this: `deployment/cms-oauth/README.md`.
 
 `npm run oauth:dev` is run from the repository root and loads this service's ignored `.env.local`. Production must inject the same variables through a secret store and use `npm --prefix services/cms-oauth-broker start`.
 

@@ -158,9 +158,12 @@ export function loadConfig(environment = {}) {
     throw new Error("OAuth broker configuration error: OAUTH_STATE_SECRET must be a 32-byte base64url key.");
   }
 
+  // public_repo for a public content repository, repo for a private one. GitHub scopes
+  // are not repository-specific, so nothing broader is accepted; the staff allowlist and
+  // the push-permission check on OAUTH_ALLOWED_REPOSITORY still apply to every login.
   const scope = required(environment, "OAUTH_GITHUB_SCOPE");
-  if (scope !== "public_repo") {
-    throw new Error("OAuth broker configuration error: OAUTH_GITHUB_SCOPE must be exactly public_repo.");
+  if (scope !== "public_repo" && scope !== "repo") {
+    throw new Error("OAuth broker configuration error: OAUTH_GITHUB_SCOPE must be exactly public_repo or repo.");
   }
 
   const transactionTtlSeconds = positiveInteger(

@@ -78,10 +78,15 @@ function branch(value) {
   return value;
 }
 
+// GitHub OAuth scopes are not repository-specific. public_repo reaches only public
+// repositories; a private content repository needs repo. Nothing broader is accepted,
+// and the broker (services/cms-oauth-broker) enforces the same set.
+const allowedScopes = new Set(["public_repo", "repo"]);
+
 function scope(value) {
-  if (value !== "public_repo") {
+  if (!allowedScopes.has(value)) {
     throw new Error(
-      "Invalid CMS configuration: CMS_AUTH_SCOPE must remain public_repo until a repository visibility review."
+      "Invalid CMS configuration: CMS_AUTH_SCOPE must be public_repo (public repository) or repo (private repository)."
     );
   }
   return value;

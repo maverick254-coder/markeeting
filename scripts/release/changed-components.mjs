@@ -78,6 +78,10 @@ export const SERVER_CONFIG = [
   "deployment/forum/db.env.example",
   "deployment/forum/scripts/backup.sh",
   "deployment/forum/scripts/restore.sh",
+  // The CMS login broker is installed by hand (deployment/cms-oauth/README.md).
+  "deployment/cms-oauth/compose.yaml",
+  "deployment/cms-oauth/broker.env.example",
+  "deployment/cms-oauth/nginx/",
   "deployment/shared/",
   "deployment/cd/",
 ];

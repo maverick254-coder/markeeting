@@ -11,7 +11,8 @@ Current deployment constraints:
 - GitHub OAuth expiring access tokens must be enabled; non-expiring token responses are rejected.
 - The current transaction store is in-memory, single-process, expiry-pruned, and capacity-bounded. Do not use multiple replicas or an ephemeral serverless runtime until a shared atomic consume-once TTL adapter is implemented and tested.
 - Rate limiting and request-volume controls remain deployment-edge responsibilities and are required before internet exposure.
-- The `public_repo` OAuth scope can reach public repositories available to the editor. The broker checks the configured repository and staff identity, but GitHub OAuth scopes are not repository-specific.
+- The OAuth scope is exactly `public_repo` (public repositories) or `repo` (needed for a private repository; it reaches every repository the editor can access, private ones included). The broker checks the configured repository and staff identity, but GitHub OAuth scopes are not repository-specific, so keep the staff allowlist short.
+- With `OAUTH_TLS_TERMINATION=proxy` the broker listens over plain HTTP and must be reachable only from the TLS-terminating proxy on the same host (a loopback-published port); that proxy must keep the callback query string and cookies out of its logs.
 - The returned token is held by Decap in the editor browser. A compromise of the approved admin origin can therefore compromise that token.
 
 Report suspected credential exposure by revoking the OAuth grant, rotating both broker secrets, invalidating active sessions, preserving sanitized evidence, and following OpenRedakt's incident process.

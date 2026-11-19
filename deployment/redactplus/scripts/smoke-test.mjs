@@ -70,6 +70,27 @@ if (expectedOrigin) {
     homeHtml.includes(`"url":"${expectedOrigin}`));
 }
 
+// --- Blog -------------------------------------------------------------------------
+// The homepage previews only the newest post: the one /blog features on its front page.
+{
+  const articleLinks = (html) => [...new Set([...html.matchAll(/href="(\/blog\/[^"/?#]+)"/g)].map((m) => m[1]))]
+    .filter((href) => !href.startsWith("/blog/category"));
+  const preview = /<section id="insights"[\s\S]*?<\/section>/.exec(homeHtml)?.[0] ?? "";
+  const previewed = articleLinks(preview);
+  const blogHtml = (await get("/blog")).body;
+  const featured = articleLinks(/aria-label="Featured story"[\s\S]*?<\/section>/.exec(blogHtml)?.[0] ?? "");
+  const listed = articleLinks(blogHtml);
+  const sitemapArticles = pages.filter((p) => /^\/blog\/[^/]+$/.test(p) && !p.startsWith("/blog/category"));
+  console.log(`NOTE  homepage previews ${previewed.join(", ") || "nothing"}; /blog lists ${listed.length} of ${sitemapArticles.length} sitemap articles`);
+  check("homepage previews exactly one blog post", previewed.length === 1, previewed.join(", "));
+  check("homepage preview is the post /blog features", featured.length === 1 && previewed[0] === featured[0], `${previewed[0]} vs ${featured[0]}`);
+  // The front page holds the featured story plus one page of six; beyond that, pagination.
+  if (sitemapArticles.length <= 7) {
+    check("/blog front page links every sitemap article", sitemapArticles.every((p) => listed.includes(p)),
+      sitemapArticles.filter((p) => !listed.includes(p)).join(", "));
+  }
+}
+
 {
   const { response, body } = await get("/robots.txt");
   check("robots.txt 200", response.status === 200);

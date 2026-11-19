@@ -106,8 +106,29 @@ test("the forum image is published only: never deployed, and only when its revis
   assert.match(runs, /--build-arg GIT_COMMIT="\$TAG"/);
   const decide = jobs.plan.steps.find((s) => s.id === "decide").run;
   assert.match(decide, /if enabled_for forum && /, "CD_COMPONENTS must name the forum");
-  assert.deepEqual(jobs.notify.needs, ["plan", "marketing", "portal", "forum"]);
-  assert.match(jobs.notify.steps[0].run, /\$MARKETING \$PORTAL \$FORUM/);
+  assert.deepEqual(jobs.notify.needs, ["plan", "marketing", "marketing-publish", "portal", "forum"]);
+  assert.match(jobs.notify.steps[0].run, /\$MARKETING \$MARKETING_IMAGE \$PORTAL \$FORUM/);
+});
+
+test("marketing-publish builds, smoke-tests and publishes the production image, and never deploys", () => {
+  const job = jobs["marketing-publish"];
+  assert.match(job.if, /needs\.plan\.outputs\.enabled == 'true'/);
+  assert.match(job.if, /needs\.plan\.outputs\.marketing_publish == 'true'/);
+  assert.equal(job.environment, "production");
+  assert.equal(job.concurrency.group, "production-marketing", "never races a full marketing deployment");
+  assert.equal(job.concurrency["cancel-in-progress"], false);
+  const runs = job.steps.map((s) => s.run ?? "").join("\n");
+  assert.doesNotMatch(runs, /remote-deploy\.sh|ssh /, "a published image is deployed by hand (DEPLOYMENT.md)");
+  assert.doesNotMatch(JSON.stringify(job), /DEPLOY_SSH_KEY|DEPLOY_HOST/);
+  // The same production build as a full deployment: Download dialog with its security check.
+  const build = job.steps.find((s) => /build-image\.sh/.test(s.run ?? ""));
+  assert.equal(build.env.NEXT_PUBLIC_PORTAL_URL, "https://home.redactplus.io");
+  assert.equal(build.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY, "${{ vars.TURNSTILE_SITE_KEY }}");
+  assert.match(build.run, /\[ -n "\$NEXT_PUBLIC_TURNSTILE_SITE_KEY" \] \|\| \{/, "refuses to build without the key");
+  const order = job.steps.map((s) => (/smoke-test\.mjs/.test(s.run ?? "") ? "smoke" : /publish-image\.sh/.test(s.run ?? "") ? "publish" : null)).filter(Boolean);
+  assert.deepEqual(order, ["smoke", "publish"], "nothing is published before its smoke test passes");
+  const decide = jobs.plan.steps.find((s) => s.id === "decide").run;
+  assert.match(decide, /if enabled_for marketing-publish && ! enabled_for marketing; then/);
 });
 
 // Runs one of the plan job's steps for real with bash, as GitHub would, and returns its outputs.
@@ -126,7 +147,7 @@ function runPlanStep(id, env) {
 test("a forum-only run never asks the server, so it needs no SSH secrets", () => {
   const ask = jobs.plan.steps.find((s) => /ssh /.test(s.run ?? ""));
   assert.equal(ask.if, "steps.gate.outputs.enabled == 'true' && steps.scope.outputs.server == 'true'");
-  const cases = { forum: "false", "": "false", portal: "true", "marketing,portal": "true", "forum, portal": "true", "marketing,forum": "true", portals: "false" };
+  const cases = { forum: "false", "": "false", "forum,marketing-publish": "false", "marketing-publish": "false", portal: "true", "marketing,portal": "true", "forum, portal": "true", "marketing,forum": "true", portals: "false" };
   for (const [components, server] of Object.entries(cases)) {
     assert.equal(runPlanStep("scope", { CD_COMPONENTS: components }).outputs.server, server, `CD_COMPONENTS=${JSON.stringify(components)}`);
   }
@@ -140,6 +161,17 @@ test("without the server's status, the plan publishes the forum and deploys noth
   assert.equal(outputs.forum, "true");
   assert.match(outputs.forum_revision, /^[0-9a-f]{40}$/);
   assert.match(summary, /marketing, portal: not enabled; the server was not asked/);
+});
+
+test("marketing-publish publishes when the push changed a marketing input, and a full deployment wins", () => {
+  // The commit that added this test changed tests and the workflow only; its parent is known.
+  const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+  const head = git("rev-parse", "HEAD");
+  const touched = git("log", "-1", "--format=%H", "--", "src/", "content/", "deployment/redactplus/scripts/");
+  const plan = (sha, components) => runPlanStep("decide", { SHA: sha, CD_COMPONENTS: components, SERVER: "false" }).outputs.marketing_publish;
+  assert.equal(plan(touched, "forum,marketing-publish"), "true", "a commit that changed the image publishes it");
+  assert.equal(plan(head, "forum"), "false", "off unless CD_COMPONENTS names it");
+  assert.equal(plan(touched, "marketing,marketing-publish"), "false", "a full deployment publishes instead");
 });
 
 test("every secret the deployment reads is declared and passed by name from CI (or it is silently empty)", () => {

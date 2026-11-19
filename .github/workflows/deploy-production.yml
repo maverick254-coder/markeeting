@@ -19,6 +19,10 @@
 #      (deployment/forum/RUNBOOK.md). It is tagged with the last commit that changed its inputs,
 #      and a run publishes it only when that tag is missing from the registry. A run whose
 #      CD_COMPONENTS names only "forum" never connects to the server at all (no SSH secrets).
+#   8. "marketing-publish" builds, smoke-tests and publishes the marketing image without
+#      deploying it, for releases installed by hand (deployment/redactplus/DEPLOYMENT.md). It
+#      publishes when this push changed a marketing image input (first parent to this commit),
+#      and never connects to the server. "marketing" (full deployment) takes precedence.
 #
 # Environment "production" (Settings → Environments):
 #   deployment branches: main only;  required reviewers: none (automatic) or as agreed
@@ -26,7 +30,8 @@
 #              DEPLOY_SSH_KEY, DEPLOY_SSH_KNOWN_HOSTS  forced-command key, pinned host key
 #              DEPLOY_NOTIFY_WEBHOOK                   optional, Slack-compatible incoming webhook
 #   variables: CD_ENABLED ("true" to deploy), CD_COMPONENTS ("portal" or "marketing,portal";
-#              add "forum" to publish the forum image),
+#              add "forum" to publish the forum image, "marketing-publish" to publish the
+#              marketing image for a manual deployment),
 #              DEPLOY_HOST, PORTAL_EXPECTED_ACCESS (default "staff-preview"),
 #              TURNSTILE_SITE_KEY (public site key of the registration security check; required)
 #
@@ -67,6 +72,7 @@ jobs:
       portal: ${{ steps.decide.outputs.portal }}
       forum: ${{ steps.decide.outputs.forum }}
       forum_revision: ${{ steps.decide.outputs.forum_revision }}
+      marketing_publish: ${{ steps.decide.outputs.marketing_publish }}
     steps:
       - name: Gate (main push, switch, current head)
         id: gate
@@ -163,6 +169,16 @@ jobs:
           if enabled_for forum && [[ "$forum_rev" =~ ^[0-9a-f]{40}$ ]]; then forum=true; fi
           echo "forum=${forum}" >> "$GITHUB_OUTPUT"
           echo "forum_revision=${forum_rev}" >> "$GITHUB_OUTPUT"
+          # The marketing image is published for a manual deployment when this push changed one
+          # of its inputs. A full "marketing" deployment, when enabled, does that job instead.
+          marketing_publish=false
+          if enabled_for marketing-publish && ! enabled_for marketing; then
+            parent=$(git rev-parse --verify --quiet "${SHA}^1" || true)
+            node scripts/release/changed-components.mjs --head "$SHA" \
+              --marketing-base "$parent" --portal-base "" --marketing-flags-changed false > "$RUNNER_TEMP/publish.json"
+            marketing_publish=$(node -e "console.log(require(process.argv[1]).marketing.deploy)" "$RUNNER_TEMP/publish.json")
+          fi
+          echo "marketing_publish=${marketing_publish}" >> "$GITHUB_OUTPUT"
           {
             echo "### Plan for ${SHA}"
             echo "- automation enabled for: \`${CD_COMPONENTS:-none}\`"
@@ -173,6 +189,7 @@ jobs:
               echo "- marketing, portal: not enabled; the server was not asked"
             fi
             echo "- forum image (publish only, revision \`${forum_rev:-none}\`): ${forum}"
+            echo "- marketing image (publish only, for a manual deployment): ${marketing_publish}"
           } >> "$GITHUB_STEP_SUMMARY"
           server=$(decision 'd.serverConfig.join(", ")')
           if [ -n "$server" ]; then
@@ -240,6 +257,65 @@ jobs:
           code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 https://redactplus.io/)
           echo "public https://redactplus.io/: ${code}" | tee -a "$GITHUB_STEP_SUMMARY"
           [ "$code" = 200 ]
+
+  # Publish only: the same build, smoke test and digest-addressed push as the marketing job, then
+  # stop. The release is pinned and started by hand on the server (DEPLOYMENT.md), so this job
+  # has no SSH key and no host.
+  marketing-publish:
+    name: publish / marketing image
+    needs: plan
+    if: needs.plan.outputs.enabled == 'true' && needs.plan.outputs.marketing_publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: production
+    concurrency:
+      group: production-marketing
+      cancel-in-progress: false
+    steps:
+      - name: Check out the exact commit
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22
+      - name: Build the marketing image (build-image.sh, Download dialog with registration)
+        env:
+          SHA: ${{ github.sha }}
+          NEXT_PUBLIC_PORTAL_URL: https://home.redactplus.io
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
+        run: |
+          [ -n "$NEXT_PUBLIC_TURNSTILE_SITE_KEY" ] || { echo "::error::TURNSTILE_SITE_KEY is not set in the production environment"; exit 1; }
+          bash deployment/redactplus/scripts/build-image.sh "$SHA"
+          echo "TAG=$SHA" >> "$GITHUB_ENV"
+          echo "IMAGE=registry.safaridesk.io/safari/redactplus-landing:$SHA" >> "$GITHUB_ENV"
+      - name: Smoke-test the image before publishing
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          docker run --rm -d --name redactplus-smoke -p 127.0.0.1:3095:3000 --read-only \
+            --tmpfs /tmp --tmpfs /app/.next/cache:mode=1777 --tmpfs /app/.next/server/route-cache:mode=1777 \
+            --env-file deployment/redactplus/app.env.example "$IMAGE"
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:3095/api/health >/dev/null 2>&1 && break; sleep 2; done
+          EXPECT_CANONICAL_ORIGIN=https://redactplus.io node deployment/redactplus/scripts/smoke-test.mjs http://127.0.0.1:3095 "$SHA"
+          docker rm -f redactplus-smoke >/dev/null
+      - name: Publish (digest-addressed)
+        env:
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        run: bash .github/scripts/publish-image.sh
+      - name: How to deploy it
+        run: |
+          {
+            echo "Not deployed. To release it by hand (deployment/redactplus/DEPLOYMENT.md), pin in /root/deploy/redactplus-landing/.env:"
+            echo '```'
+            echo "RELEASE_SHA=$TAG"
+            echo "RELEASE_DIGEST=$DIGEST"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   portal:
     name: deploy / portal
@@ -366,7 +442,7 @@ jobs:
 
   notify:
     name: deploy / notify
-    needs: [plan, marketing, portal, forum]
+    needs: [plan, marketing, marketing-publish, portal, forum]
     if: always() && needs.plan.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -379,11 +455,12 @@ jobs:
           MARKETING: ${{ needs.marketing.result }}
           PORTAL: ${{ needs.portal.result }}
           FORUM: ${{ needs.forum.result }}
+          MARKETING_IMAGE: ${{ needs.marketing-publish.result }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           status="succeeded"
-          case "$MARKETING $PORTAL $FORUM" in *failure*|*cancelled*) status="FAILED" ;; esac
-          text="RedactPlus production deployment ${status} for ${SHA:0:12}: marketing=${MARKETING:-skipped}, portal=${PORTAL:-skipped}, forum image=${FORUM:-skipped}. ${RUN_URL}"
+          case "$MARKETING $MARKETING_IMAGE $PORTAL $FORUM" in *failure*|*cancelled*) status="FAILED" ;; esac
+          text="RedactPlus production deployment ${status} for ${SHA:0:12}: marketing=${MARKETING:-skipped}, portal=${PORTAL:-skipped}, marketing image=${MARKETING_IMAGE:-skipped}, forum image=${FORUM:-skipped}. ${RUN_URL}"
           echo "$text" >> "$GITHUB_STEP_SUMMARY"
           if [ -n "$WEBHOOK" ]; then
             payload=$(node -e 'console.log(JSON.stringify({ text: process.argv[1] }))' "$text")

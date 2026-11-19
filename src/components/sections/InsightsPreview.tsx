@@ -8,12 +8,12 @@ import { captureUrl } from "@/content/media";
 import { articleTypeLabel, loadPublishedArticles } from "@/lib/blog/content";
 
 /**
- * Latest published blog posts as editorial rows inside one pale coral panel. Uses the
- * same publication gate as /blog, so archived and scheduled entries never appear.
- * Renders nothing when there is nothing published.
+ * The latest published blog post as one editorial row inside a pale coral panel; the
+ * rest are a click away on /blog. Uses the same publication gate as /blog, so archived
+ * and scheduled entries never appear. Renders nothing when there is nothing published.
  */
 export async function InsightsPreview() {
-  const articles = (await loadPublishedArticles()).slice(0, 3);
+  const articles = (await loadPublishedArticles()).slice(0, 1);
   if (articles.length === 0) return null;
 
   return (

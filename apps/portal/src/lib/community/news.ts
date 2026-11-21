@@ -25,6 +25,19 @@ export async function newsFor(current: CurrentSession, query: { type?: Announcem
   }
 }
 
+const NEWS_DATE = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+
+/**
+ * A news item's date. The bridge sends full ISO timestamps (2026-11-21T08:31:42.000Z), not the
+ * date-only values of release notes, so formatReleaseDate does not apply: it appends a time and
+ * throws on these. Anything unreadable gives null and the date is left out; it never throws.
+ */
+export function newsDate(value: unknown): string | null {
+  if (typeof value !== "string" && typeof value !== "number") return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : NEWS_DATE.format(date);
+}
+
 export const NEWS_TYPE_LABELS: Record<AnnouncementType, string> = {
   announcement: "Announcement",
   news: "News",

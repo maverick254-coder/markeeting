@@ -323,6 +323,53 @@ Rebuild the marketing image with `NEXT_PUBLIC_PORTAL_URL=https://home.redactplus
 stage I passes. This is a normal marketing release (`deployment/redactplus/DEPLOYMENT.md`), and
 it rolls back to the previous digest.
 
+## Releasing a new portal version
+
+Every release after launch follows these steps. A release is healthy only when the signed-in
+smoke check passes. `/api/health` and signed-out requests are not enough: they only ever see the
+redirect to sign-in, so they never render a page. Release `b264b96` passed both, then failed for
+every signed-in customer on `/` and `/news` until it was rolled back (21 Nov 2026).
+
+**Before:** a test account that can sign in to `home.redactplus.io` (a customer account kept for
+this, not a real customer's).
+
+```sh
+cd /root/deploy/redactplus-portal
+cp -p .env .env.previous
+# set RELEASE_SHA and RELEASE_DIGEST from the "publish / portal image" summary
+docker compose -f compose.yaml -f compose.forum.yaml up -d redactplus-portal   # without the forum: docker compose up -d redactplus-portal
+curl -s http://127.0.0.1:6096/api/health    # "status":"ready" and the new commitSha
+```
+
+**Signed-in smoke check (required):**
+1. Sign in as the test account in a browser at `https://home.redactplus.io`.
+2. Copy its session cookie (developer tools → Application → Cookies → `__Host-rp_session`) into
+   `/root/deploy/redactplus-portal/smoke-session.cookie` as one line, `__Host-rp_session=<value>`,
+   then `chmod 600` the file. Never paste the value into chat or a ticket.
+3. Run the check:
+
+   ```sh
+   ./smoke-signed-in.sh                       # loads /, /news and /forum signed in
+   ```
+
+   Each page must answer 200 with a signed-in page, not a redirect to sign-in or Next's error
+   page. The container's log must also show no server-side exception since it started.
+4. Delete the cookie file and sign the test account out.
+
+If it fails, roll back at once, then read the error from the saved logs. Recreating the container
+deletes its logs, so save them first:
+
+```sh
+docker logs --timestamps redactplus-portal > failed-release-<sha>-$(date -u +%Y%m%dT%H%M%SZ).log 2>&1
+cp -p .env.previous .env
+docker compose -f compose.yaml -f compose.forum.yaml up -d redactplus-portal
+```
+
+Then add a line to `releases.log` saying which release went live, or was rolled back, and why.
+
+In CI, the route tests run the same pages signed in, with the forum on, against the bridge's real
+response shapes and against an unreachable forum (`apps/portal/tests/routes/news-forum.test.mjs`).
+
 ## Restoring the database
 
 ```sh

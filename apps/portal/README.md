@@ -27,8 +27,12 @@ no sign-in or registration controls of its own.
   it server side with `src/lib/community/bridge.ts` and `/api/forum/*`. It is **off unless
   `PORTAL_FORUM_ENABLED=true`**: until then every forum URL is a 404 and there is no navigation
   entry.
-- **News** (`/news`, `/news/[slug]`) renders published Markdown articles from `content/news`,
-  the same format Decap CMS edits.
+- **News** (`/news`) lists staff posts from the forum's Announcements category, read through the
+  bridge (`GET /announcements`): pinned first, then newest, filtered by type (News or
+  Announcement, a tag). Each item opens its forum thread, where customers reply. Only staff
+  (Keycloak `forum-moderator`) can post there ("Post to News"); the forum refuses everyone else,
+  and only topics the bridge marked as staff posts at creation are listed. Without the forum,
+  News says nothing has been published. Release notes stay file-based (`content/releases.json`).
 - **The download UI** shows product, version, platform, size, the download button and release
   notes. The SHA-256 is not displayed: the manifest requires it, and `releases:verify` checks
   it against the published file before a release is listed.
@@ -114,7 +118,6 @@ Development settings cannot reach production:
 | `PORTAL_OIDC_REGISTRATION_PROMPT` | no | Default `create` (OIDC `prompt=create`). Set to empty if the realm rejects it. |
 | `PORTAL_DOWNLOAD_ALLOWED_HOSTS` | no | Exact host names that installer URLs may use. Empty: nothing is downloadable. Use `github.com` for the GitHub Releases installer. |
 | `PORTAL_RELEASES_MANIFEST_PATH` | no | Overrides `content/releases.json` (tests use a fixture). |
-| `PORTAL_NEWS_DIR` | no | Overrides `content/news` (local previews use `tests/fixtures/news`). |
 | `PORTAL_CUSTOMER_API_URL` | no | Proposed backend customer API. **Not yet available.** |
 | `PORTAL_ACCOUNT_MANAGEMENT_URL` | no | Reserved. Not shown while the account menu holds Sign out only. |
 | `PORTAL_SUPPORT_EMAIL` | no | Shown in the footer and on Documentation. |

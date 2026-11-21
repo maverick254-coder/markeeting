@@ -26,6 +26,7 @@ const former = person('former', { roles: ['forum-moderator'] });
 const stale = person('stale', { roles: ['forum-moderator'] });
 const unverified = person('unverified', { emailVerified: false });
 const climber = person('climber', { roles: ['administrators', 'admin', 'Global Moderators'] });
+const herald = person('herald', { roles: ['forum-moderator'] });
 
 const header = who => Buffer.from(JSON.stringify(who)).toString('base64url');
 async function call(who, method, path, body, { rawKey = key, idem, form } = {}) {
@@ -248,6 +249,45 @@ check('Moderators still see the removed comment, marked, and can restore it', mo
 const restored = await call(mod, 'POST', `/posts/${c2.data.id}/restore`);
 check('A moderator restores it', restored.status === 200);
 check('Customers cannot restore posts (403)', (await call(alice, 'POST', `/posts/${c2.data.id}/restore`)).status === 403);
+
+// ---------- announcements (the portal's /news) ----------
+const healthNow = (await call(alice, 'GET', '/health')).data;
+check("NodeBB's own privileges keep Announcements staff-only (members read and reply, moderators create)", healthNow.announcementsStaffOnly === true, JSON.stringify(healthNow));
+const custAnnounce = await paced(alice, () => call(alice, 'POST', '/questions', { category: 'announcements', title: `A customer tries to announce ${stamp}`, body: 'Customers must not be able to post announcements.', type: 'news' }));
+check('A customer cannot create a topic in Announcements (403 staff_only)', custAnnounce.status === 403 && custAnnounce.error.code === 'staff_only', `${custAnnounce.status} ${JSON.stringify(custAnnounce.error)}`);
+await call(herald, 'GET', '/me');
+const ann1 = await paced(mod, () => call(mod, 'POST', '/questions', { category: 'announcements', title: `RedactPlus 9.9 is available now ${stamp}`, body: 'The new release improves audio review and adds faster export checks.', type: 'announcement' }));
+check('A moderator creates an announcement, and it is not a question', ann1.status === 201 && ann1.data.kind === 'announcement' && ann1.data.type === 'announcement', `${ann1.status} ${JSON.stringify(ann1.error || ann1.data)}`);
+const news1 = await paced(herald, () => call(herald, 'POST', '/questions', { category: 'announcements', title: `RedactPlus at the privacy summit ${stamp}`, body: 'The team will present redaction review practice at the summit next month.', type: 'news' }));
+check('A second moderator posts news', news1.status === 201 && news1.data.type === 'news', `${news1.status} ${JSON.stringify(news1.error || news1.data)}`);
+const annThread = await call(alice, 'GET', `/questions/${ann1.data.id}`);
+check('Customers open the announcement thread; no accepted-answer controls, no pin', annThread.status === 200 && annThread.data.kind === 'announcement' && annThread.data.viewer.canAccept === false && annThread.data.viewer.canPin === false && annThread.data.viewer.canAnswer === true, `${annThread.status} ${JSON.stringify(annThread.data && annThread.data.viewer)}`);
+const annReply = await paced(alice, () => call(alice, 'POST', `/questions/${ann1.data.id}/answers`, { body: 'Thanks, looking forward to trying the export checks.' }));
+check('A customer replies to an announcement', annReply.status === 201, `${annReply.status} ${JSON.stringify(annReply.error)}`);
+const annAccept = await call(mod, 'PUT', `/questions/${ann1.data.id}/accepted`, { postId: annReply.data && annReply.data.id });
+check('Announcements have no accepted answer (400)', annAccept.status === 400, annAccept.status);
+const questionsNow = (await call(alice, 'GET', '/questions?pageSize=50&sort=newest')).data;
+check('Announcements are not listed as questions (no unanswered state)', !questionsNow.items.some(i => i.id === ann1.data.id || i.id === news1.data.id));
+const custPin = await call(alice, 'PUT', `/announcements/${ann1.data.id}/pinned`, { pinned: true });
+check('A customer cannot pin (403)', custPin.status === 403, custPin.status);
+const pinNews = await call(mod, 'PUT', `/announcements/${news1.data.id}/pinned`, { pinned: true });
+check('A moderator pins an item', pinNews.status === 200 && pinNews.data.pinned === true, `${pinNews.status} ${JSON.stringify(pinNews.error)}`);
+let feed = (await call(alice, 'GET', '/announcements')).data.items;
+const mine = feed.filter(i => i.id === ann1.data.id || i.id === news1.data.id);
+check('/announcements lists the staff posts, pinned first, with type and reply count', mine.length === 2 && feed[0].id === news1.data.id && feed[0].pinned === true && mine.find(i => i.id === ann1.data.id).replyCount === 1, JSON.stringify(feed.slice(0, 3).map(i => [i.id, i.pinned, i.announcementType])));
+const onlyNews = (await call(alice, 'GET', '/announcements?type=news')).data.items;
+check('/announcements filters by type', onlyNews.some(i => i.id === news1.data.id) && !onlyNews.some(i => i.id === ann1.data.id));
+check('Questions never appear in /announcements', !feed.some(i => i.id === tid));
+const moveIn = await call(mod, 'PUT', `/questions/${tid}`, { category: 'announcements', title: thread.title, body: 'Trying to move a question into Announcements.', tags: [] });
+check('Questions cannot be moved into Announcements (400)', moveIn.status === 400, moveIn.status);
+// The author loses the role; their post stays on /news, because authorship was recorded at creation.
+const heraldGone = await call({ ...herald, roles: [] }, 'GET', '/me');
+feed = (await call(alice, 'GET', '/announcements')).data.items;
+check("A post stays on /news after its author loses the moderator role", heraldGone.data.isModerator === false && feed.some(i => i.id === news1.data.id), `isModerator ${heraldGone.data.isModerator}`);
+const heraldAgain = await paced(herald, () => call({ ...herald, roles: [] }, 'POST', '/questions', { category: 'announcements', title: `No longer staff, trying again ${stamp}`, body: 'This must be refused now that the role is gone.', type: 'news' }));
+check('Without the role, the same person can no longer announce (403)', heraldAgain.status === 403, heraldAgain.status);
+const unpin = await call(mod, 'PUT', `/announcements/${news1.data.id}/pinned`, { pinned: false });
+check('A moderator unpins it', unpin.status === 200 && unpin.data.pinned === false, unpin.status);
 
 // ---------- former moderator: revoked on the next request ----------
 const formerAnswer = await paced(alice, () => call(alice, 'POST', `/questions/${tid}/answers`, { body: 'A third answer that a moderator might remove later on.' }));

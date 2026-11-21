@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { test } from "node:test";
 import { plannedCategories } from "../src/lib/community/categories";
@@ -9,7 +9,6 @@ import { PAGE_SIZE, parseQuestionQuery, queryQuestions, questionQueryHref } from
 import { forumAvailable, forumFor } from "../src/lib/community/source";
 import type { CurrentSession } from "../src/lib/session/current";
 import { parsePortalConfig, type PortalConfig } from "../src/lib/config";
-import { loadPublishedNews, parseNewsFile } from "../src/lib/editorial/news";
 import { initialsFor } from "../src/lib/initials";
 import { parseManifest } from "../src/lib/releases/manifest";
 import { MAX_QUERY_LENGTH, normaliseQuery, searchPortal } from "../src/lib/search";
@@ -118,18 +117,14 @@ test("composer validation, tags, attachments and formatting", () => {
   assert.equal(applyFormat("", 0, 0, "code").text, "`code`");
 });
 
-test("news: only published, valid entries render, newest first", async () => {
-  const articles = await loadPublishedNews(path.join(process.cwd(), "tests/fixtures/news"));
-  assert.deepEqual(articles.map((article) => article.slug), ["sample-release-9-9-0", "sample-community-guidelines"]);
-  assert.ok(articles.every((article) => article.status === "published"));
-  assert.deepEqual(await loadPublishedNews(path.join(process.cwd(), "content/news")), [], "nothing is published in the repository yet");
-  assert.equal(parseNewsFile("Bad Name.md", "---\ntitle: x\n---").ok, false);
-  assert.equal(parseNewsFile("ok-name.md", "no front matter").ok, false);
-  const external = parseNewsFile(
-    "ok-name.md",
-    "---\ntitle: Valid title\ndate: 2026-01-01\ntype: news\ncategory: Product\nexcerpt: Ten chars plus\nstatus: published\nauthor: Staff\nimage:\n  src: https://evil.example/x.png\n  alt: An image\n---\nBody"
-  );
-  assert.equal(external.ok, false, "images must be local paths");
+test("news comes from the forum, not Markdown files; release notes stay file-based", () => {
+  assert.equal(existsSync(path.join(process.cwd(), "src/lib/editorial/news.ts")), false, "the Markdown news loader is gone");
+  assert.equal(existsSync(path.join(process.cwd(), "content/news")), false);
+  assert.equal(existsSync(path.join(process.cwd(), "src/app/(portal)/news/[slug]")), false, "news items open their forum threads");
+  const page = read("src/app/(portal)/news/page.tsx");
+  assert.match(page, /newsFor\(current/);
+  assert.match(read("src/app/(portal)/page.tsx"), /newsFor\(current, \{ limit: 3 \}\)/);
+  assert.ok(existsSync(path.join(process.cwd(), "content", "releases.json")), "release notes stay in content/releases.json");
 });
 
 test("Markdown is rendered without raw HTML", () => {
@@ -177,7 +172,6 @@ test("every signed-in page checks the session itself, not only through the share
     "forum/questions/[slug]/page.tsx",
     "docs/page.tsx",
     "news/page.tsx",
-    "news/[slug]/page.tsx",
     "release-notes/page.tsx",
     "support/page.tsx",
     "search/page.tsx",

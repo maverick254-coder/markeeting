@@ -50,8 +50,6 @@ export interface PortalConfig {
   databaseSsl: boolean;
   downloadAllowedHosts: ReadonlySet<string>;
   releasesManifestPath: string | null;
-  /** Overrides content/news (tests and local previews use a fixture folder). */
-  newsDir: string | null;
   customerApiUrl: URL | null;
   accountManagementUrl: string | null;
   supportEmail: string | null;
@@ -280,7 +278,6 @@ export function parsePortalConfig(env: Env): PortalConfig {
     databaseSsl: read(env, "PORTAL_DATABASE_SSL") !== "false",
     downloadAllowedHosts: parseHosts(read(env, "PORTAL_DOWNLOAD_ALLOWED_HOSTS")),
     releasesManifestPath: read(env, "PORTAL_RELEASES_MANIFEST_PATH"),
-    newsDir: read(env, "PORTAL_NEWS_DIR"),
     customerApiUrl,
     accountManagementUrl,
     supportEmail,

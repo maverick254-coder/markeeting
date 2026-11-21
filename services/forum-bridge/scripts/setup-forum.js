@@ -8,7 +8,11 @@
  *
  * What it enforces:
  * - the six portal categories (categories.json), created once and mapped by slug, with every
- *   new topic in them a question (Q&A plugin);
+ *   new topic in them a question (Q&A plugin), except Announcements;
+ * - Announcements: staff posts for the portal's /news. Members read and reply; only Global
+ *   Moderators (Keycloak forum-moderator) and administrators create topics. A one-time,
+ *   idempotent migration turns earlier staff topics there into announcements
+ *   (lib/announcement-migration.js) and prints what it changed;
  * - no guest, crawler or fediverse access, and ActivityPub federation off;
  * - no NodeBB self-registration and no NodeBB password sign-in for customers (they use the
  *   portal; local administrators keep their own sign-in on the private network);
@@ -27,6 +31,10 @@ req('src/prestart').loadConfig(path.resolve(root, process.env.NODEBB_CONFIG || '
 
 const CATEGORY_HASH = 'redactplus:categories';
 const planned = require('../categories.json');
+const { migrateAnnouncements, describe } = require('../lib/announcement-migration');
+const ANNOUNCEMENTS = 'announcements';
+const STAFF_FIELD = 'redactplusStaffPost'; // lib/announcements.js
+const STAFF_CREATORS = ['Global Moderators', 'administrators'];
 
 const CONFIG = {
   registrationType: 'disabled',
@@ -98,7 +106,13 @@ const CONFIG = {
     await categories.setCategoryField(cid, 'disabled', 0);
     // No one outside signed-in customers: not guests, not crawlers, not other servers.
     await privileges.categories.rescind(privileges.categories.getGroupPrivilegeList(), cid, ['guests', 'spiders', 'fediverse']);
-    qanda[`defaultCid_${cid}`] = 'on';
+    qanda[`defaultCid_${cid}`] = category.slug === ANNOUNCEMENTS ? 'off' : 'on';
+    if (category.slug === ANNOUNCEMENTS) {
+      // Members read and reply; only staff start topics.
+      await privileges.categories.rescind(['groups:topics:create'], cid, ['registered-users']);
+      await privileges.categories.give(['groups:find', 'groups:read', 'groups:topics:read', 'groups:topics:reply'], cid, ['registered-users']);
+      await privileges.categories.give(['groups:find', 'groups:read', 'groups:topics:read', 'groups:topics:create', 'groups:topics:reply'], cid, STAFF_CREATORS);
+    }
   }
   // Retire categories NodeBB made at install (for example "General Discussion").
   const mapped = new Set(Object.values((await db.getObject(CATEGORY_HASH)) || {}).map(Number));
@@ -108,6 +122,10 @@ const CONFIG = {
 
   // Q&A: every topic in a mapped category is a question; the asker or a moderator accepts.
   await meta.settings.set('question-and-answer', { ...((await meta.settings.get('question-and-answer')) || {}), ...qanda, onlyAdmins: 'off', toggleLock: 'off' });
+
+  const announcementsCid = Number.parseInt(((await db.getObject(CATEGORY_HASH)) || {})[ANNOUNCEMENTS], 10) || null;
+  const migration = await migrateAnnouncements({ cid: announcementsCid, db, topics: req('src/topics'), groups: req('src/groups'), user: req('src/user'), staffField: STAFF_FIELD });
+  for (const line of describe(migration)) console.log(line);
 
   // Global privileges for ordinary members: images only, no NodeBB password sign-in, no chat.
   await privileges.global.rescind(['groups:local:login', 'groups:chat', 'groups:chat:privileged', 'groups:upload:post:file', 'groups:signature', 'groups:invite', 'groups:group:create', 'groups:search:users', 'groups:view:users', 'groups:view:groups'], 'registered-users');

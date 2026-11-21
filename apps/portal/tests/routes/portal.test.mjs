@@ -232,7 +232,7 @@ test("the forum API needs a session, and does not exist while the forum is off",
 });
 
 
-test("news shows only published articles, and a clean empty state when none exist", async () => {
+test("without a forum, News shows a clean empty state, and old article URLs are gone", async () => {
   const { browser } = await signIn();
   const html = await (await browser.request(`${PORTAL}/news`)).text();
   assert.match(html, /No announcements have been published yet\./);

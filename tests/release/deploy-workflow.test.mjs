@@ -106,8 +106,8 @@ test("the forum image is published only: never deployed, and only when its revis
   assert.match(runs, /--build-arg GIT_COMMIT="\$TAG"/);
   const decide = jobs.plan.steps.find((s) => s.id === "decide").run;
   assert.match(decide, /if enabled_for forum && /, "CD_COMPONENTS must name the forum");
-  assert.deepEqual(jobs.notify.needs, ["plan", "marketing", "marketing-publish", "portal", "forum"]);
-  assert.match(jobs.notify.steps[0].run, /\$MARKETING \$MARKETING_IMAGE \$PORTAL \$FORUM/);
+  assert.deepEqual(jobs.notify.needs, ["plan", "marketing", "marketing-publish", "portal", "portal-publish", "forum"]);
+  assert.match(jobs.notify.steps[0].run, /\$MARKETING \$MARKETING_IMAGE \$PORTAL \$PORTAL_IMAGE \$FORUM/);
 });
 
 test("marketing-publish builds, smoke-tests and publishes the production image, and never deploys", () => {
@@ -128,7 +128,35 @@ test("marketing-publish builds, smoke-tests and publishes the production image, 
   const order = job.steps.map((s) => (/smoke-test\.mjs/.test(s.run ?? "") ? "smoke" : /publish-image\.sh/.test(s.run ?? "") ? "publish" : null)).filter(Boolean);
   assert.deepEqual(order, ["smoke", "publish"], "nothing is published before its smoke test passes");
   const decide = jobs.plan.steps.find((s) => s.id === "decide").run;
-  assert.match(decide, /if enabled_for marketing-publish && ! enabled_for marketing; then/);
+  assert.match(decide, /if enabled_for marketing-publish && ! enabled_for marketing; then want_marketing=true; fi/);
+});
+
+test("portal-publish builds and publishes the portal image, and never deploys", () => {
+  const job = jobs["portal-publish"];
+  assert.match(job.if, /needs\.plan\.outputs\.enabled == 'true'/);
+  assert.match(job.if, /needs\.plan\.outputs\.portal_publish == 'true'/);
+  assert.equal(job.environment, "production");
+  assert.equal(job.concurrency.group, "production-portal", "never races a full portal deployment");
+  assert.equal(job.concurrency["cancel-in-progress"], false);
+  const runs = job.steps.map((s) => s.run ?? "").join("\n");
+  assert.doesNotMatch(runs, /remote-deploy\.sh|ssh /, "a published image is deployed by hand (DEPLOYMENT.md)");
+  assert.doesNotMatch(JSON.stringify(job), /DEPLOY_SSH_KEY|DEPLOY_HOST/);
+  // The same build and checks as the full portal job.
+  const build = job.steps.find((s) => /docker build/.test(s.run ?? "")).run;
+  assert.equal(build, jobs.portal.steps.find((s) => /docker build/.test(s.run ?? "")).run);
+  const order = job.steps.map((s) => (/docker build/.test(s.run ?? "") ? "build" : /publish-image\.sh/.test(s.run ?? "") ? "publish" : null)).filter(Boolean);
+  assert.deepEqual(order, ["build", "publish"]);
+  assert.match(jobs.plan.steps.find((s) => s.id === "decide").run, /if enabled_for portal-publish && ! enabled_for portal; then want_portal=true; fi/);
+});
+
+test("portal-publish publishes when the push changed a portal input, and a full deployment wins", () => {
+  const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+  const touched = git("log", "-1", "--format=%H", "--", "apps/portal/src/");
+  const plan = (components) => runPlanStep("decide", { SHA: touched, CD_COMPONENTS: components, SERVER: "false" }).outputs;
+  assert.equal(plan("forum,portal-publish").portal_publish, "true");
+  assert.equal(plan("forum,portal-publish").marketing_publish, "false", "each publish switch is separate");
+  assert.equal(plan("forum,marketing-publish").portal_publish, "false");
+  assert.equal(plan("portal,portal-publish").portal_publish, "false", "a full deployment publishes instead");
 });
 
 // Runs one of the plan job's steps for real with bash, as GitHub would, and returns its outputs.
@@ -147,7 +175,7 @@ function runPlanStep(id, env) {
 test("a forum-only run never asks the server, so it needs no SSH secrets", () => {
   const ask = jobs.plan.steps.find((s) => /ssh /.test(s.run ?? ""));
   assert.equal(ask.if, "steps.gate.outputs.enabled == 'true' && steps.scope.outputs.server == 'true'");
-  const cases = { forum: "false", "": "false", "forum,marketing-publish": "false", "marketing-publish": "false", portal: "true", "marketing,portal": "true", "forum, portal": "true", "marketing,forum": "true", portals: "false" };
+  const cases = { forum: "false", "": "false", "forum,marketing-publish": "false", "marketing-publish": "false", "forum,marketing-publish,portal-publish": "false", "portal-publish": "false", portal: "true", "marketing,portal": "true", "forum, portal": "true", "marketing,forum": "true", portals: "false" };
   for (const [components, server] of Object.entries(cases)) {
     assert.equal(runPlanStep("scope", { CD_COMPONENTS: components }).outputs.server, server, `CD_COMPONENTS=${JSON.stringify(components)}`);
   }

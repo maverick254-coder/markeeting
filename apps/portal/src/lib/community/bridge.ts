@@ -10,6 +10,7 @@ import type {
   ForumNotification,
   ForumReport,
   ForumService,
+  NewsItem,
   PostAbilities,
   Question,
   QuestionAbilities,
@@ -99,6 +100,9 @@ interface BridgeSummary {
   score: number;
   hasAcceptedAnswer: boolean;
   pinned: boolean;
+  kind?: "question" | "announcement";
+  announcementType?: "announcement" | "news" | null;
+  replyCount?: number;
 }
 interface BridgeAttachment { url: string; name: string; sizeBytes: number; kind: "image" }
 interface BridgePost {
@@ -154,6 +158,22 @@ function summary(item: BridgeSummary): QuestionSummary {
     score: item.score,
     hasAcceptedAnswer: item.hasAcceptedAnswer,
     pinned: item.pinned,
+    kind: item.kind === "announcement" ? "announcement" : "question",
+    announcementType: item.kind === "announcement" ? (item.announcementType === "news" ? "news" : "announcement") : null,
+  };
+}
+
+/** A staff post as the News page shows it; it links to its forum thread for discussion. */
+export function newsItem(item: BridgeSummary): NewsItem {
+  return {
+    slug: questionSlug(item.id, item.slugTitle),
+    title: item.title,
+    excerpt: item.excerpt,
+    type: item.announcementType === "news" ? "news" : "announcement",
+    pinned: item.pinned,
+    createdAt: item.createdAt,
+    replyCount: Math.max(0, Number(item.replyCount) || 0),
+    author: item.author,
   };
 }
 
@@ -240,6 +260,12 @@ export function nodebbForum(settings: ForumSettings, identity: () => Promise<For
     async notifications() {
       const result = await get<{ items: (Omit<ForumNotification, "href"> & { link: BridgeLink | null })[]; unread: number }>(`/notifications`);
       return { unread: result.unread, items: result.items.map(({ link, ...item }) => ({ ...item, href: linkHref(link) })) };
+    },
+    async announcements(query = {}) {
+      const params = new URLSearchParams({ limit: String(Math.min(50, Math.max(1, query.limit ?? 20))) });
+      if (query.type) params.set("type", query.type);
+      const result = await get<{ items: BridgeSummary[] }>(`/announcements?${params.toString()}`);
+      return result.items.filter((item) => item.kind === "announcement").map(newsItem);
     },
     async reports(page) {
       try {

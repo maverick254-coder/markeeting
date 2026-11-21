@@ -35,6 +35,7 @@ export const ROUTES: readonly ForumRoute[] = [
   { method: "POST", pattern: new RegExp(`^questions/${id}/answers$`), bridge: (m) => `/questions/${m[1]}/answers`, idempotent: true },
   { method: "POST", pattern: new RegExp(`^questions/${id}/comments$`), bridge: (m) => `/questions/${m[1]}/comments`, idempotent: true },
   { method: "PUT", pattern: new RegExp(`^questions/${id}/accepted$`), bridge: (m) => `/questions/${m[1]}/accepted` },
+  { method: "PUT", pattern: new RegExp(`^announcements/${id}/pinned$`), bridge: (m) => `/announcements/${m[1]}/pinned` },
   { method: "DELETE", pattern: new RegExp(`^questions/${id}/accepted$`), bridge: (m) => `/questions/${m[1]}/accepted` },
   { method: "PUT", pattern: new RegExp(`^posts/${id}$`), bridge: (m) => `/posts/${m[1]}` },
   { method: "DELETE", pattern: new RegExp(`^posts/${id}$`), bridge: (m) => `/posts/${m[1]}` },

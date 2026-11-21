@@ -23,6 +23,8 @@
 #      deploying it, for releases installed by hand (deployment/redactplus/DEPLOYMENT.md). It
 #      publishes when this push changed a marketing image input (first parent to this commit),
 #      and never connects to the server. "marketing" (full deployment) takes precedence.
+#   9. "portal-publish" does the same for the portal image: build and publish when the push
+#      changed a portal image input, never deploy. "portal" (full deployment) takes precedence.
 #
 # Environment "production" (Settings → Environments):
 #   deployment branches: main only;  required reviewers: none (automatic) or as agreed
@@ -30,8 +32,8 @@
 #              DEPLOY_SSH_KEY, DEPLOY_SSH_KNOWN_HOSTS  forced-command key, pinned host key
 #              DEPLOY_NOTIFY_WEBHOOK                   optional, Slack-compatible incoming webhook
 #   variables: CD_ENABLED ("true" to deploy), CD_COMPONENTS ("portal" or "marketing,portal";
-#              add "forum" to publish the forum image, "marketing-publish" to publish the
-#              marketing image for a manual deployment),
+#              add "forum" to publish the forum image, "marketing-publish" or
+#              "portal-publish" to publish that image for a manual deployment),
 #              DEPLOY_HOST, PORTAL_EXPECTED_ACCESS (default "staff-preview"),
 #              TURNSTILE_SITE_KEY (public site key of the registration security check; required)
 #
@@ -73,6 +75,7 @@ jobs:
       forum: ${{ steps.decide.outputs.forum }}
       forum_revision: ${{ steps.decide.outputs.forum_revision }}
       marketing_publish: ${{ steps.decide.outputs.marketing_publish }}
+      portal_publish: ${{ steps.decide.outputs.portal_publish }}
     steps:
       - name: Gate (main push, switch, current head)
         id: gate
@@ -169,16 +172,25 @@ jobs:
           if enabled_for forum && [[ "$forum_rev" =~ ^[0-9a-f]{40}$ ]]; then forum=true; fi
           echo "forum=${forum}" >> "$GITHUB_OUTPUT"
           echo "forum_revision=${forum_rev}" >> "$GITHUB_OUTPUT"
-          # The marketing image is published for a manual deployment when this push changed one
-          # of its inputs. A full "marketing" deployment, when enabled, does that job instead.
+          # The marketing and portal images are published for a manual deployment when this push
+          # changed one of their inputs. A full deployment of that component, when enabled, does
+          # that job instead.
           marketing_publish=false
-          if enabled_for marketing-publish && ! enabled_for marketing; then
+          portal_publish=false
+          want_marketing=false
+          want_portal=false
+          if enabled_for marketing-publish && ! enabled_for marketing; then want_marketing=true; fi
+          if enabled_for portal-publish && ! enabled_for portal; then want_portal=true; fi
+          if [ "$want_marketing" = true ] || [ "$want_portal" = true ]; then
             parent=$(git rev-parse --verify --quiet "${SHA}^1" || true)
             node scripts/release/changed-components.mjs --head "$SHA" \
-              --marketing-base "$parent" --portal-base "" --marketing-flags-changed false > "$RUNNER_TEMP/publish.json"
-            marketing_publish=$(node -e "console.log(require(process.argv[1]).marketing.deploy)" "$RUNNER_TEMP/publish.json")
+              --marketing-base "$parent" --portal-base "$parent" --marketing-flags-changed false > "$RUNNER_TEMP/publish.json"
+            publish() { node -e "console.log(require(process.argv[1])[process.argv[2]].deploy)" "$RUNNER_TEMP/publish.json" "$1"; }
+            if [ "$want_marketing" = true ]; then marketing_publish=$(publish marketing); fi
+            if [ "$want_portal" = true ]; then portal_publish=$(publish portal); fi
           fi
           echo "marketing_publish=${marketing_publish}" >> "$GITHUB_OUTPUT"
+          echo "portal_publish=${portal_publish}" >> "$GITHUB_OUTPUT"
           {
             echo "### Plan for ${SHA}"
             echo "- automation enabled for: \`${CD_COMPONENTS:-none}\`"
@@ -190,6 +202,7 @@ jobs:
             fi
             echo "- forum image (publish only, revision \`${forum_rev:-none}\`): ${forum}"
             echo "- marketing image (publish only, for a manual deployment): ${marketing_publish}"
+            echo "- portal image (publish only, for a manual deployment): ${portal_publish}"
           } >> "$GITHUB_STEP_SUMMARY"
           server=$(decision 'd.serverConfig.join(", ")')
           if [ -n "$server" ]; then
@@ -361,6 +374,51 @@ jobs:
           EXPECT_ACCESS: ${{ vars.PORTAL_EXPECTED_ACCESS || 'staff-preview' }}
         run: bash .github/scripts/remote-deploy.sh
 
+  # Publish only: the portal job's build, checks and digest-addressed push, then stop. The release
+  # is pinned and started by hand on the server (deployment/portal/DEPLOYMENT.md), so this job
+  # has no SSH key and no host.
+  portal-publish:
+    name: publish / portal image
+    needs: plan
+    if: needs.plan.outputs.enabled == 'true' && needs.plan.outputs.portal_publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: production
+    concurrency:
+      group: production-portal
+      cancel-in-progress: false
+    steps:
+      - name: Check out the exact commit
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Build the portal image
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          image="registry.safaridesk.io/safari/redactplus-portal:${SHA}"
+          docker build --platform linux/amd64 -f deployment/portal/Dockerfile --build-arg GIT_COMMIT="$SHA" -t "$image" apps/portal
+          # No development tooling or fixtures may ship.
+          docker run --rm --network none --entrypoint sh "$image" -c \
+            'for p in dev public/dev-fixtures tests .env .env.local; do [ -e "/app/$p" ] && { echo "unexpected /app/$p"; exit 1; }; done; exit 0'
+          echo "TAG=$SHA" >> "$GITHUB_ENV"
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+      - name: Publish (digest-addressed)
+        env:
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        run: bash .github/scripts/publish-image.sh
+      - name: How to deploy it
+        run: |
+          {
+            echo "Not deployed. To release it by hand (deployment/portal/DEPLOYMENT.md), pin in /root/deploy/redactplus-portal/.env:"
+            echo '```'
+            echo "RELEASE_SHA=$TAG"
+            echo "RELEASE_DIGEST=$DIGEST"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   # The forum backend image, published to the registry only. Nothing on the server changes:
   # installing or upgrading the forum is a manual, reviewed step (deployment/forum/RUNBOOK.md).
   forum:
@@ -442,7 +500,7 @@ jobs:
 
   notify:
     name: deploy / notify
-    needs: [plan, marketing, marketing-publish, portal, forum]
+    needs: [plan, marketing, marketing-publish, portal, portal-publish, forum]
     if: always() && needs.plan.outputs.enabled == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -456,11 +514,12 @@ jobs:
           PORTAL: ${{ needs.portal.result }}
           FORUM: ${{ needs.forum.result }}
           MARKETING_IMAGE: ${{ needs.marketing-publish.result }}
+          PORTAL_IMAGE: ${{ needs.portal-publish.result }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           status="succeeded"
-          case "$MARKETING $MARKETING_IMAGE $PORTAL $FORUM" in *failure*|*cancelled*) status="FAILED" ;; esac
-          text="RedactPlus production deployment ${status} for ${SHA:0:12}: marketing=${MARKETING:-skipped}, portal=${PORTAL:-skipped}, marketing image=${MARKETING_IMAGE:-skipped}, forum image=${FORUM:-skipped}. ${RUN_URL}"
+          case "$MARKETING $MARKETING_IMAGE $PORTAL $PORTAL_IMAGE $FORUM" in *failure*|*cancelled*) status="FAILED" ;; esac
+          text="RedactPlus production deployment ${status} for ${SHA:0:12}: marketing=${MARKETING:-skipped}, portal=${PORTAL:-skipped}, marketing image=${MARKETING_IMAGE:-skipped}, portal image=${PORTAL_IMAGE:-skipped}, forum image=${FORUM:-skipped}. ${RUN_URL}"
           echo "$text" >> "$GITHUB_STEP_SUMMARY"
           if [ -n "$WEBHOOK" ]; then
             payload=$(node -e 'console.log(JSON.stringify({ text: process.argv[1] }))' "$text")

@@ -6,6 +6,7 @@ const { BridgeError } = require('./errors');
 const nb = require('./nodebb');
 const index = require('./question-index');
 const { loadTopic } = require('./read');
+const announcements = require('./announcements');
 
 /**
  * Write side. Each action calls NodeBB's own API module (src/api) with the mapped customer as
@@ -95,6 +96,7 @@ async function createQuestion(viewer, body, key) {
   const { bySlug } = await index.categoryMap();
   const cid = bySlug.get(String(body.category || ''));
   if (!cid) throw new BridgeError(400, 'invalid', 'Choose a category.');
+  if (await announcements.isAnnouncementsCid(cid)) return createAnnouncement(viewer, cid, body, key);
   const title = text(body.title, 'A title', 255);
   const content = text(body.body, 'The question', 20_000);
   const tags = tagList(body.tags);
@@ -109,16 +111,47 @@ async function createQuestion(viewer, body, key) {
   });
 }
 
+/**
+ * A staff post in Announcements: not a question, tagged with its type, and marked as written by
+ * staff (announcements.STAFF_FIELD) once NodeBB has accepted it. NodeBB's category privileges
+ * refuse non-staff as well; this check only gives a clearer answer first.
+ */
+async function createAnnouncement(viewer, cid, body, key) {
+  announcements.requireStaff(viewer);
+  const title = text(body.title, 'A title', 255);
+  const content = text(body.body, 'The announcement', 20_000);
+  const type = announcements.typeOf(body);
+  const attachments = await attachmentList(viewer, body.attachments);
+  return idempotent(viewer, key, async () => {
+    const result = await nb.api().topics.create(caller(viewer), { cid, title, content, tags: [type], isQuestion: 0 });
+    const wait = queued(result);
+    if (wait) return wait;
+    await nb.topics().setTopicField(result.tid, announcements.STAFF_FIELD, 1);
+    if (attachments.length) await nb.posts().setPostField(result.mainPid, 'redactplusAttachments', JSON.stringify(attachments));
+    await index.refresh(result.tid);
+    return { id: Number(result.tid), slugTitle: String(result.slug || '').split('/')[1] || 'announcement', kind: 'announcement', type };
+  });
+}
+
 async function editQuestion(viewer, tid, body) {
   requireWrite(viewer);
   const topic = await loadTopic(tid, viewer);
   const { bySlug } = await index.categoryMap();
-  // isQuestion must be restated: the Q&A plugin turns a question into a plain topic otherwise.
-  const payload = { pid: Number(topic.mainPid), content: text(body.body, 'The question', 20_000), title: text(body.title, 'A title', 255), tags: tagList(body.tags), isQuestion: 1 };
+  const cid = body.category ? bySlug.get(String(body.category)) : null;
+  const inAnnouncements = await announcements.isAnnouncementsCid(topic.cid);
+  // Topics never move into or out of Announcements: a question there would carry no staff mark,
+  // and an announcement elsewhere would turn into a question.
+  if (cid && cid !== Number(topic.cid) && (inAnnouncements || (await announcements.isAnnouncementsCid(cid)))) {
+    throw new BridgeError(400, 'invalid', 'Announcements cannot be moved to or from another category.');
+  }
+  // isQuestion must be restated: the Q&A plugin turns a question into a plain topic otherwise,
+  // and an announcement must stay a plain topic.
+  const payload = inAnnouncements
+    ? { pid: Number(topic.mainPid), content: text(body.body, 'The announcement', 20_000), title: text(body.title, 'A title', 255), tags: [announcements.typeOf(body)], isQuestion: 0 }
+    : { pid: Number(topic.mainPid), content: text(body.body, 'The question', 20_000), title: text(body.title, 'A title', 255), tags: tagList(body.tags), isQuestion: 1 };
   const attachments = body.attachments === undefined ? null : await attachmentList(viewer, body.attachments);
   await nb.api().posts.edit(caller(viewer), payload);
   if (attachments) await nb.posts().setPostField(topic.mainPid, 'redactplusAttachments', JSON.stringify(attachments));
-  const cid = body.category ? bySlug.get(String(body.category)) : null;
   if (cid && cid !== Number(topic.cid)) await nb.api().topics.move(caller(viewer), { tid, cid });
   await index.refresh(tid);
   return { id: tid };
@@ -205,6 +238,7 @@ function qanda() {
 async function accept(viewer, tid, pid) {
   requireWrite(viewer);
   const topic = await loadTopic(tid, viewer);
+  if (await announcements.isAnnouncementsCid(topic.cid)) throw new BridgeError(400, 'invalid', 'Announcements have no accepted answer.');
   const post = await nb.posts().getPostFields(pid, ['pid', 'tid', 'toPid', 'deleted']);
   if (!post || Number(post.tid) !== tid || Number(post.deleted) || pid === Number(topic.mainPid)) throw new BridgeError(400, 'invalid', 'That answer is not part of this question.');
   if (post.toPid) throw new BridgeError(400, 'invalid', 'Only an answer can be accepted, not a comment.');
@@ -215,8 +249,19 @@ async function accept(viewer, tid, pid) {
 async function unaccept(viewer, tid) {
   requireWrite(viewer);
   const topic = await loadTopic(tid, viewer);
+  if (await announcements.isAnnouncementsCid(topic.cid)) throw new BridgeError(400, 'invalid', 'Announcements have no accepted answer.');
   if (String(topic.isSolved) === '1') await qanda().toggleSolved({ uid: viewer.uid }, { tid });
   return { id: tid, acceptedId: null };
+}
+
+/** Pins or unpins an announcement (staff only; NodeBB's own privilege check applies too). */
+async function pinAnnouncement(viewer, tid, pinned) {
+  announcements.requireStaff(viewer);
+  const topic = await loadTopic(tid, viewer);
+  if (!(await announcements.isAnnouncementsCid(topic.cid))) throw new BridgeError(400, 'invalid', 'Only announcements can be pinned here.');
+  if (typeof pinned !== 'boolean') throw new BridgeError(400, 'invalid', 'Say whether the announcement is pinned.');
+  await nb.api().topics[pinned ? 'pin' : 'unpin'](caller(viewer), { tids: [tid] });
+  return { id: tid, pinned };
 }
 
 async function report(viewer, pid, reason) {
@@ -285,4 +330,4 @@ function uploadFile(name) {
   return { full, type };
 }
 
-module.exports = { createQuestion, editQuestion, reply, editPost, deletePost, restorePost, vote, accept, unaccept, report, suspendAuthor, upload, uploadFile, tagList, MAX_IMAGE_BYTES };
+module.exports = { createQuestion, createAnnouncement, editQuestion, pinAnnouncement, reply, editPost, deletePost, restorePost, vote, accept, unaccept, report, suspendAuthor, upload, uploadFile, tagList, MAX_IMAGE_BYTES };

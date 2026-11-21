@@ -7,6 +7,10 @@
  *   - portal "configured"   on localhost:3299, signed in through that provider;
  *   - portal "unconfigured" on localhost:3297, with no identity provider settings;
  *   - portal "misconfigured" on localhost:3296: production mode with an http origin.
+ *   - portal "forum" on localhost:3294 (its provider on 127.0.0.1:3292), with the forum on and
+ *     the bridge stand-in (tests/routes/mock-forum-bridge.mjs) on 127.0.0.1:3293;
+ *   - portal "forum-down" on localhost:3291 (its provider on 127.0.0.1:3290), with the forum on
+ *     and a bridge address where nothing listens (127.0.0.1:3289): the forum is unreachable.
  * Then runs tests/routes/*.test.mjs with their URLs in the environment.
  */
 import { spawn } from "node:child_process";
@@ -47,7 +51,8 @@ async function waitFor(url, accept = (status) => status < 500 || status === 503)
 
 // A server already listening on a test port would silently answer in place of the one started
 // here (for example a local review instance with sample data), so refuse to run.
-for (const port of [3295, 3296, 3297, 3298, 3299]) {
+// 3289 must stay closed: it is the unreachable forum.
+for (const port of [3289, 3290, 3291, 3292, 3293, 3294, 3295, 3296, 3297, 3298, 3299]) {
   const inUse = await fetch(`http://127.0.0.1:${port}/`, { signal: AbortSignal.timeout(1000) }).then(() => true, () => false);
   if (inUse) {
     console.error(`route tests: port ${port} is already in use. Stop the server on it and run again.`);
@@ -101,6 +106,38 @@ start("portal-misconfigured", process.execPath, [nextBin, "start", "-p", "3296"]
   PORTAL_SESSION_STORE: "memory",
 });
 
+// Signed-in pages with the forum on: against the bridge's real response shapes, and against a
+// forum that does not answer at all.
+const bridgeKey = randomBytes(32).toString("base64url");
+start("mock-forum-bridge", process.execPath, ["tests/routes/mock-forum-bridge.mjs"], {
+  NODE_ENV: "test",
+  MOCK_BRIDGE_PORT: "3293",
+  MOCK_BRIDGE_KEY: bridgeKey,
+});
+for (const [name, portalPort, idpPort, bridgePort] of [["forum", 3294, 3292, 3293], ["forum-down", 3291, 3290, 3289]]) {
+  start(`mock-idp-${name}`, process.execPath, ["dev/mock-idp/server.mjs"], {
+    NODE_ENV: "test",
+    MOCK_IDP_PORT: String(idpPort),
+    MOCK_IDP_PUBLIC_CLIENT: "true",
+    MOCK_IDP_REDIRECT_ORIGIN: `http://localhost:${portalPort}`,
+  });
+  start(`portal-${name}`, process.execPath, [nextBin, "start", "-p", String(portalPort)], {
+    ...shared,
+    PORTAL_ENVIRONMENT: "test",
+    PORTAL_PUBLIC_ORIGIN: `http://localhost:${portalPort}`,
+    PORTAL_SESSION_STORE: "memory",
+    PORTAL_OIDC_ISSUER: `http://127.0.0.1:${idpPort}`,
+    PORTAL_OIDC_CLIENT_ID: "redactplus-portal-dev",
+    PORTAL_CUSTOMER_API_URL: "http://127.0.0.1:3295",
+    PORTAL_DOWNLOAD_ALLOWED_HOSTS: "downloads.example.test",
+    PORTAL_RELEASES_MANIFEST_PATH: path.join(root, "tests", "fixtures", "releases.fixture.json"),
+    PORTAL_SUPPORT_EMAIL: "support@example.test",
+    PORTAL_FORUM_ENABLED: "true",
+    PORTAL_FORUM_BRIDGE_URL: `http://127.0.0.1:${bridgePort}`,
+    PORTAL_FORUM_BRIDGE_KEY: bridgeKey,
+  });
+}
+
 function stopAll() {
   for (const { child } of children) child.kill();
 }
@@ -114,6 +151,11 @@ try {
     waitFor("http://localhost:3299/api/health"),
     waitFor("http://localhost:3297/api/health"),
     waitFor("http://localhost:3296/api/health"),
+    waitFor("http://127.0.0.1:3292/.well-known/openid-configuration"),
+    waitFor("http://127.0.0.1:3290/.well-known/openid-configuration"),
+    waitFor("http://127.0.0.1:3293/__mock/calls"),
+    waitFor("http://localhost:3294/api/health"),
+    waitFor("http://localhost:3291/api/health"),
   ]);
   const files = readdirSync(path.join(root, "tests", "routes"))
     .filter((file) => file.endsWith(".test.mjs"))
@@ -126,6 +168,11 @@ try {
       PORTAL_URL: "http://localhost:3299",
       UNCONFIGURED_PORTAL_URL: "http://localhost:3297",
       MISCONFIGURED_PORTAL_URL: "http://localhost:3296",
+      FORUM_PORTAL_URL: "http://localhost:3294",
+      FORUM_IDP_URL: "http://127.0.0.1:3292",
+      FORUM_BRIDGE_URL: "http://127.0.0.1:3293",
+      FORUM_DOWN_PORTAL_URL: "http://localhost:3291",
+      FORUM_DOWN_IDP_URL: "http://127.0.0.1:3290",
       IDP_URL: "http://127.0.0.1:3298",
       CUSTOMER_API_URL: "http://127.0.0.1:3295",
     },

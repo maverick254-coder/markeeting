@@ -6,6 +6,8 @@ import * as React from "react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { Markdown } from "../src/components/forum/Markdown";
+import { NewsList } from "../src/components/NewsList";
+import { newsDate } from "../src/lib/community/news";
 import { matchRoute, ROUTES } from "../src/lib/community/api";
 import { bridgeCall, ForumError, linkHref, nodebbForum } from "../src/lib/community/bridge";
 import { plannedCategories } from "../src/lib/community/categories";
@@ -173,6 +175,32 @@ test("News reads staff posts through the bridge, pinned first as the bridge orde
   } finally {
     fake.restore();
   }
+});
+
+test("the News list renders the bridge's full ISO timestamps, and an unreadable date never breaks the page", async () => {
+  // Release b264b96 gave these timestamps to formatReleaseDate (date-only) and every signed-in
+  // page with news threw "RangeError: Invalid time value".
+  const bridgeItem = (id: number, createdAt: unknown) => ({
+    id, slugTitle: `post-${id}`, title: `Post ${id}`, excerpt: "e", categorySlug: "announcements", tags: ["announcement"], author: { name: "RedactPlus team", isStaff: true },
+    createdAt, lastActivityAt: createdAt, answerCount: 0, viewCount: 0, score: 0, hasAcceptedAnswer: false,
+    pinned: id === 1, kind: "announcement", announcementType: id === 2 ? "news" : "announcement", replyCount: id - 1,
+  });
+  const fake = withFetch(() => ok({ items: [bridgeItem(1, "2026-11-21T08:31:42.000Z"), bridgeItem(2, "2026-11-21T13:40:05.123Z"), bridgeItem(3, "not a date")] }));
+  try {
+    const items = await nodebbForum(settings, async () => identity).announcements({ limit: 3 });
+    for (const compact of [false, true]) {
+      const html = renderToStaticMarkup(createElement(NewsList, { items, compact }));
+      assert.match(html, /<time dateTime="2026-11-21T08:31:42.000Z">21 November 2026<\/time>/);
+      assert.match(html, /Pinned · /);
+      assert.match(html, /Post 3/, "an item with an unreadable date is still listed, without a date");
+      assert.doesNotMatch(html, /not a date"?>/);
+    }
+  } finally {
+    fake.restore();
+  }
+  assert.equal(newsDate("2026-11-21T08:31:42.000Z"), "21 November 2026");
+  assert.equal(newsDate("2026-11-21"), "21 November 2026");
+  for (const bad of ["", "not a date", undefined, null, {}]) assert.equal(newsDate(bad), null);
 });
 
 test("only staff can pin, through one route; customers never see Announcements in the composer", () => {

@@ -123,10 +123,14 @@ async function createAnnouncement(viewer, cid, body, key) {
   const type = announcements.typeOf(body);
   const attachments = await attachmentList(viewer, body.attachments);
   return idempotent(viewer, key, async () => {
-    const result = await nb.api().topics.create(caller(viewer), { cid, title, content, tags: [type], isQuestion: 0 });
+    // No isQuestion key at all: the Q&A plugin makes any topic created with that key a question,
+    // whatever its value. The fields are cleared afterwards too, in case the plugin's settings
+    // force questions in this category.
+    const result = await nb.api().topics.create(caller(viewer), { cid, title, content, tags: [type] });
     const wait = queued(result);
     if (wait) return wait;
-    await nb.topics().setTopicField(result.tid, announcements.STAFF_FIELD, 1);
+    await nb.topics().setTopicFields(result.tid, { isQuestion: 0, isSolved: 0, [announcements.STAFF_FIELD]: 1 });
+    await nb.db().sortedSetsRemove(['topics:solved', 'topics:unsolved'], result.tid);
     if (attachments.length) await nb.posts().setPostField(result.mainPid, 'redactplusAttachments', JSON.stringify(attachments));
     await index.refresh(result.tid);
     return { id: Number(result.tid), slugTitle: String(result.slug || '').split('/')[1] || 'announcement', kind: 'announcement', type };

@@ -319,8 +319,11 @@ async function listAnnouncements(viewer, rawQuery) {
   if (!cid) return { items: [] };
   const db = nb.db();
   // Every topic in the category, then the mark, type and order decide; the category is small.
-  const tids = (await db.getSortedSetRevRange(`cid:${cid}:tids:create`, 0, 499).catch(() => [])).map(Number);
-  const all = tids.length ? tids : (await db.getSortedSetRevRange(`cid:${cid}:tids`, 0, 499)).map(Number);
+  // NodeBB moves a pinned topic out of the category's other sets into cid:X:tids:pinned.
+  const pinned = (await db.getSortedSetRevRange(`cid:${cid}:tids:pinned`, 0, 499).catch(() => [])).map(Number);
+  const created = (await db.getSortedSetRevRange(`cid:${cid}:tids:create`, 0, 499).catch(() => [])).map(Number);
+  const rest = created.length ? created : (await db.getSortedSetRevRange(`cid:${cid}:tids`, 0, 499)).map(Number);
+  const all = [...new Set([...pinned, ...rest])];
   const readable = await nb.privileges().topics.filterTids('topics:read', all, viewer.uid);
   const rows = announcements.staffMarked(await nb.topics().getTopicsFields(readable, ['tid', 'pinned', 'timestamp', 'deleted', announcements.STAFF_FIELD]));
   const ordered = announcements.newsOrder(rows).map(row => Number(row.tid));

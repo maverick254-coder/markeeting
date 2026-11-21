@@ -11,6 +11,7 @@ import {
   ATTACHMENT_TYPES,
   BODY_MIN,
   checkAttachments,
+  draftPayload,
   MAX_ATTACHMENTS,
   MAX_TAGS,
   normaliseTag,
@@ -107,11 +108,11 @@ export function QuestionComposer({
   const id = (name: string) => `${base}-${name}`;
   const knownCategories = categories.map((category) => category.slug);
 
-  const draft = { title, categorySlug, tags, body };
+  const draft = { title, categorySlug, tags, body, announcementType };
   useEffect(() => {
-    if (submitted) setErrors(validateDraft({ title, categorySlug, tags, body }, knownCategories));
+    if (submitted) setErrors(validateDraft({ title, categorySlug, tags, body, announcementType }, knownCategories));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, categorySlug, tags, body, submitted]);
+  }, [title, categorySlug, tags, body, announcementType, submitted]);
 
   function addTag(raw: string) {
     const tag = normaliseTag(raw);
@@ -185,17 +186,13 @@ export function QuestionComposer({
       setFailure("Wait for the images to finish uploading.");
       return;
     }
-    const payload = {
-      category: categorySlug,
-      title: title.trim(),
-      body: body.trim(),
-      tags: announcing ? [] : finalTags,
-      ...(announcing ? { type: announcementType } : {}),
-      attachments: attachments.flatMap((item) => {
+    const payload = draftPayload(
+      { ...draft, tags: finalTags },
+      attachments.flatMap((item) => {
         const url = storedImagePath(item.url);
         return url ? [{ url, name: item.name, sizeBytes: item.size }] : [];
-      }),
-    };
+      })
+    );
     setBusy(true);
     const result = initial
       ? await forumRequest<{ id: number }>(`questions/${initial.questionId}`, { method: "PUT", body: payload, csrf })
@@ -256,7 +253,7 @@ export function QuestionComposer({
           Title
         </label>
         <p id={id("title-hint")} className="mt-0.5 text-body-sm text-ink-muted">
-          Be specific: what are you trying to do, and what happens?
+          {announcing ? "A short headline. Customers see it on the News page." : "Be specific: what are you trying to do, and what happens?"}
         </p>
         <input
           id={id("title")}
@@ -265,7 +262,7 @@ export function QuestionComposer({
           maxLength={TITLE_MAX + 20}
           aria-invalid={Boolean(errors.title)}
           aria-describedby={[id("title-hint"), errors.title ? id("title-error") : null].filter(Boolean).join(" ")}
-          placeholder="e.g. How do I blur a face that moves across the frame?"
+          placeholder={announcing ? "e.g. RedactPlus 2.4 is available" : "e.g. How do I blur a face that moves across the frame?"}
           className={cn(fieldClass("title"), "mt-2 h-12")}
         />
         <div className="mt-1 flex justify-between gap-3">
@@ -308,8 +305,9 @@ export function QuestionComposer({
               id={id("type")}
               value={announcementType}
               onChange={(event) => setAnnouncementType(event.target.value === "news" ? "news" : "announcement")}
-              aria-describedby={id("type-hint")}
-              className={cn(fieldClass("tags"), "mt-2 h-12")}
+              aria-invalid={Boolean(errors.type)}
+              aria-describedby={[id("type-hint"), errors.type ? id("type-error") : null].filter(Boolean).join(" ")}
+              className={cn(fieldClass("type"), "mt-2 h-12")}
             >
               <option value="announcement">Announcement</option>
               <option value="news">News</option>
@@ -317,6 +315,7 @@ export function QuestionComposer({
             <p id={id("type-hint")} className="mt-1 text-caption text-ink-muted">
               Shown on the portal&apos;s News page. Customers can reply in the forum.
             </p>
+            {errorText("type")}
           </div>
         ) : (
         <div>
@@ -408,7 +407,7 @@ export function QuestionComposer({
               rows={12}
               aria-invalid={Boolean(errors.body)}
               aria-describedby={[id("body-hint"), errors.body ? id("body-error") : null].filter(Boolean).join(" ")}
-              placeholder={"Describe what you tried and what happened.\n\nUse ``` for code and logs."}
+              placeholder={announcing ? "Write the announcement. Markdown is supported." : "Describe what you tried and what happened.\n\nUse ``` for code and logs."}
               className="block w-full resize-y px-4 py-3 font-mono text-[0.875rem] leading-6 text-ink focus:outline-none"
             />
           </div>

@@ -256,9 +256,10 @@ check("NodeBB's own privileges keep Announcements staff-only (members read and r
 const custAnnounce = await paced(alice, () => call(alice, 'POST', '/questions', { category: 'announcements', title: `A customer tries to announce ${stamp}`, body: 'Customers must not be able to post announcements.', type: 'news' }));
 check('A customer cannot create a topic in Announcements (403 staff_only)', custAnnounce.status === 403 && custAnnounce.error.code === 'staff_only', `${custAnnounce.status} ${JSON.stringify(custAnnounce.error)}`);
 await call(herald, 'GET', '/me');
-const ann1 = await paced(mod, () => call(mod, 'POST', '/questions', { category: 'announcements', title: `RedactPlus 9.9 is available now ${stamp}`, body: 'The new release improves audio review and adds faster export checks.', type: 'announcement' }));
+// Exactly what the portal's Post to News sends (draftPayload): the type, no tags.
+const ann1 = await paced(mod, () => call(mod, 'POST', '/questions', { category: 'announcements', title: `RedactPlus 9.9 is available now ${stamp}`, body: 'The new release improves audio review and adds faster export checks.', tags: [], type: 'announcement', attachments: [] }));
 check('A moderator creates an announcement, and it is not a question', ann1.status === 201 && ann1.data.kind === 'announcement' && ann1.data.type === 'announcement', `${ann1.status} ${JSON.stringify(ann1.error || ann1.data)}`);
-const news1 = await paced(herald, () => call(herald, 'POST', '/questions', { category: 'announcements', title: `RedactPlus at the privacy summit ${stamp}`, body: 'The team will present redaction review practice at the summit next month.', type: 'news' }));
+const news1 = await paced(herald, () => call(herald, 'POST', '/questions', { category: 'announcements', title: `RedactPlus at the privacy summit ${stamp}`, body: 'The team will present redaction review practice at the summit next month.', tags: [], type: 'news', attachments: [] }));
 check('A second moderator posts news', news1.status === 201 && news1.data.type === 'news', `${news1.status} ${JSON.stringify(news1.error || news1.data)}`);
 const annThread = await call(alice, 'GET', `/questions/${ann1.data.id}`);
 check('Customers open the announcement thread; no accepted-answer controls, no pin', annThread.status === 200 && annThread.data.kind === 'announcement' && annThread.data.viewer.canAccept === false && annThread.data.viewer.canPin === false && annThread.data.viewer.canAnswer === true, `${annThread.status} ${JSON.stringify(annThread.data && annThread.data.viewer)}`);

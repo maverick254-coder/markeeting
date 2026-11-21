@@ -5,7 +5,7 @@ import { AuthorLine, FixtureBanner, formatForumDate, TagChip } from "@/component
 import { forumProblem } from "@/components/forum/ForumState";
 import { Markdown } from "@/components/forum/Markdown";
 import { Attachments, CommentsBlock, RemovedLabel, VoteColumn } from "@/components/forum/Thread";
-import { AcceptControl, AnswerComposer, PostTools, type ThreadContext } from "@/components/forum/ThreadControls";
+import { AcceptControl, AnswerComposer, PinControl, PostTools, type ThreadContext } from "@/components/forum/ThreadControls";
 import { Icon } from "@/components/Icon";
 import { questionQueryHref, parseQuestionQuery } from "@/lib/community/query";
 import { forumFor } from "@/lib/community/source";
@@ -44,6 +44,8 @@ export default async function QuestionPage({ params }: { params: Promise<{ slug:
       : null;
   const baseQuery = parseQuestionQuery({}, forum.categories.map((category) => category.slug));
   const category = forum.categories.find((item) => item.slug === question.categorySlug);
+  // A staff post from Announcements (the News page): replies instead of answers, nothing to accept.
+  const announcement = question.kind === "announcement";
   const answers = [...question.answers].sort((a, b) => Number(b.accepted) - Number(a.accepted) || b.score - a.score);
   const visibleAnswers = answers.filter((answer) => !answer.deleted).length;
 
@@ -60,19 +62,31 @@ export default async function QuestionPage({ params }: { params: Promise<{ slug:
           </li>
           <li aria-hidden="true">/</li>
           <li>
-            <Link href={questionQueryHref(baseQuery, { category: question.categorySlug })} prefetch={false} className="hover:text-ink">
-              {category?.name ?? question.categorySlug}
-            </Link>
+            {announcement ? (
+              <Link href="/news" prefetch={false} className="hover:text-ink">
+                News
+              </Link>
+            ) : (
+              <Link href={questionQueryHref(baseQuery, { category: question.categorySlug })} prefetch={false} className="hover:text-ink">
+                {category?.name ?? question.categorySlug}
+              </Link>
+            )}
           </li>
         </ol>
       </nav>
 
       <header className="flex flex-col gap-4 border-b border-border-subtle pb-5 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
+          {announcement ? (
+            <p className="type-eyebrow mb-1">
+              {question.announcementType === "news" ? "News" : "Announcement"}
+              {question.pinned ? " · Pinned" : ""}
+            </p>
+          ) : null}
           <h1 className="type-h1 break-words">{question.title}</h1>
           <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-caption text-ink-muted">
             <div className="flex gap-1">
-              <dt>Asked</dt>
+              <dt>{announcement ? "Posted" : "Asked"}</dt>
               <dd className="text-ink">
                 <time dateTime={question.createdAt}>{formatForumDate(question.createdAt)}</time>
               </dd>
@@ -93,7 +107,8 @@ export default async function QuestionPage({ params }: { params: Promise<{ slug:
             ) : null}
           </dl>
         </div>
-        {forum.kind === "nodebb" ? (
+        {ctx && announcement && viewer?.canPin ? <PinControl ctx={ctx} pinned={question.pinned} /> : null}
+        {forum.kind === "nodebb" && !announcement ? (
           <Link
             href="/forum/ask"
             prefetch={false}
@@ -123,7 +138,7 @@ export default async function QuestionPage({ params }: { params: Promise<{ slug:
               <div className="mt-4 flex flex-wrap items-start justify-between gap-3">
                 {ctx && viewer && question.postId ? <PostTools ctx={ctx} postId={question.postId} kind="question" viewer={viewer} body={question.body} /> : <span />}
                 <div className="rounded-xl bg-surface-raised px-3 py-2">
-                  <AuthorLine author={question.author} verb={question.editedAt ? "asked (edited)" : "asked"} date={question.createdAt} />
+                  <AuthorLine author={question.author} verb={announcement ? (question.editedAt ? "posted (edited)" : "posted") : question.editedAt ? "asked (edited)" : "asked"} date={question.createdAt} />
                 </div>
               </div>
               <CommentsBlock comments={question.comments} ctx={ctx} parentId={question.postId ?? null} />
@@ -133,9 +148,9 @@ export default async function QuestionPage({ params }: { params: Promise<{ slug:
           <section aria-labelledby="answers-heading">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
               <h2 id="answers-heading" className="type-h2">
-                {visibleAnswers} {visibleAnswers === 1 ? "Answer" : "Answers"}
+                {visibleAnswers} {announcement ? (visibleAnswers === 1 ? "Reply" : "Replies") : visibleAnswers === 1 ? "Answer" : "Answers"}
               </h2>
-              <p className="text-caption text-ink-muted">Accepted answer first, then by score</p>
+              <p className="text-caption text-ink-muted">{announcement ? "By score" : "Accepted answer first, then by score"}</p>
             </div>
             {answers.length ? (
               <ol className="divide-y divide-border-subtle">
@@ -165,7 +180,7 @@ export default async function QuestionPage({ params }: { params: Promise<{ slug:
                         ) : (
                           <span />
                         )}
-                        <AuthorLine author={answer.author} verb={answer.editedAt ? "answered (edited)" : "answered"} date={answer.createdAt} />
+                        <AuthorLine author={answer.author} verb={announcement ? (answer.editedAt ? "replied (edited)" : "replied") : answer.editedAt ? "answered (edited)" : "answered"} date={answer.createdAt} />
                       </div>
                       <CommentsBlock comments={answer.comments} ctx={ctx} parentId={answer.deleted ? null : answer.id} />
                     </div>
@@ -173,17 +188,19 @@ export default async function QuestionPage({ params }: { params: Promise<{ slug:
                 ))}
               </ol>
             ) : (
-              <p className="py-6 text-body-sm text-ink-muted">No answers yet.{ctx && viewer?.canAnswer ? " Be the first to help." : ""}</p>
+              <p className="py-6 text-body-sm text-ink-muted">
+                {announcement ? "No replies yet." : `No answers yet.${ctx && viewer?.canAnswer ? " Be the first to help." : ""}`}
+              </p>
             )}
           </section>
 
           {ctx && viewer ? (
             <section aria-labelledby="your-answer" className="rounded-[20px] border border-border-subtle bg-surface-raised p-5">
               <h2 id="your-answer" className="type-h3">
-                Your answer
+                {announcement ? "Your reply" : "Your answer"}
               </h2>
               {viewer.canAnswer ? (
-                <AnswerComposer ctx={ctx} />
+                <AnswerComposer ctx={ctx} noun={announcement ? "reply" : "answer"} />
               ) : (
                 <p className="mt-2 text-body-sm text-ink-muted">
                   {question.locked

@@ -19,6 +19,7 @@ const read = require('./lib/read');
 const write = require('./lib/write');
 const inbox = require('./lib/inbox');
 const nb = require('./lib/nodebb');
+const announcements = require('./lib/announcements');
 
 const BASE = '/redactplus-bridge/v1';
 const sweepSeconds = Number.parseInt(process.env.REDACTPLUS_BRIDGE_SWEEP_SECONDS || '300', 10);
@@ -63,6 +64,21 @@ function asViewer(handler, status = 200, { allowSuspended = false } = {}) {
   };
 }
 
+/**
+ * Whether NodeBB itself keeps Announcements staff-only: ordinary members may read and reply but
+ * not create topics, and Global Moderators may (scripts/setup-forum.js). Reported by /health so
+ * the forum's own privilege, not only the bridge's check, can be verified.
+ */
+async function announcementsStaffOnly(bySlug) {
+  const cid = bySlug.get(announcements.SLUG);
+  if (!cid) return false;
+  const [members, mods] = await Promise.all([
+    nb.privileges().categories.groupPrivileges(cid, 'registered-users'),
+    nb.privileges().categories.groupPrivileges(cid, identity.MODERATORS),
+  ]);
+  return !members['groups:topics:create'] && Boolean(members['groups:topics:read']) && Boolean(members['groups:topics:reply']) && Boolean(mods['groups:topics:create']);
+}
+
 const id = value => {
   const n = Number.parseInt(value, 10);
   if (!/^\d{1,12}$/.test(String(value)) || !Number.isSafeInteger(n) || n <= 0) throw new BridgeError(404, 'not_found', 'That question or post does not exist.');
@@ -79,7 +95,7 @@ exports.init = async function ({ router }) {
       const { bySlug } = await index.categoryMap();
       const moderators = await nb.groups().getMembers(identity.MODERATORS, 0, -1);
       const linked = moderators.length ? (await nb.user().getUsersFields(moderators, ['redactplusId'])).filter(row => row && row.redactplusId).length : 0;
-      send(res, 200, { status: 'ready', categories: bySlug.size, acceptedAnswers: Boolean(nb.socketPlugins().QandA), linkedModerators: linked });
+      send(res, 200, { status: 'ready', categories: bySlug.size, acceptedAnswers: Boolean(nb.socketPlugins().QandA), linkedModerators: linked, announcementsStaffOnly: await announcementsStaffOnly(bySlug) });
     } catch (err) {
       await fail(res, err);
     }
@@ -96,6 +112,8 @@ exports.init = async function ({ router }) {
   r('get', '/questions', asViewer((viewer, req) => read.list(viewer, req.query || {})));
   r('get', '/tags', asViewer((viewer, req) => read.popularTags(viewer, Number.parseInt(req.query.limit, 10) || 12)));
   r('get', '/questions/:tid', asViewer((viewer, req) => read.thread(viewer, id(req.params.tid), { view: req.query.view === '1' })));
+  r('get', '/announcements', asViewer((viewer, req) => read.listAnnouncements(viewer, req.query || {})));
+  r('put', '/announcements/:tid/pinned', asViewer((viewer, req) => write.pinAnnouncement(viewer, id(req.params.tid), (req.body || {}).pinned)));
   r('get', '/questions/:tid/related', asViewer((viewer, req) => read.related(viewer, id(req.params.tid), Number.parseInt(req.query.limit, 10) || 5)));
 
   r('post', '/questions', asViewer((viewer, req) => write.createQuestion(viewer, req.body || {}, idem(req)), 201));
@@ -147,6 +165,13 @@ exports.init = async function ({ router }) {
 };
 
 const quietly = work => Promise.resolve().then(work).catch(err => nb.winston().error(`[redactplus-bridge] index update failed: ${err.message}`));
+
+// Only the bridge marks a topic as a staff announcement, after NodeBB has created it. Whatever
+// reaches NodeBB's own topic creation (its UI, its API, another plugin) never carries the mark.
+exports.filterTopicCreate = (data) => {
+  if (data && data.topic) delete data.topic[announcements.STAFF_FIELD];
+  return data;
+};
 
 exports.onTopicSave = ({ topic }) => quietly(() => index.refresh(Number(topic.tid)));
 exports.onPostSave = ({ post }) => quietly(() => index.refresh(Number(post.tid)));

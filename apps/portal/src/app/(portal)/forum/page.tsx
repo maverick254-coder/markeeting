@@ -7,7 +7,7 @@ import { QuestionRow } from "@/components/forum/QuestionRow";
 import { Icon } from "@/components/Icon";
 import { forumFor } from "@/lib/community/source";
 import { parseQuestionQuery, questionQueryHref } from "@/lib/community/query";
-import type { ForumMe, QuestionFilter, QuestionPage, QuestionQuery, QuestionSort } from "@/lib/community/types";
+import { ANNOUNCEMENTS_SLUG, type ForumMe, type QuestionFilter, type QuestionPage, type QuestionQuery, type QuestionSort } from "@/lib/community/types";
 import { requirePortalSession } from "@/lib/session/current";
 import { cn } from "@/lib/utils";
 
@@ -226,8 +226,9 @@ export default async function ForumPage({ searchParams }: { searchParams: Promis
               </li>
               {forum.categories.map((category) => (
                 <li key={category.slug} className="shrink-0">
+                  {/* Announcements are staff posts, listed on the News page rather than as questions. */}
                   <Link
-                    href={questionQueryHref(query, { category: category.slug })}
+                    href={category.slug === ANNOUNCEMENTS_SLUG ? "/news" : questionQueryHref(query, { category: category.slug })}
                     prefetch={false}
                     title={category.description}
                     aria-current={query.category === category.slug ? "true" : undefined}

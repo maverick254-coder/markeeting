@@ -21,7 +21,7 @@ import {
 } from "@/lib/community/compose";
 import { portalImageUrl, storedImagePath } from "@/lib/community/images";
 import { questionSlug } from "@/lib/community/slug";
-import type { CommunityCategory } from "@/lib/community/types";
+import { ANNOUNCEMENTS_SLUG, type AnnouncementType, type CommunityCategory } from "@/lib/community/types";
 import { cn } from "@/lib/utils";
 
 interface Attachment {
@@ -41,6 +41,8 @@ export interface QuestionDraftInitial {
   tags: string[];
   body: string;
   attachments: { name: string; sizeBytes: number; url: string }[];
+  /** Announcements only: News or Announcement. */
+  announcementType?: AnnouncementType | null;
 }
 
 const toolbar: { action: FormatAction; label: string; text: string }[] = [
@@ -66,8 +68,11 @@ export function QuestionComposer({
   authorInitials,
   csrf,
   initial,
+  defaultCategory,
 }: {
   categories: readonly CommunityCategory[];
+  /** Preselected category for a new post (for example Announcements from the News page). */
+  defaultCategory?: string;
   authorName: string;
   authorInitials: string;
   csrf: string;
@@ -76,10 +81,14 @@ export function QuestionComposer({
   const router = useRouter();
   const editing = Boolean(initial);
   const [title, setTitle] = useState(initial?.title ?? "");
-  const [categorySlug, setCategorySlug] = useState(initial?.categorySlug ?? "");
+  const [categorySlug, setCategorySlug] = useState(initial?.categorySlug ?? defaultCategory ?? "");
   const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
   const [tagInput, setTagInput] = useState("");
   const [body, setBody] = useState(initial?.body ?? "");
+  // Staff posts in Announcements carry a type instead of tags (only moderators see the category).
+  const [announcementType, setAnnouncementType] = useState<AnnouncementType>(initial?.announcementType ?? "announcement");
+  const announcing = categorySlug === ANNOUNCEMENTS_SLUG;
+  const noun = announcing ? "announcement" : "question";
   const [tab, setTab] = useState<"write" | "preview">("write");
   const [attachments, setAttachments] = useState<Attachment[]>(
     () => initial?.attachments.map((item, index) => ({ id: `existing-${index}`, name: item.name, size: item.sizeBytes, url: item.url, status: "ready" as const })) ?? []
@@ -180,7 +189,8 @@ export function QuestionComposer({
       category: categorySlug,
       title: title.trim(),
       body: body.trim(),
-      tags: finalTags,
+      tags: announcing ? [] : finalTags,
+      ...(announcing ? { type: announcementType } : {}),
       attachments: attachments.flatMap((item) => {
         const url = storedImagePath(item.url);
         return url ? [{ url, name: item.name, sizeBytes: item.size }] : [];
@@ -192,7 +202,7 @@ export function QuestionComposer({
       : await forumRequest<{ id: number; slugTitle: string }>("questions", { body: payload, csrf, idempotent: submissionKey.current });
     setBusy(false);
     if (!result.ok) {
-      if (result.status !== 401) setFailure(result.error?.message ?? "Your question could not be posted. Try again.");
+      if (result.status !== 401) setFailure(result.error?.message ?? `Your ${noun} could not be posted. Try again.`);
       return;
     }
     if (result.status === 202) {
@@ -289,6 +299,26 @@ export function QuestionComposer({
           {errorText("category")}
         </div>
 
+        {announcing ? (
+          <div>
+            <label htmlFor={id("type")} className="block font-semibold text-ink">
+              Type
+            </label>
+            <select
+              id={id("type")}
+              value={announcementType}
+              onChange={(event) => setAnnouncementType(event.target.value === "news" ? "news" : "announcement")}
+              aria-describedby={id("type-hint")}
+              className={cn(fieldClass("tags"), "mt-2 h-12")}
+            >
+              <option value="announcement">Announcement</option>
+              <option value="news">News</option>
+            </select>
+            <p id={id("type-hint")} className="mt-1 text-caption text-ink-muted">
+              Shown on the portal&apos;s News page. Customers can reply in the forum.
+            </p>
+          </div>
+        ) : (
         <div>
           <label htmlFor={id("tags")} className="block font-semibold text-ink">
             Tags
@@ -325,12 +355,13 @@ export function QuestionComposer({
           </p>
           {errorText("tags")}
         </div>
+        )}
       </div>
 
       <div>
         <div className="flex flex-wrap items-end justify-between gap-2">
           <label htmlFor={id("body")} className="block font-semibold text-ink">
-            Question details
+            {announcing ? "Announcement" : "Question details"}
           </label>
           <div role="tablist" aria-label="Editor mode" className="inline-flex rounded-full border border-border-subtle bg-surface-raised p-0.5">
             {(["write", "preview"] as const).map((value) => (
@@ -472,7 +503,7 @@ export function QuestionComposer({
           disabled={busy}
           className="inline-flex min-h-11 items-center rounded-full bg-accent-warm px-6 text-[0.9375rem] font-semibold text-on-accent shadow-action hover:bg-accent-warm-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {busy ? (editing ? "Saving…" : "Posting…") : editing ? "Save changes" : "Post your question"}
+          {busy ? (editing ? "Saving…" : "Posting…") : editing ? "Save changes" : announcing ? "Post to News" : "Post your question"}
         </button>
         <Link href={initial ? `/forum/questions/${initial.slug}` : "/forum"} prefetch={false} className="inline-flex min-h-11 items-center rounded-full px-4 text-[0.9375rem] font-medium text-ink-muted hover:bg-surface-active hover:text-ink">
           Cancel

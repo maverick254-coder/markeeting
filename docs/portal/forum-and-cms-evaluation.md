@@ -4,10 +4,12 @@
 and its editorial content (news, announcements, release posts, tutorials, documentation),
 without building a forum backend and without a redundant CMS.
 
-**Status:** nothing has been installed or deployed. The portal's forum and news UIs run on
-interfaces (`ForumService` in `apps/portal/src/lib/community/types.ts`, and
-`apps/portal/src/lib/editorial/news.ts`). In production those interfaces report an honest empty
-state.
+**Status (updated 21 November 2026):** the NodeBB forum is live behind the portal. Portal
+**news now comes from the forum's Announcements category**, not from Markdown files: staff post
+there from `/news` without a pull request, and customers reply in the forum
+(`deployment/forum/RUNBOOK.md` §5.1). The Markdown news loader and `apps/portal/content/news`
+were removed, so the Decap collection for portal news sketched in §4 is no longer planned.
+Release notes stay file-based (`content/releases.json`).
 
 ## 1. What already exists
 
@@ -86,32 +88,10 @@ and back up, for features we don't need yet (relational content, an in-app media
 - non-GitHub staff accounts;
 - structured relations across many content types.
 
-### The Decap collection for portal news (to add when the CMS is enabled)
+### Portal news
 
-```yaml
-- name: portal-news
-  label: Portal news and announcements
-  folder: apps/portal/content/news
-  create: true
-  slug: "{{slug}}"
-  media_folder: /apps/portal/public/images/news
-  public_folder: /images/news
-  fields:
-    - { label: Title, name: title, widget: string }
-    - { label: Date, name: date, widget: datetime, format: "YYYY-MM-DD", date_format: "YYYY-MM-DD", time_format: false }
-    - { label: Type, name: type, widget: select, options: [news, announcement, release] }
-    - { label: Category, name: category, widget: string }
-    - { label: Tags, name: tags, widget: list, default: [] }
-    - { label: Excerpt, name: excerpt, widget: text }
-    - { label: Status, name: status, widget: select, options: [draft, published], default: draft }
-    - { label: Featured, name: featured, widget: boolean, default: false }
-    - { label: Author, name: author, widget: string }
-    - { label: Image, name: image, widget: object, required: false, fields: [{ label: Source, name: src, widget: image }, { label: Alt text, name: alt, widget: string }] }
-    - { label: Body, name: body, widget: markdown }
-```
-
-The portal validates every file (`newsFrontMatterSchema`) and renders only `status: published`
-entries. Tutorials and documentation can follow as further collections with the same pattern.
+Superseded: portal news is posted in the forum's Announcements category (see the status above),
+so no Decap collection is needed for it.
 
 ## 5. Identity requirements shared by all candidates
 

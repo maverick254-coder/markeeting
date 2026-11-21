@@ -153,3 +153,41 @@ test("the portal's categories are exactly the bridge's (services/forum-bridge/ca
   const bridge = JSON.parse(readFileSync(path.join(process.cwd(), "../../services/forum-bridge/categories.json"), "utf8")) as { slug: string; name: string; description: string }[];
   assert.deepEqual(bridge, plannedCategories.map(({ slug, name, description }) => ({ slug, name, description })));
 });
+
+test("News reads staff posts through the bridge, pinned first as the bridge orders them, and links each to its thread", async () => {
+  const item = (id: number, extra: Record<string, unknown> = {}) => ({
+    id, slugTitle: `post-${id}`, title: `Post ${id}`, excerpt: "e", categorySlug: "announcements", tags: ["news"], author: { name: "RedactPlus team", isStaff: true },
+    createdAt: "2026-11-20T00:00:00.000Z", lastActivityAt: "2026-11-20T00:00:00.000Z", answerCount: 0, viewCount: 0, score: 0, hasAcceptedAnswer: false,
+    pinned: false, kind: "announcement", announcementType: "news", replyCount: 2, ...extra,
+  });
+  // The bridge decides what is a staff post; anything it returns that is not an announcement is dropped.
+  const fake = withFetch(() => ok({ items: [item(7, { pinned: true, announcementType: "announcement", tags: [] }), item(5), item(3, { kind: "question", categorySlug: "ideas" })] }));
+  try {
+    const forum = nodebbForum(settings, async () => identity);
+    const items = await forum.announcements({ type: "news", limit: 3 });
+    const url = new URL(fake.calls[0].url);
+    assert.equal(url.pathname, "/redactplus-bridge/v1/announcements");
+    assert.equal(url.searchParams.get("type"), "news");
+    assert.equal(url.searchParams.get("limit"), "3");
+    assert.deepEqual(items.map((i) => [i.slug, i.type, i.pinned, i.replyCount]), [["7-post-7", "announcement", true, 2], ["5-post-5", "news", false, 2]]);
+  } finally {
+    fake.restore();
+  }
+});
+
+test("only staff can pin, through one route; customers never see Announcements in the composer", () => {
+  const pin = matchRoute("PUT", "announcements/42/pinned");
+  assert.equal(pin?.route.bridge(pin.match), "/announcements/42/pinned");
+  assert.equal(matchRoute("POST", "announcements"), null, "announcements are created through questions, which the bridge checks");
+  const ask = readFileSync(path.join(process.cwd(), "src/app/(portal)/forum/ask/page.tsx"), "utf8");
+  assert.match(ask, /staff \|\| category\.slug !== ANNOUNCEMENTS_SLUG/);
+  const news = readFileSync(path.join(process.cwd(), "src/app/(portal)/news/page.tsx"), "utf8");
+  assert.match(news, /staff && result\.status === "ok"/, "only staff see Post to News");
+});
+
+test("a thread from Announcements reads as a staff post: replies, no accepted answer, pin for staff", () => {
+  const page = readFileSync(path.join(process.cwd(), "src/app/(portal)/forum/questions/[slug]/page.tsx"), "utf8");
+  assert.match(page, /question\.kind === "announcement"/);
+  assert.match(page, /viewer\?\.canPin \? <PinControl/);
+  assert.match(page, /"Reply" : "Replies"/);
+});

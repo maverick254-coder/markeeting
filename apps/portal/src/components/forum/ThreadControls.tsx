@@ -114,6 +114,25 @@ export function VoteControl({ ctx, postId, score, label, viewer }: { ctx: Thread
 
 // ---------- accepted answer ----------
 
+/** Staff only: pins an announcement to the top of News, or unpins it. */
+export function PinControl({ ctx, pinned }: { ctx: ThreadContext; pinned: boolean }) {
+  const { busy, error, run } = useAction();
+  return (
+    <span className="inline-flex flex-col">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => run(() => forumRequest(`announcements/${ctx.questionId}/pinned`, { method: "PUT", body: { pinned: !pinned }, csrf: ctx.csrf }))}
+        className={actionClass}
+      >
+        <Icon name="pin" size={14} />
+        {pinned ? "Unpin from News" : "Pin to the top of News"}
+      </button>
+      <ErrorLine message={error} />
+    </span>
+  );
+}
+
 export function AcceptControl({ ctx, postId, accepted }: { ctx: ThreadContext; postId: string; accepted: boolean }) {
   const { busy, error, run } = useAction();
   return (
@@ -168,7 +187,7 @@ function MarkdownBox({ id, value, onChange, rows, placeholder, label, max }: { i
   );
 }
 
-export function AnswerComposer({ ctx }: { ctx: ThreadContext }) {
+export function AnswerComposer({ ctx, noun = "answer" }: { ctx: ThreadContext; noun?: "answer" | "reply" }) {
   const { busy, error, notice, run, setError } = useAction();
   const [body, setBody] = useState("");
   const id = useId();
@@ -176,17 +195,25 @@ export function AnswerComposer({ ctx }: { ctx: ThreadContext }) {
     event.preventDefault();
     const text = body.trim();
     if (text.length < ANSWER_MIN) return setError(`Write at least ${ANSWER_MIN} characters.`);
-    if (text.length > BODY_MAX) return setError(`Keep the answer under ${BODY_MAX.toLocaleString("en-GB")} characters.`);
+    if (text.length > BODY_MAX) return setError(`Keep the ${noun} under ${BODY_MAX.toLocaleString("en-GB")} characters.`);
     const ok = await run(() => forumRequest(`questions/${ctx.questionId}/answers`, { body: { body: text }, csrf: ctx.csrf, idempotent: true }));
     if (ok) setBody("");
   }
   return (
     <form onSubmit={submit} noValidate>
       <label htmlFor={id} className="sr-only">
-        Your answer
+        {`Your ${noun}`}
       </label>
       <div className="mt-3">
-        <MarkdownBox id={id} value={body} onChange={setBody} rows={6} label="Your answer" max={BODY_MAX} placeholder={"Share what worked for you. Markdown is supported; use ``` for code and logs."} />
+        <MarkdownBox
+          id={id}
+          value={body}
+          onChange={setBody}
+          rows={6}
+          label={`Your ${noun}`}
+          max={BODY_MAX}
+          placeholder={noun === "reply" ? "Ask a question or share feedback. Markdown is supported." : "Share what worked for you. Markdown is supported; use ``` for code and logs."}
+        />
       </div>
       <ErrorLine message={error} />
       {notice ? (
@@ -195,7 +222,7 @@ export function AnswerComposer({ ctx }: { ctx: ThreadContext }) {
         </p>
       ) : null}
       <button type="submit" disabled={busy} className={cn(primaryButton, "mt-3")}>
-        {busy ? "Posting…" : "Post your answer"}
+        {busy ? "Posting…" : `Post your ${noun}`}
       </button>
     </form>
   );

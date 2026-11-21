@@ -5,7 +5,7 @@ import { forumProblem } from "@/components/forum/ForumState";
 import { QuestionComposer } from "@/components/forum/QuestionComposer";
 import { questionIdFromSlug } from "@/lib/community/slug";
 import { forumFor } from "@/lib/community/source";
-import type { Question } from "@/lib/community/types";
+import { ANNOUNCEMENTS_SLUG, type Question } from "@/lib/community/types";
 import { initialsFor } from "@/lib/initials";
 import { requirePortalSession } from "@/lib/session/current";
 
@@ -39,9 +39,10 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ s
         </Link>{" "}
         / Edit
       </nav>
-      <h1 className="type-h1">Edit your question</h1>
+      <h1 className="type-h1">{question.kind === "announcement" ? "Edit the announcement" : "Edit your question"}</h1>
       <QuestionComposer
-        categories={forum.categories}
+        // Topics never move into or out of Announcements (the bridge refuses it too).
+        categories={forum.categories.filter((category) => (category.slug === ANNOUNCEMENTS_SLUG) === (question.kind === "announcement"))}
         authorName={session.name ?? session.email ?? "You"}
         authorInitials={initialsFor(session.name, session.email)}
         csrf={session.csrfToken}
@@ -50,7 +51,8 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ s
           slug: question.slug,
           title: question.title,
           categorySlug: question.categorySlug,
-          tags: question.tags,
+          tags: question.kind === "announcement" ? [] : question.tags,
+          announcementType: question.announcementType ?? null,
           body: question.body,
           attachments: question.attachments.flatMap((item) => (item.url ? [{ name: item.name, sizeBytes: item.sizeBytes, url: item.url }] : [])),
         }}

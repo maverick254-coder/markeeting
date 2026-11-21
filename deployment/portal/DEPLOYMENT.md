@@ -232,6 +232,11 @@ docker push registry.safaridesk.io/safari/redactplus-portal:"$(git rev-parse HEA
 
 Build elsewhere than the server while disk is at 94%.
 
+Without a local build machine: with `portal-publish` in the production environment's
+`CD_COMPONENTS`, CI builds and publishes the portal image for every push to main that changes a
+portal image input, and never deploys. The run's summary ("publish / portal image") gives
+`RELEASE_SHA` and `RELEASE_DIGEST` for `.env`; the approval to publish is the merge to main.
+
 ### Stage H. Portal on loopback [APPROVAL H]
 
 ```sh

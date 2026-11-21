@@ -508,6 +508,7 @@ const icons: Record<string, ReactElement> = {
   "vote-up": <path d="M12 5 5 14h14L12 5z" strokeWidth="1.5" strokeLinejoin="round" />,
   "vote-down": <path d="M12 19 5 10h14l-7 9z" strokeWidth="1.5" strokeLinejoin="round" />,
   flag: <path d="M5 21V4M5 4h11l-2 4 2 4H5" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
+  pin: <path d="M12 16v5M9 3h6l-1 6 3 3v2H7v-2l3-3-1-6z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
   trash: <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
   bell: <path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16zM10 20a2 2 0 0 0 4 0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,
   undo: <path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />,

@@ -130,6 +130,30 @@ new image instead (§9).
 4. Roll back by removing `PORTAL_FORUM_ENABLED` and restarting the portal without
    `compose.forum.yaml`. The forum's data stays intact.
 
+### 5.1 News from Announcements
+
+The portal's `/news` lists staff posts from the Announcements category (`GET /announcements` on
+the bridge). On every start, `setup-forum.js` keeps that category staff-only:
+- members read and reply, but cannot create topics; Global Moderators (Keycloak
+  `forum-moderator`) and administrators can;
+- Announcements is not a Q&A category.
+
+Bridge health reports `announcementsStaffOnly: true` when NodeBB's own privileges say so.
+
+Staff post from `/news` ("Post to News"), choosing News or Announcement (a tag), and pin from the
+post's thread. The bridge marks each staff post when it creates it (topic field
+`redactplusStaffPost`), and `/news` shows only marked topics: a topic that reaches the category
+any other way never appears. A post stays on `/news` after its author loses the role.
+
+The start-up migration (`lib/announcement-migration.js`) converts earlier staff topics in
+Announcements once:
+- it removes the question flag;
+- it sets the staff mark;
+- it adds the tag `announcement` if the topic has none.
+
+It prints what it changed: `docker logs redactplus-forum | grep "announcements migration"`. Later
+starts change nothing.
+
 ## 6. Monitoring and logs
 
 - `docker compose ps`: both services `healthy`. The forum's health check calls the bridge with its
@@ -175,6 +199,10 @@ counts.
   as `.env.previous`) and `docker compose up -d`. The schema upgrade runs on start.
 - **Rollback:** restore `.env.previous` and `docker compose up -d`. If the new version upgraded the
   schema, restore the backup taken before the upgrade (§8).
+- **Rollback order when a release changed both the bridge and the portal** (for example News from
+  Announcements): roll back the **portal first, then the forum**. An older bridge hides
+  non-question topics, so it would empty the new portal's `/news` and break the links to
+  announcement threads. An older portal works with the newer bridge.
 - **Secrets:** rotating `REDACTPLUS_BRIDGE_KEY` needs the portal and the forum changed together.
   Rotating `FORUM_SECRET` signs administrators out of NodeBB's UI only.
 

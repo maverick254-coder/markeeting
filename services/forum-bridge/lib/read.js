@@ -4,6 +4,7 @@ const { BridgeError } = require('./errors');
 const nb = require('./nodebb');
 const index = require('./question-index');
 const { MODERATORS } = require('./identity');
+const announcements = require('./announcements');
 
 /**
  * Read side: question lists, whole threads, related questions and tags, already shaped for the
@@ -62,21 +63,28 @@ async function summaries(tids, viewer) {
   if (!readable.length) return [];
   const [{ byCid }, topics, tags] = await Promise.all([
     index.categoryMap(),
-    nb.topics().getTopicsFields(readable, ['tid', 'cid', 'title', 'slug', 'uid', 'mainPid', 'timestamp', 'lastposttime', 'viewcount', 'pinned', 'isSolved', 'isQuestion', 'deleted', 'redactplusAnswers']),
+    nb.topics().getTopicsFields(readable, ['tid', 'cid', 'title', 'slug', 'uid', 'mainPid', 'timestamp', 'lastposttime', 'viewcount', 'postcount', 'pinned', 'isSolved', 'isQuestion', 'deleted', 'redactplusAnswers', announcements.STAFF_FIELD]),
     nb.topics().getTopicsTagsObjects(readable),
   ]);
   const mains = await nb.posts().getPostsFields(topics.map(t => t.mainPid), ['content', 'upvotes', 'downvotes']);
   const authorOf = await authors(topics.map(t => t.uid));
   return topics.map((topic, i) => {
     const categorySlug = byCid.get(Number(topic.cid));
-    if (!topic || !topic.tid || !categorySlug || Number(topic.deleted) || String(topic.isQuestion) !== '1') return null;
+    if (!topic || !topic.tid || !categorySlug || Number(topic.deleted)) return null;
+    const announcement = categorySlug === announcements.SLUG;
+    // Questions everywhere else; in Announcements, only topics marked as written by staff.
+    if (announcement ? String(topic[announcements.STAFF_FIELD]) !== '1' : String(topic.isQuestion) !== '1') return null;
+    const tagValues = (tags[i] || []).map(tag => tag.value);
     return {
       id: Number(topic.tid),
       slugTitle: String(topic.slug || '').split('/')[1] || 'question',
+      kind: announcement ? 'announcement' : 'question',
+      announcementType: announcement ? announcements.typeFromTags(tagValues) : null,
+      replyCount: Math.max(0, (Number(topic.postcount) || 1) - 1),
       title: topic.title,
       excerpt: excerptOf(mains[i] && mains[i].content),
       categorySlug,
-      tags: (tags[i] || []).map(tag => tag.value),
+      tags: tagValues,
       author: authorOf(topic.uid),
       createdAt: iso(topic.timestamp),
       lastActivityAt: iso(topic.lastposttime || topic.timestamp),
@@ -174,9 +182,12 @@ async function list(viewer, rawQuery) {
 
 async function loadTopic(tid, viewer) {
   if (!Number.isSafeInteger(tid) || tid <= 0) throw new BridgeError(404, 'not_found', 'That question does not exist.');
-  const topic = await nb.topics().getTopicFields(tid, ['tid', 'cid', 'uid', 'title', 'slug', 'mainPid', 'deleted', 'isQuestion', 'solvedPid', 'isSolved', 'locked']);
+  const topic = await nb.topics().getTopicFields(tid, ['tid', 'cid', 'uid', 'title', 'slug', 'mainPid', 'deleted', 'isQuestion', 'solvedPid', 'isSolved', 'locked', announcements.STAFF_FIELD]);
   const { byCid } = await index.categoryMap();
-  if (!topic || !topic.tid || String(topic.isQuestion) !== '1' || !byCid.has(Number(topic.cid))) throw new BridgeError(404, 'not_found', 'That question does not exist.');
+  const slug = topic && byCid.get(Number(topic.cid));
+  // A question, or a staff-marked announcement; nothing else in the forum is shown.
+  const shown = slug === announcements.SLUG ? String(topic[announcements.STAFF_FIELD]) === '1' : String(topic && topic.isQuestion) === '1';
+  if (!topic || !topic.tid || !slug || !shown) throw new BridgeError(404, 'not_found', 'That question does not exist.');
   if (!(await nb.privileges().topics.canRead(tid, viewer.uid))) throw new BridgeError(404, 'not_found', 'That question does not exist.');
   if (Number(topic.deleted)) throw new BridgeError(404, 'not_found', 'That question has been removed.');
   return topic;
@@ -266,7 +277,8 @@ async function thread(viewer, tid, { view = false } = {}) {
       ...main.viewer,
       canAnswer: write && Boolean(topicPrivileges['topics:reply']),
       canComment: write && Boolean(topicPrivileges['topics:reply']),
-      canAccept: viewer.canWrite && (isAsker || viewer.isModerator),
+      canAccept: base.kind === 'question' && viewer.canWrite && (isAsker || viewer.isModerator),
+      canPin: base.kind === 'announcement' && viewer.isModerator,
       isModerator: viewer.isModerator,
     },
     mainPid,
@@ -297,4 +309,26 @@ async function popularTags(viewer, limit) {
   return [...counts].map(([tag, count]) => ({ tag, count })).sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag)).slice(0, Math.min(50, Math.max(1, limit)));
 }
 
-module.exports = { list, thread, related, popularTags, parseListQuery, excerptOf, pageWindow, loadTopic };
+/**
+ * The portal's /news: staff-marked topics in Announcements, pinned first, then newest, optionally
+ * one type. Read privileges apply as for every other read.
+ */
+async function listAnnouncements(viewer, rawQuery) {
+  const query = announcements.parseListQuery(rawQuery || {});
+  const cid = await announcements.categoryId();
+  if (!cid) return { items: [] };
+  const db = nb.db();
+  // Every topic in the category, then the mark, type and order decide; the category is small.
+  // NodeBB moves a pinned topic out of the category's other sets into cid:X:tids:pinned.
+  const pinned = (await db.getSortedSetRevRange(`cid:${cid}:tids:pinned`, 0, 499).catch(() => [])).map(Number);
+  const created = (await db.getSortedSetRevRange(`cid:${cid}:tids:create`, 0, 499).catch(() => [])).map(Number);
+  const rest = created.length ? created : (await db.getSortedSetRevRange(`cid:${cid}:tids`, 0, 499)).map(Number);
+  const all = [...new Set([...pinned, ...rest])];
+  const readable = await nb.privileges().topics.filterTids('topics:read', all, viewer.uid);
+  const rows = announcements.staffMarked(await nb.topics().getTopicsFields(readable, ['tid', 'pinned', 'timestamp', 'deleted', announcements.STAFF_FIELD]));
+  const ordered = announcements.newsOrder(rows).map(row => Number(row.tid));
+  const items = (await summaries(ordered, viewer)).filter(item => !query.type || item.announcementType === query.type);
+  return { items: items.slice(0, query.limit) };
+}
+
+module.exports = { list, thread, related, popularTags, listAnnouncements, parseListQuery, excerptOf, pageWindow, loadTopic };

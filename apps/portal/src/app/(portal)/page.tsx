@@ -7,7 +7,7 @@ import { NewsList } from "@/components/NewsList";
 import { Notice } from "@/components/ui";
 import { forumAvailable as forumIsAvailable } from "@/lib/community/source";
 import { customerStatusFor } from "@/lib/customer-api/for-session";
-import { defaultNewsDir, loadPublishedNews } from "@/lib/editorial/news";
+import { newsFor, type NewsResult } from "@/lib/community/news";
 import { requirePortalSession } from "@/lib/session/current";
 
 function ResourceCard({ icon, title, href, linkLabel, children }: { icon: string; title: string; href: string; linkLabel: string; children: ReactNode }) {
@@ -61,8 +61,9 @@ export default async function PortalHomePage() {
   const current = await requirePortalSession();
   const { runtime, session } = current;
   const { config } = runtime;
-  const news = await loadPublishedNews(config.newsDir ?? defaultNewsDir());
-  const featured = news.filter((article) => article.featured || article.type !== "news").slice(0, 3);
+  // The latest staff posts from the forum's Announcements (pinned first). The home page never
+  // fails because of the forum: an unreachable forum or an ended forum session shows nothing here.
+  const news: NewsResult = await newsFor(current, { limit: 3 }).catch(() => ({ status: "unavailable" as const, items: [] as [] }));
   const forumAvailable = forumIsAvailable(config);
   const supportEmail = config.supportEmail;
   // The Control Center's view of this account (GET /portal/me); nothing when not configured.
@@ -100,7 +101,13 @@ export default async function PortalHomePage() {
         </ResourceCard>
 
         <ResourceCard icon="news" title="News and announcements" href="/news" linkLabel="All news">
-          {featured.length ? <NewsList articles={featured} compact /> : <p>Nothing has been published yet. Release announcements will appear here.</p>}
+          {news.items.length ? (
+            <NewsList items={news.items} compact />
+          ) : news.status === "unavailable" ? (
+            <p>News is not available right now.</p>
+          ) : (
+            <p>Nothing has been published yet. Release announcements will appear here.</p>
+          )}
         </ResourceCard>
 
         <ResourceCard icon="book" title="Learn RedactPlus" href="/release-notes" linkLabel="Release notes">

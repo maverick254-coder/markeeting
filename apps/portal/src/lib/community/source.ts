@@ -35,6 +35,9 @@ const unavailableForum: ForumService = {
   async reports() {
     return null;
   },
+  async announcements() {
+    return [];
+  },
 };
 
 function summary(question: Question): QuestionSummary {
@@ -85,6 +88,9 @@ const fixtureForum: ForumService = {
   },
   async reports() {
     return null;
+  },
+  async announcements() {
+    return [];
   },
 };
 

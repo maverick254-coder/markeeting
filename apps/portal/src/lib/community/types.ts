@@ -4,6 +4,11 @@
  * fixtures can stand in, read-only.
  */
 
+/** Staff posts for the portal's News page; customers read and reply in the forum. */
+export const ANNOUNCEMENTS_SLUG = "announcements";
+export const ANNOUNCEMENT_TYPES = ["announcement", "news"] as const;
+export type AnnouncementType = (typeof ANNOUNCEMENT_TYPES)[number];
+
 export interface CommunityCategory {
   slug: string;
   name: string;
@@ -35,6 +40,8 @@ export interface QuestionAbilities extends PostAbilities {
   canAnswer: boolean;
   canComment: boolean;
   canAccept: boolean;
+  /** Announcements only: staff can pin them to the top of News. */
+  canPin?: boolean;
   isModerator: boolean;
 }
 
@@ -90,6 +97,21 @@ export interface QuestionSummary {
   score: number;
   hasAcceptedAnswer: boolean;
   pinned: boolean;
+  /** "announcement" for a staff post in Announcements; questions everywhere else. */
+  kind?: "question" | "announcement";
+  announcementType?: AnnouncementType | null;
+}
+
+/** One item on the portal's News page: a staff post in the forum's Announcements category. */
+export interface NewsItem {
+  slug: string;
+  title: string;
+  excerpt: string;
+  type: AnnouncementType;
+  pinned: boolean;
+  createdAt: string;
+  replyCount: number;
+  author: ForumAuthor;
 }
 
 export interface Question extends QuestionSummary {
@@ -165,4 +187,6 @@ export interface ForumService {
   me(): Promise<ForumMe | null>;
   notifications(): Promise<{ items: ForumNotification[]; unread: number } | null>;
   reports(page: number): Promise<{ items: ForumReport[]; page: number; pageCount: number } | null>;
+  /** The News page: staff posts in Announcements, pinned first, then newest. */
+  announcements(query?: { type?: AnnouncementType | null; limit?: number }): Promise<NewsItem[]>;
 }

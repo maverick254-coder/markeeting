@@ -1,4 +1,5 @@
 /** Rules for the Ask Question composer. The forum engine re-checks everything server side. */
+import { ANNOUNCEMENT_TYPES, ANNOUNCEMENTS_SLUG } from "./types";
 
 export const TITLE_MIN = 15;
 export const TITLE_MAX = 150;
@@ -19,9 +20,11 @@ export interface QuestionDraft {
   categorySlug: string;
   tags: string[];
   body: string;
+  /** Announcements only: the type is the post's tag, and there is no tag field. */
+  announcementType?: string | null;
 }
 
-export type DraftField = "title" | "category" | "tags" | "body" | "attachments";
+export type DraftField = "title" | "category" | "tags" | "type" | "body" | "attachments";
 export type DraftErrors = Partial<Record<DraftField, string>>;
 
 /** Lower-case words joined by hyphens, as tags are written in the forum. */
@@ -36,24 +39,57 @@ export function normaliseTag(raw: string) {
     .slice(0, 30);
 }
 
+export function isAnnouncementDraft(draft: Pick<QuestionDraft, "categorySlug">) {
+  return draft.categorySlug === ANNOUNCEMENTS_SLUG;
+}
+
+/** The fields the composer shows: an announcement has a Type and no Tags. */
+export function draftFields(announcing: boolean): DraftField[] {
+  return ["title", "category", announcing ? "type" : "tags", "body"];
+}
+
+/**
+ * Only fields the composer shows can fail (draftFields). In Announcements the Type (News or
+ * Announcement) is the post's tag, so the tag rules do not apply.
+ */
 export function validateDraft(draft: QuestionDraft, knownCategories: readonly string[]): DraftErrors {
   const errors: DraftErrors = {};
+  const announcing = isAnnouncementDraft(draft);
+  const noun = announcing ? "announcement" : "question";
   const title = draft.title.trim();
-  if (!title) errors.title = "Enter a title that sums up your question.";
-  else if (title.length < TITLE_MIN) errors.title = `Make the title at least ${TITLE_MIN} characters so others can find it.`;
+  if (!title) errors.title = announcing ? "Enter a headline for the announcement." : "Enter a title that sums up your question.";
+  else if (title.length < TITLE_MIN) errors.title = announcing ? `Make the headline at least ${TITLE_MIN} characters.` : `Make the title at least ${TITLE_MIN} characters so others can find it.`;
   else if (title.length > TITLE_MAX) errors.title = `Keep the title to ${TITLE_MAX} characters or fewer.`;
 
   if (!knownCategories.includes(draft.categorySlug)) errors.category = "Choose a category.";
 
-  if (draft.tags.length === 0) errors.tags = "Add at least one tag.";
+  if (announcing) {
+    if (!(ANNOUNCEMENT_TYPES as readonly unknown[]).includes(draft.announcementType)) errors.type = "Choose News or Announcement.";
+  } else if (draft.tags.length === 0) errors.tags = "Add at least one tag.";
   else if (draft.tags.length > MAX_TAGS) errors.tags = `Use up to ${MAX_TAGS} tags.`;
   else if (draft.tags.some((tag) => normaliseTag(tag) !== tag || !tag)) errors.tags = "Tags use lower-case letters, numbers and hyphens.";
 
   const body = draft.body.trim();
-  if (!body) errors.body = "Describe your question.";
+  if (!body) errors.body = announcing ? "Write the announcement." : "Describe your question.";
   else if (body.length < BODY_MIN) errors.body = `Add more detail: at least ${BODY_MIN} characters.`;
-  else if (body.length > BODY_MAX) errors.body = `Keep the question under ${BODY_MAX.toLocaleString("en-GB")} characters.`;
+  else if (body.length > BODY_MAX) errors.body = `Keep the ${noun} under ${BODY_MAX.toLocaleString("en-GB")} characters.`;
   return errors;
+}
+
+/**
+ * What the composer sends to POST/PUT questions. An announcement sends its type and no tags (the
+ * bridge tags it with the type); a question sends its tags.
+ */
+export function draftPayload(draft: QuestionDraft, attachments: { url: string; name: string; sizeBytes: number }[] = []) {
+  const announcing = isAnnouncementDraft(draft);
+  return {
+    category: draft.categorySlug,
+    title: draft.title.trim(),
+    body: draft.body.trim(),
+    tags: announcing ? [] : draft.tags,
+    ...(announcing ? { type: draft.announcementType === "news" ? "news" : "announcement" } : {}),
+    attachments,
+  };
 }
 
 /** Checks files chosen for upload. Returns the accepted files and a message for any refused. */

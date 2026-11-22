@@ -1,0 +1,13 @@
+# /etc/sudoers.d/redactplus-cd: the deploy user's only privilege.
+#
+# Install by hand, checking the syntax before it can take effect:
+#   install -m 440 -o root -g root sudoers-redactplus-cd /tmp/redactplus-cd.sudoers
+#   visudo -cf /tmp/redactplus-cd.sudoers && mv /tmp/redactplus-cd.sudoers /etc/sudoers.d/redactplus-cd
+#   visudo -c
+#
+# redactplus-cd may run exactly one program as root, and sudo itself also checks the request
+# (a regular expression over the single argument, sudo 1.9.10 or later): only `status
+# marketing` and `deploy marketing <commit> <digest> <run>`. `rollback` is for an operator
+# running the program as root. The program validates the request again on its own.
+Defaults:redactplus-cd !lecture, env_reset, secure_path="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+redactplus-cd ALL=(root) NOPASSWD: /usr/local/sbin/redactplus-deploy ^(status marketing|deploy marketing [0-9a-f]{40} sha256\:[0-9a-f]{64} [0-9]{1,9})$

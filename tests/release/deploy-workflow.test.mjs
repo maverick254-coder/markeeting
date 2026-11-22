@@ -1,7 +1,7 @@
 // Guards the automatic deployment workflow's safety properties (docs/ci/README.md).
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { test } from "node:test";
@@ -74,6 +74,48 @@ test("the server is reached as the unprivileged deploy user, never root", () => 
   for (const source of [text, remote]) assert.doesNotMatch(source, /root@/);
   assert.match(remote, /"redactplus-cd@\$\{HOST\}" "deploy \$\{COMPONENT\} \$\{TAG\} \$\{DIGEST\} \$\{RUN\}"/);
   assert.match(jobs.plan.steps.find((s) => /ssh /.test(s.run ?? "")).run, /"redactplus-cd@\$\{HOST\}" "status marketing"/);
+});
+
+// Runs .github/scripts/remote-deploy.sh for real with bash, against a stand-in ssh that prints the
+// given server answer, and returns its exit code, output and job summary.
+function remoteDeploy(answer, serverExit = 0) {
+  const dir = mkdtempSync(path.join(tmpdir(), "rp-remote-"));
+  const bin = path.join(dir, "bin");
+  mkdirSync(bin);
+  writeFileSync(path.join(dir, "answer"), answer);
+  writeFileSync(path.join(bin, "ssh"), `#!/bin/bash\ncat "${dir.replace(/\\/g, "/")}/answer"\nexit ${serverExit}\n`);
+  chmodSync(path.join(bin, "ssh"), 0o755);
+  const summary = path.join(dir, "summary");
+  writeFileSync(summary, "");
+  const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}`, RUNNER_TEMP: dir, GITHUB_STEP_SUMMARY: summary, DEPLOY_SSH_KEY: "k", DEPLOY_SSH_KNOWN_HOSTS: "h", HOST: "host.example", COMPONENT: "marketing", TAG: "a".repeat(40), DIGEST: `sha256:${"1".repeat(64)}`, RUN: "9" };
+  const result = spawnSync("bash", [path.join(root, ".github/scripts/remote-deploy.sh")], { env, encoding: "utf8" });
+  return { code: result.status, out: result.stdout, summary: readFileSync(summary, "utf8") };
+}
+
+test("the public check runs on the server and is reported; the runner no longer fetches the site", () => {
+  assert.doesNotMatch(text, /curl[^\n]*redactplus\.io|name: Public check/, "Cloudflare refuses GitHub's runners");
+  const deployed = "result=deployed\nrelease_sha=" + "a".repeat(40) + "\n";
+
+  const ok = remoteDeploy(deployed + "public_health=ok\npublic_home=200\n");
+  assert.equal(ok.code, 0);
+  assert.match(ok.summary, /public check from the server, through Cloudflare: \/api\/health ok, \/ 200/);
+  assert.doesNotMatch(ok.out, /::warning::/, "no annotation when all is well");
+
+  const refused = remoteDeploy(deployed + "public_health=http-403\npublic_home=403\n");
+  assert.equal(refused.code, 0, "a Cloudflare problem never fails the deployment");
+  assert.match(refused.out, /::warning::deployed, but https:\/\/redactplus\.io did not show it: \/api\/health http-403, \/ 403/);
+
+  const stale = remoteDeploy(deployed + "public_health=other-commit\npublic_home=200\n");
+  assert.equal(stale.code, 0);
+  assert.match(stale.out, /::warning::.*other-commit/);
+
+  const older = remoteDeploy(deployed);
+  assert.equal(older.code, 0);
+  assert.match(older.summary, /public check: not reported/);
+
+  const failed = remoteDeploy("result=failed\nrollback=healthy\n", 1);
+  assert.equal(failed.code, 1, "a failed deployment still fails the run");
+  assert.doesNotMatch(failed.summary, /public check/);
 });
 
 test("every marketing release carries Create account and Sign in", () => {

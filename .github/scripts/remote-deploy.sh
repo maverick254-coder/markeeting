@@ -21,8 +21,24 @@ field() { grep -E "^$1=" "$out" | head -1 | cut -d= -f2-; }
 { echo "### ${COMPONENT}: $(field result)"; echo '```'; cat "$out"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
 cat "$out"
 
+# The public check ran on the server, through Cloudflare, after the release passed its own
+# checks. It is reported only: a Cloudflare, DNS or TLS problem does not fail the deployment.
+# An annotation appears only when it found a problem.
+public_report() {
+  local health home
+  health="$(field public_health)"; home="$(field public_home)"
+  if [ -z "$health" ]; then
+    echo "- public check: not reported (the server program predates it)" >> "$GITHUB_STEP_SUMMARY"
+    return 0
+  fi
+  echo "- public check from the server, through Cloudflare: /api/health ${health}, / ${home}" >> "$GITHUB_STEP_SUMMARY"
+  if [ "$health" != ok ] || [ "$home" != 200 ]; then
+    echo "::warning::deployed, but https://redactplus.io did not show it: /api/health ${health}, / ${home} (Cloudflare, DNS or TLS; the release was not rolled back)"
+  fi
+}
+
 case "$(field result)" in
-  deployed) ;;
+  deployed) public_report ;;
   skipped) echo "::notice::${COMPONENT} not deployed: $(field reason)"; exit 0 ;;
   failed) echo "::error::${COMPONENT} deployment failed health checks; rollback: $(field rollback)"; exit 1 ;;
   *) echo "::error::${COMPONENT} deployment refused or unreachable (exit ${rc}): $(field reason)"; exit 1 ;;

@@ -40,8 +40,8 @@ push to main ──► CI: marketing / verify, portal / verify, images / build,
                  deploy / marketing   (concurrency group, never cancelled)
                    build-image.sh (exact SHA, production flags), loopback smoke test,
                    push → digest,
-                   ssh redactplus-cd@host "deploy marketing <sha> <digest> <run>",
-                   public check
+                   ssh redactplus-cd@host "deploy marketing <sha> <digest> <run>"
+                   (the server also runs the public check and reports it; see step 10)
                        │
                  deploy / notify      job summary, optional webhook; fails if a deployment failed
 ```
@@ -75,7 +75,15 @@ sshd  ── key line: restrict,command="/usr/local/sbin/redactplus-deploy-ssh"
    `/api/registration/resend` answers 400 (503 means registration is not configured);
 8. on any failure, restores `.env.previous`, recreates the service, waits for it to be healthy
    and reports `result=failed rollback=healthy|unhealthy`;
-9. records the attempt in `deploy-history.jsonl` and `releases.log` (mode 600, beside `.env`).
+9. records the attempt in `deploy-history.jsonl` and `releases.log` (mode 600, beside `.env`);
+10. after a successful deployment only, runs the **public check**: the server fetches
+    `https://redactplus.io/api/health` (up to 5 tries, 3 s apart) and `https://redactplus.io/`
+    the way visitors reach them, through Cloudflare, and reports `public_health=ok` (the new
+    commit), `other-commit` or `http-<code>`, and `public_home=<code>`. **It only reports**: the
+    release already passed its own checks on loopback, so a Cloudflare, DNS or TLS problem never
+    rolls it back. The workflow writes it to the job summary and adds a warning annotation only
+    when it found a problem. (It runs on the server because Cloudflare answers 403 to GitHub's
+    runners.)
 
 It prints only `key=value` lines from a fixed set (`result`, `reason`, `release_sha`, …; a test
 enforces the list) and discards all Docker and Compose output. It never reads `app.env` or any

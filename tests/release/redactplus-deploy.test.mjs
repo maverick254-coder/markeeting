@@ -125,10 +125,12 @@ test("a newer run deploys the exact tag and digest, keeps the previous pin and r
 
 test("only whitelisted key=value fields are ever printed, never file contents", { skip }, () => {
   const { run, flag } = setup();
-  const allowed = new Set(["result", "reason", "component", "release_sha", "release_digest", "last_run", "container", "image_portal_url", "previous_sha", "rollback", "check"]);
+  const allowed = new Set(["result", "reason", "component", "release_sha", "release_digest", "last_run", "container", "image_portal_url", "previous_sha", "rollback", "check", "public_health", "public_home"]);
   const outputs = [run("status marketing"), run(`deploy marketing ${NEW} ${DIG("2")} 5`)];
-  flag(`unhealthy-${NEWER}`);
-  outputs.push(run(`deploy marketing ${NEWER} ${DIG("3")} 6`), run("status portal"), run("rollback marketing 7"));
+  flag("public-403");
+  outputs.push(run(`deploy marketing ${NEWER} ${DIG("3")} 6`));
+  flag(`unhealthy-${OLD}`);
+  outputs.push(run(`deploy marketing ${OLD} ${DIG("4")} 7`), run("status portal"), run("rollback marketing 8"));
   for (const r of outputs) {
     for (const line of r.out.split("\n").filter(Boolean)) {
       assert.ok(allowed.has(line.slice(0, line.indexOf("="))), `unexpected output line: ${line}`);
@@ -160,6 +162,47 @@ test("a release that fails its health check is rolled back to .env.previous auto
   assert.equal(read(".deploy-run"), null, "a failed run is not recorded as deployed");
   assert.match(read("deploy-history.jsonl"), /"outcome":"failed-rolled-back"/);
   assert.match(read("releases.log"), /deploy run 9: failed-rolled-back/);
+});
+
+test("after a deployment, the server checks the public site through Cloudflare and reports the new commit", { skip }, () => {
+  const { run, stateFile } = setup();
+  const r = run(`deploy marketing ${NEW} ${DIG("2")} 5`);
+  assert.equal(r.code, 0, r.out);
+  assert.equal(r.fields.result, "deployed");
+  assert.equal(r.fields.public_health, "ok");
+  assert.equal(r.fields.public_home, "200");
+  const urls = stateFile("curl-urls").trim().split("\n");
+  assert.ok(urls.includes("https://redactplus.io/api/health") && urls.includes("https://redactplus.io/"), "both public addresses were fetched");
+  assert.ok(urls.indexOf("https://redactplus.io/api/health") > urls.lastIndexOf("http://127.0.0.1:6095/api/registration/resend"), "only after the loopback checks passed");
+});
+
+test("a Cloudflare refusal or a stale public commit is reported, and never rolls the release back", { skip }, () => {
+  for (const [name, health, home] of [["public-403", "http-403", "403"], ["public-stale", "other-commit", "200"]]) {
+    const { run, read, flag, stateFile } = setup();
+    flag(name);
+    const r = run(`deploy marketing ${NEW} ${DIG("2")} 5`);
+    assert.equal(r.code, 0, `${name}: ${r.out}`);
+    assert.equal(r.fields.result, "deployed", name);
+    assert.equal(r.fields.public_health, health, name);
+    assert.equal(r.fields.public_home, home, name);
+    assert.equal(r.fields.rollback, undefined, `${name}: no rollback`);
+    assert.equal(read(".env"), `RELEASE_SHA=${NEW}\nRELEASE_DIGEST=${DIG("2")}\n`, `${name}: the new release stays`);
+    assert.equal(stateFile("calls").trim().split("\n").length, 1, `${name}: the service was recreated once, never restored`);
+    assert.match(read("deploy-history.jsonl"), /"outcome":"deployed"/);
+    assert.doesNotMatch(r.out, /Cloudflare|<html/i, `${name}: no response body is printed`);
+  }
+});
+
+test("a failed or refused deployment never runs the public check", { skip }, () => {
+  for (const name of [`unhealthy-${NEW}`, "bad-revision", "drill"]) {
+    const { run, flag, put, stateFile } = setup();
+    if (name === "drill") put(".drill-fail-next");
+    else flag(name);
+    const r = run(`deploy marketing ${NEW} ${DIG("2")} 5`);
+    assert.notEqual(r.code, 0, name);
+    assert.equal(r.fields.public_health, undefined, name);
+    assert.doesNotMatch(stateFile("curl-urls") ?? "", /https:\/\/redactplus\.io/, name);
+  }
 });
 
 test("the operator's drill switch fails one deployment after a real start, rolls back, and clears itself", { skip }, () => {
@@ -347,6 +390,8 @@ test("the forced command cannot change access, configuration, data or other serv
     assert.doesNotMatch(code, forbidden, `forbidden: ${forbidden}`);
   }
   assert.match(script, /^readonly DEPLOY_ROOT=\/root\/deploy$/m);
+  assert.match(script, /^readonly PUBLIC_ORIGIN=https:\/\/redactplus\.io$/m, "the public check fetches one fixed address");
+  assert.doesNotMatch(code, /echo[^\n]*\$health/, "a public response body is never printed");
   assert.match(script, /^export PATH=\/usr\/local\/sbin:/m, "a fixed PATH: nothing from the caller's environment");
   assert.match(script, /docker compose up -d --no-deps "\$service"/, "only the one service");
   assert.match(script, /^\s*marketing\)\n\s*dir="\$DEPLOY_ROOT\/redactplus-landing"; service=redactplus-landing; port=6095$/m);

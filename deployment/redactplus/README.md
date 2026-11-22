@@ -47,7 +47,6 @@ switching between them is an image change with no DNS or Nginx change.
 
 | Variable | When read | Changing it needs |
 |---|---|---|
-| `NEXT_PUBLIC_DOCUMENTATION_URL` | **Build** (inlined into the client bundle) | a new image |
 | `NEXT_PUBLIC_PORTAL_URL` | **Build**. Bare https origin of the customer portal. The header, mobile menu, homepage hero, footer and standard pricing cards always offer Download / Get Started, opening one shared sign-in dialog that links to `<portal>/auth/start`; unset or invalid, the portal is `https://home.redactplus.io`. There is no sales-link fallback. | a new image |
 | `NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH` | **Build**. `enabled` lets the Download dialog's account form submit to the portal, and adds the portal origin to `connect-src`. Leave unset until the backend credential API exists (`docs/portal/backend-integration-boundary.md` §6). Unset, the form validates but sends nothing and offers the RedactPlus sign-in redirect. | a new image |
 | `SITE_NOINDEX` | **Build** (`next.config.ts` headers and the static `/robots.txt`) | a new image |

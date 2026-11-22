@@ -13,7 +13,6 @@ The repository is **provider-neutral**: no `netlify.toml`, no Netlify packages, 
 | Support chat (Chatwoot) | `OPENREDAKT_CHATWOOT_ENABLED`, `OPENREDAKT_CHATWOOT_BASE_URL`, `OPENREDAKT_CHATWOOT_WEBSITE_TOKEN` | `OPENREDAKT_CHATWOOT_ENABLED` is not `true` | `OPENREDAKT_CHATWOOT_ENABLED=false` |
 | CMS (Decap at `/admin`) | `CMS_ENABLED`, `CMS_PUBLISH_BRANCH`, `CMS_GITHUB_REPOSITORY`, `CMS_OAUTH_PUBLIC_BASE_URL`, `CMS_OAUTH_AUTH_ENDPOINT`, `CMS_AUTH_SCOPE`, `PUBLIC_SITE_ORIGIN` | `CMS_ENABLED=false` (`/admin` then redirects) | `CMS_ENABLED=false`. If ever enabled on staging, `CMS_PUBLISH_BRANCH` must not be `master`. |
 | Search indexing | `SITE_NOINDEX` (new, opt-in) | Unset | `SITE_NOINDEX=true` |
-| Documentation link | `NEXT_PUBLIC_DOCUMENTATION_URL` | Unset | Unset |
 | Release metadata (`/api/health`) | `RELEASE_COMMIT_SHA`, `RELEASE_BUILD_ID` | — | Optional |
 | Build runtime | `NODE_VERSION` | — | `22` (matches CI) |
 | Analytics | None in the application code | — | Nothing to set. Netlify's own server-side analytics, if enabled, sends nothing to third parties. |

@@ -1,14 +1,29 @@
 #!/bin/bash
 # Test stand-in for curl, used only by tests/release/redactplus-deploy.test.mjs.
 # Answers for whichever commit the stand-in docker says the service is running.
+# The public address (https://redactplus.io, through Cloudflare) answers like loopback unless
+# $STUB_STATE/public-403 (Cloudflare refuses) or public-stale (an old commit is still served).
 state="$STUB_STATE"
 url="${@: -1}"
 code=false
 for a in "$@"; do [ "$a" = '%{http_code}' ] && code=true; done
-port=$(echo "$url" | sed -E 's|.*:([0-9]+)/.*|\1|')
-svc=redactplus-portal; [ "$port" = 6095 ] && svc=redactplus-landing
+echo "$url" >> "$state/curl-urls"
+case "$url" in
+  https://redactplus.io/*)
+    svc=redactplus-landing
+    if [ -e "$state/public-403" ]; then
+      if $code; then printf 403; else printf '<html>Attention Required! | Cloudflare</html>'; fi
+      exit 0
+    fi
+    ;;
+  *)
+    port=$(echo "$url" | sed -E 's|.*:([0-9]+)/.*|\1|')
+    svc=redactplus-portal; [ "$port" = 6095 ] && svc=redactplus-landing
+    ;;
+esac
 sha=$(cat "$state/running-$svc" 2>/dev/null || echo none)
 [ -e "$state/wrong-commit-$sha" ] && sha=ffffffffffffffffffffffffffffffffffffffff
+case "$url" in https://redactplus.io/*) [ -e "$state/public-stale" ] && sha=dddddddddddddddddddddddddddddddddddddddd ;; esac
 
 if $code; then
   case "$url" in

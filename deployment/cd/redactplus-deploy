@@ -31,6 +31,7 @@ set -euo pipefail
 umask 077
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 readonly DEPLOY_ROOT=/root/deploy
+readonly PUBLIC_ORIGIN=https://redactplus.io
 
 refuse() { echo "result=refused"; echo "reason=$1"; exit 2; }
 
@@ -111,6 +112,29 @@ drill() {
   return 1
 }
 
+# The public check, after a deployment has succeeded: this server fetches the site the way
+# visitors reach it (https://redactplus.io through Cloudflare) and confirms /api/health reports
+# the new commit. It only reports. The release already passed its health and smoke checks on
+# loopback, so a Cloudflare, DNS or TLS problem is not the release's fault and never rolls it
+# back. Prints status codes only, never a response body.
+public_check() { # expected-commit
+  local expected="$1" health="" code=""
+  for _ in 1 2 3 4 5; do
+    health=$(curl -s --max-time 10 -H 'Cache-Control: no-cache' "${PUBLIC_ORIGIN}/api/health" || true)
+    case "$health" in *"\"commitSha\":\"${expected}\""*) break ;; esac
+    sleep 3
+  done
+  case "$health" in
+    *"\"commitSha\":\"${expected}\""*) echo "public_health=ok" ;;
+    *'"commitSha"'*) echo "public_health=other-commit" ;;
+    *)
+      code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 -H 'Cache-Control: no-cache' "${PUBLIC_ORIGIN}/api/health" || true)
+      echo "public_health=http-${code:-000}" ;;
+  esac
+  code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 15 -H 'Cache-Control: no-cache' "${PUBLIC_ORIGIN}/" || true)
+  echo "public_home=${code:-000}"
+}
+
 status() {
   local image labels
   echo "component=$component"
@@ -175,6 +199,7 @@ case "$action" in
       echo "$run" > .deploy-run
       record deploy deployed "$tag" "$digest" "$run" "$previous"
       echo "result=deployed"; echo "release_sha=$tag"; echo "release_digest=$digest"
+      public_check "$commit"
       exit 0
     fi
 

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, type KeyboardEvent, type PointerEvent } from "react";
 import type { PrimaryNavItem } from "@/content/navigation";
 import { Icon } from "@/components/ui/Icon";
+import { SiteLink } from "@/components/ui/DocsLink";
 import { isCurrentPage, isRouteActive } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
@@ -168,7 +169,7 @@ export function NavDropdown({
               const current = isCurrentPage(pathname, link.href);
               return (
                 <li key={link.href}>
-                  <Link
+                  <SiteLink
                     href={link.href}
                     aria-current={current ? "page" : undefined}
                     onClick={() => setOpen(false)}
@@ -186,7 +187,7 @@ export function NavDropdown({
                       <span className="block text-body-sm font-semibold text-ink">{link.label}</span>
                       {link.description ? <span className="mt-0.5 block text-caption leading-5 text-ink-muted">{link.description}</span> : null}
                     </span>
-                  </Link>
+                  </SiteLink>
                 </li>
               );
             })}

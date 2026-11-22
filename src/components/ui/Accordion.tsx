@@ -3,12 +3,15 @@
 import React, { useId, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Icon } from "@/components/ui/Icon";
+import { SiteLink } from "@/components/ui/DocsLink";
 
 export interface AccordionItem {
   id: string;
   title: string;
   description: string;
   icon?: string;
+  /** Optional links under the description; documentation links open in a new tab. */
+  links?: readonly { label: string; href: string }[];
 }
 
 interface AccordionProps {
@@ -99,6 +102,17 @@ export function Accordion({
               className={cn("pb-6 pr-6 text-[0.9375rem] leading-7 text-ink-muted", item.icon ? "pl-[3.75rem] sm:pl-[4.25rem]" : "pl-1 sm:pl-3")}
             >
               {item.description}
+              {item.links?.length ? (
+                <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
+                  {item.links.map((link) => (
+                    <li key={link.href}>
+                      <SiteLink href={link.href} className="font-semibold text-accent-ink underline-offset-4 hover:text-accent-ink-hover hover:underline">
+                        {link.label}
+                      </SiteLink>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </div>
           </div>
         );

@@ -24,6 +24,8 @@ export interface Industry {
 export interface FaqItem {
   question: string;
   answer: string;
+  /** Optional follow-up links shown under the answer (not part of the FAQPage structured data). */
+  links?: readonly { label: string; href: string }[];
 }
 
 export interface Service {

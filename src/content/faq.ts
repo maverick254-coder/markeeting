@@ -1,4 +1,5 @@
 import type { FaqItem } from "@/types";
+import { docsLinks } from "@/content/docs-links";
 
 export const faqItems: FaqItem[] = [
   {
@@ -45,5 +46,9 @@ export const faqItems: FaqItem[] = [
     question: "How do I get started?",
     answer:
       "Contact sales through the enquiry form to discuss packages and licensing, or email support@redactplus.io with questions about evaluating RedactPlus for your workflow.",
+    links: [
+      { label: "Install RedactPlus", href: docsLinks.installation },
+      { label: "Sign in to RedactPlus", href: docsLinks.signIn },
+    ],
   },
 ];

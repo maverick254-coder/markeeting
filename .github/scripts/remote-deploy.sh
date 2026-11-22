@@ -1,9 +1,9 @@
 #!/bin/bash
-# Asks the server's forced command (deployment/cd/redactplus-deploy) to deploy one image and
-# interprets its key=value answer. Used by .github/workflows/deploy-production.yml only.
+# Asks the server's forced command (deployment/cd/redactplus-deploy, reached as the unprivileged
+# user redactplus-cd, never root) to deploy the marketing image
+# and interprets its key=value answer. Used by .github/workflows/deploy-production.yml only.
 #
-# Needs: DEPLOY_SSH_KEY, DEPLOY_SSH_KNOWN_HOSTS, HOST, COMPONENT, TAG, DIGEST, RUN, and
-# EXPECT_ACCESS (portal).
+# Needs: DEPLOY_SSH_KEY, DEPLOY_SSH_KNOWN_HOSTS, HOST, COMPONENT (marketing), TAG, DIGEST, RUN.
 set -uo pipefail
 : "${DEPLOY_SSH_KEY:?}" "${DEPLOY_SSH_KNOWN_HOSTS:?}" "${HOST:?}" "${COMPONENT:?}" "${TAG:?}" "${DIGEST:?}" "${RUN:?}"
 
@@ -14,7 +14,7 @@ printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" > "$hosts"
 trap 'rm -f "$key" "$hosts"' EXIT
 
 ssh -i "$key" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$hosts" \
-    -o ConnectTimeout=20 -o ServerAliveInterval=30 "root@${HOST}" "deploy ${COMPONENT} ${TAG} ${DIGEST} ${RUN}" > "$out"
+    -o ConnectTimeout=20 -o ServerAliveInterval=30 "redactplus-cd@${HOST}" "deploy ${COMPONENT} ${TAG} ${DIGEST} ${RUN}" > "$out"
 rc=$?
 field() { grep -E "^$1=" "$out" | head -1 | cut -d= -f2-; }
 
@@ -27,9 +27,3 @@ case "$(field result)" in
   failed) echo "::error::${COMPONENT} deployment failed health checks; rollback: $(field rollback)"; exit 1 ;;
   *) echo "::error::${COMPONENT} deployment refused or unreachable (exit ${rc}): $(field reason)"; exit 1 ;;
 esac
-
-# The deployment must not have changed who can reach the portal.
-if [ "$COMPONENT" = portal ] && [ "$(field portal_access)" != "${EXPECT_ACCESS:-staff-preview}" ]; then
-  echo "::error::portal access is '$(field portal_access)', expected '${EXPECT_ACCESS:-staff-preview}'"
-  exit 1
-fi

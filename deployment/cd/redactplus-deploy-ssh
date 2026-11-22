@@ -1,0 +1,10 @@
+#!/bin/sh
+# /usr/local/sbin/redactplus-deploy-ssh: the forced command of the redactplus-cd SSH user.
+#
+# sshd runs this instead of whatever the client asked for (authorized_keys `restrict,command=`
+# and `ForceCommand` in sshd-redactplus-cd.conf). It passes the client's request, unparsed and
+# as ONE argument, to the root-owned deploy program through the single sudo rule in
+# sudoers-redactplus-cd. The deploy program validates it; this wrapper interprets nothing.
+#
+# Installed by hand: install -m 755 -o root -g root redactplus-deploy-ssh /usr/local/sbin/
+exec /usr/bin/sudo -n -- /usr/local/sbin/redactplus-deploy "${SSH_ORIGINAL_COMMAND:-}"

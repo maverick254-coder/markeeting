@@ -26,11 +26,9 @@ test("it is off until CD_ENABLED is true, and deploys only the current head of m
   assert.match(gate.run, /if \[ "\$CD_ENABLED" != "true" \]/);
   assert.match(gate.run, /commits\/main" --jq \.sha/);
   assert.match(gate.run, /if \[ "\$head" != "\$SHA" \]/, "an older commit's run never deploys");
-  for (const id of ["marketing", "portal"]) {
-    assert.match(jobs[id].if, /needs\.plan\.outputs\.enabled == 'true'/);
-    assert.match(jobs[id].if, new RegExp(`needs\\.plan\\.outputs\\.${id} == 'true'`));
-  }
-  assert.match(jobs.plan.steps.find((s) => s.id === "decide").run, /enabled_for "\$c" \|\| want=false/, "CD_COMPONENTS limits what is deployed");
+  assert.match(jobs.marketing.if, /needs\.plan\.outputs\.enabled == 'true'/);
+  assert.match(jobs.marketing.if, /needs\.plan\.outputs\.marketing == 'true'/);
+  assert.match(jobs.plan.steps.find((s) => s.id === "decide").run, /enabled_for marketing \|\| want=false/, "CD_COMPONENTS limits what is deployed");
 });
 
 test("every job that sees a secret runs in the main-only production environment", () => {
@@ -50,23 +48,36 @@ test("the exact commit is built, pinned by digest, and deployed with a monotonic
   }
   for (const step of allSteps.filter((s) => s.uses)) assert.match(step.uses, /^[\w.-]+\/[\w.-]+@[0-9a-f]{40}$/, step.uses);
   assert.equal(jobs.marketing.concurrency.group, "production-marketing");
-  assert.equal(jobs.portal.concurrency.group, "production-portal");
-  for (const id of ["marketing", "portal"]) {
-    assert.equal(jobs[id].concurrency["cancel-in-progress"], false);
-    const deployStep = jobs[id].steps.find((s) => /remote-deploy\.sh/.test(s.run ?? ""));
-    assert.equal(deployStep.env.RUN, "${{ github.run_number }}");
-  }
+  assert.equal(jobs.marketing.concurrency["cancel-in-progress"], false);
+  const deployStep = jobs.marketing.steps.find((s) => /remote-deploy\.sh/.test(s.run ?? ""));
+  assert.equal(deployStep.env.RUN, "${{ github.run_number }}");
+  assert.equal(deployStep.env.COMPONENT, "marketing");
   const remote = read(".github/scripts/remote-deploy.sh");
   assert.match(remote, /"deploy \$\{COMPONENT\} \$\{TAG\} \$\{DIGEST\} \$\{RUN\}"/);
   assert.match(remote, /StrictHostKeyChecking=yes/);
   assert.match(read(".github/scripts/publish-image.sh"), /--password-stdin/);
 });
 
-test("staff-only portal access is verified, and every marketing release carries Create account and Sign in", () => {
-  const portalDeploy = jobs.portal.steps.find((s) => /remote-deploy\.sh/.test(s.run ?? ""));
-  assert.equal(portalDeploy.env.EXPECT_ACCESS, "${{ vars.PORTAL_EXPECTED_ACCESS || 'staff-preview' }}");
+test("only marketing is ever deployed: no job deploys the portal or the forum", () => {
+  const talksToServer = Object.entries(jobs).filter(([, job]) => /remote-deploy\.sh|ssh /.test(JSON.stringify(job.steps)));
+  assert.deepEqual(talksToServer.map(([id]) => id).sort(), ["marketing", "plan"], "only the plan (status) and marketing reach the server");
+  assert.equal(jobs.portal, undefined, "the portal is deployed by hand (deployment/portal/DEPLOYMENT.md)");
+  assert.doesNotMatch(text, /COMPONENT: (portal|forum)|"status portal"|"status \$c"/);
+  const sha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+  for (const components of ["portal", "marketing,portal", "portal,forum"]) {
+    assert.equal(runPlanStep("decide", { SHA: sha, CD_COMPONENTS: components, SERVER: "false" }).outputs.portal, undefined, components);
+  }
+});
+
+test("the server is reached as the unprivileged deploy user, never root", () => {
   const remote = read(".github/scripts/remote-deploy.sh");
-  assert.match(remote, /portal_access\)" != "\$\{EXPECT_ACCESS:-staff-preview\}"/);
+  for (const source of [text, remote]) assert.doesNotMatch(source, /root@/);
+  assert.match(remote, /"redactplus-cd@\$\{HOST\}" "deploy \$\{COMPONENT\} \$\{TAG\} \$\{DIGEST\} \$\{RUN\}"/);
+  assert.match(jobs.plan.steps.find((s) => /ssh /.test(s.run ?? "")).run, /"redactplus-cd@\$\{HOST\}" "status marketing"/);
+});
+
+test("every marketing release carries Create account and Sign in", () => {
+  const remote = read(".github/scripts/remote-deploy.sh");
   // Registration is not a switch: no variable, no build flag, no -registration tag.
   assert.doesNotMatch(text, /MARKETING_REGISTRATION|NEXT_PUBLIC_REDACTPLUS_REGISTRATION|-registration|EXPECT_REGISTRATION|MARKETING_PORTAL_URL/);
   assert.doesNotMatch(remote, /EXPECT_REGISTRATION/);
@@ -106,8 +117,8 @@ test("the forum image is published only: never deployed, and only when its revis
   assert.match(runs, /--build-arg GIT_COMMIT="\$TAG"/);
   const decide = jobs.plan.steps.find((s) => s.id === "decide").run;
   assert.match(decide, /if enabled_for forum && /, "CD_COMPONENTS must name the forum");
-  assert.deepEqual(jobs.notify.needs, ["plan", "marketing", "marketing-publish", "portal", "portal-publish", "forum"]);
-  assert.match(jobs.notify.steps[0].run, /\$MARKETING \$MARKETING_IMAGE \$PORTAL \$PORTAL_IMAGE \$FORUM/);
+  assert.deepEqual(jobs.notify.needs, ["plan", "marketing", "marketing-publish", "portal-publish", "forum"]);
+  assert.match(jobs.notify.steps[0].run, /\$MARKETING \$MARKETING_IMAGE \$PORTAL_IMAGE \$FORUM/);
 });
 
 test("marketing-publish builds, smoke-tests and publishes the production image, and never deploys", () => {
@@ -141,22 +152,22 @@ test("portal-publish builds and publishes the portal image, and never deploys", 
   const runs = job.steps.map((s) => s.run ?? "").join("\n");
   assert.doesNotMatch(runs, /remote-deploy\.sh|ssh /, "a published image is deployed by hand (DEPLOYMENT.md)");
   assert.doesNotMatch(JSON.stringify(job), /DEPLOY_SSH_KEY|DEPLOY_HOST/);
-  // The same build and checks as the full portal job.
   const build = job.steps.find((s) => /docker build/.test(s.run ?? "")).run;
-  assert.equal(build, jobs.portal.steps.find((s) => /docker build/.test(s.run ?? "")).run);
+  assert.match(build, /--build-arg GIT_COMMIT="\$SHA"/);
+  assert.match(build, /for p in dev public\/dev-fixtures tests \.env \.env\.local/, "no development tooling may ship");
   const order = job.steps.map((s) => (/docker build/.test(s.run ?? "") ? "build" : /publish-image\.sh/.test(s.run ?? "") ? "publish" : null)).filter(Boolean);
   assert.deepEqual(order, ["build", "publish"]);
-  assert.match(jobs.plan.steps.find((s) => s.id === "decide").run, /if enabled_for portal-publish && ! enabled_for portal; then want_portal=true; fi/);
+  assert.match(jobs.plan.steps.find((s) => s.id === "decide").run, /if enabled_for portal-publish; then want_portal=true; fi/);
 });
 
-test("portal-publish publishes when the push changed a portal input, and a full deployment wins", () => {
+test("portal-publish publishes when the push changed a portal input", () => {
   const git = (...args) => execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
   const touched = git("log", "-1", "--format=%H", "--", "apps/portal/src/");
   const plan = (components) => runPlanStep("decide", { SHA: touched, CD_COMPONENTS: components, SERVER: "false" }).outputs;
   assert.equal(plan("forum,portal-publish").portal_publish, "true");
   assert.equal(plan("forum,portal-publish").marketing_publish, "false", "each publish switch is separate");
   assert.equal(plan("forum,marketing-publish").portal_publish, "false");
-  assert.equal(plan("portal,portal-publish").portal_publish, "false", "a full deployment publishes instead");
+  assert.equal(plan("portal,portal-publish").portal_publish, "true", "there is no full portal deployment to publish instead");
 });
 
 // Runs one of the plan job's steps for real with bash, as GitHub would, and returns its outputs.
@@ -175,7 +186,7 @@ function runPlanStep(id, env) {
 test("a forum-only run never asks the server, so it needs no SSH secrets", () => {
   const ask = jobs.plan.steps.find((s) => /ssh /.test(s.run ?? ""));
   assert.equal(ask.if, "steps.gate.outputs.enabled == 'true' && steps.scope.outputs.server == 'true'");
-  const cases = { forum: "false", "": "false", "forum,marketing-publish": "false", "marketing-publish": "false", "forum,marketing-publish,portal-publish": "false", "portal-publish": "false", portal: "true", "marketing,portal": "true", "forum, portal": "true", "marketing,forum": "true", portals: "false" };
+  const cases = { forum: "false", "": "false", "forum,marketing-publish": "false", "marketing-publish": "false", "forum,marketing-publish,portal-publish": "false", "portal-publish": "false", portal: "false", "marketing,portal": "true", "forum, portal": "false", "marketing,forum": "true", marketing: "true", " marketing ": "true", marketings: "false", portals: "false" };
   for (const [components, server] of Object.entries(cases)) {
     assert.equal(runPlanStep("scope", { CD_COMPONENTS: components }).outputs.server, server, `CD_COMPONENTS=${JSON.stringify(components)}`);
   }
@@ -185,10 +196,11 @@ test("without the server's status, the plan publishes the forum and deploys noth
   const sha = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
   const { outputs, summary } = runPlanStep("decide", { SHA: sha, CD_COMPONENTS: "forum", SERVER: "false" });
   assert.equal(outputs.marketing, "false");
-  assert.equal(outputs.portal, "false");
+  assert.equal(outputs.portal, undefined, "there is no portal deployment to switch on");
   assert.equal(outputs.forum, "true");
   assert.match(outputs.forum_revision, /^[0-9a-f]{40}$/);
-  assert.match(summary, /marketing, portal: not enabled; the server was not asked/);
+  assert.match(summary, /marketing: not enabled; the server was not asked/);
+  assert.match(summary, /portal: deployed by hand, never automatically/);
 });
 
 test("marketing-publish publishes when the push changed a marketing input, and a full deployment wins", () => {

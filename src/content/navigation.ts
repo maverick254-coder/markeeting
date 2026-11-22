@@ -1,5 +1,6 @@
 import { featuredIndustries, industryHref, liveIndustryPages } from "@/content/industries";
 import { featureHref, publishedFeaturePages } from "@/content/features";
+import { docsLinks } from "@/content/docs-links";
 
 /** The sales enquiry page (path kept for existing links); /contact stays for general enquiries. */
 export const demoHref = "/book-a-demo";
@@ -28,22 +29,19 @@ const featureNav: Record<string, { label: string; description: string; icon: str
   "audio-redaction": { label: "Audio Redaction", description: "Waveform ranges and masking effects", icon: "audio" },
 };
 
-/**
- * Product documentation is planned but not yet published. Its menu entry is configured
- * here and appears only when a published address is supplied through
- * NEXT_PUBLIC_DOCUMENTATION_URL, so the public site never links to an empty page.
- */
-const documentationUrl = process.env.NEXT_PUBLIC_DOCUMENTATION_URL?.trim() || null;
-
-export const documentationLink: NavMenuLink | null = documentationUrl
-  ? { label: "Documentation", href: documentationUrl, description: "Guides for the RedactPlus desktop application", icon: "file-text" }
-  : null;
+/** The product documentation (GitBook home); it opens in a new tab wherever it is listed. */
+export const documentationLink: NavMenuLink = {
+  label: "Documentation",
+  href: docsLinks.home,
+  description: "Guides for the RedactPlus desktop application",
+  icon: "file-text",
+};
 
 const resourceLinks: readonly NavMenuLink[] = [
   { label: "How It Works", href: "/how-it-works", description: "The review lifecycle from source file to inspected output", icon: "layers" },
   { label: "Why RedactPlus", href: "/why-redactplus", description: "Where the workflow fits, and its stated limits", icon: "shield-check" },
   { label: "On-Demand Redaction Services", href: "/redaction-services", description: "Outsource a redaction project to the RedactPlus team", icon: "users" },
-  ...(documentationLink ? [documentationLink] : []),
+  documentationLink,
 ];
 
 export const primaryNav: readonly PrimaryNavItem[] = [
@@ -110,7 +108,7 @@ export const footerGroups: readonly FooterGroup[] = [
       { label: "How it works", href: "/how-it-works" },
       { label: "Why RedactPlus", href: "/why-redactplus" },
       { label: "Redaction services", href: "/redaction-services" },
-      ...(documentationLink ? [{ label: documentationLink.label, href: documentationLink.href }] : []),
+      { label: documentationLink.label, href: documentationLink.href },
       { label: "Blog", href: "/blog" },
       { label: "Common questions", href: "#faq" },
     ],

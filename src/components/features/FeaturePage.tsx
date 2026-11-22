@@ -5,6 +5,8 @@ import { featureHref, getFeaturePage } from "@/content/features";
 import { AnimateOnScroll } from "@/components/ui/AnimateOnScroll";
 import { Container } from "@/components/ui/Container";
 import { Icon } from "@/components/ui/Icon";
+import { DocsLink } from "@/components/ui/DocsLink";
+import { docsLinks } from "@/content/docs-links";
 import { PageHero } from "@/components/marketing/PageHero";
 import { Breadcrumbs } from "@/components/marketing/Breadcrumbs";
 import { FaqSection } from "@/components/marketing/FaqSection";
@@ -20,6 +22,12 @@ import { cn } from "@/lib/utils";
 const featureFormat: Record<FeatureSlug, MediaFormat> = {
   "document-redaction": "document",
   "audio-redaction": "audio",
+};
+
+/** Where each workflow's how-to lives. The documentation has no documents section yet. */
+const featureDocs: Record<FeatureSlug, { label: string; href: string }> = {
+  "document-redaction": { label: "Browse the documentation", href: docsLinks.home },
+  "audio-redaction": { label: "Read the Redact audio guide", href: docsLinks.audioRedaction },
 };
 
 export function FeaturePage({ page }: { page: FeaturePageContent }) {
@@ -78,6 +86,10 @@ export function FeaturePage({ page }: { page: FeaturePageContent }) {
                   <Icon name="arrow" size={16} />
                 </Link>
               ) : null}
+              <DocsLink href={featureDocs[page.slug].href} className="mt-4 flex w-fit items-center gap-2 text-sm font-semibold text-accent-ink transition-colors hover:text-accent-ink-hover motion-reduce:transition-none">
+                {featureDocs[page.slug].label}
+                <Icon name="external-link" size={16} />
+              </DocsLink>
             </aside>
           </div>
         </Container>

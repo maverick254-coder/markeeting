@@ -4,6 +4,7 @@ import { publicSupportEmail, siteConfig } from "@/content/site";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { PortalCta } from "@/components/portal-entry/PortalCta";
 import { Container } from "@/components/ui/Container";
+import { SiteLink } from "@/components/ui/DocsLink";
 
 const linkClass =
   "inline-flex min-h-9 items-center rounded-sm text-[0.9375rem] text-ink transition-colors hover:text-accent-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool motion-reduce:transition-none";
@@ -51,9 +52,9 @@ export function Footer({ homePage = false, invitation = true }: { homePage?: boo
               <ul className="mt-4 space-y-0.5">
                 {group.links.map((link) => (
                   <li key={link.href}>
-                    <Link href={link.href.startsWith("#") && !homePage ? `/${link.href}` : link.href} className={linkClass}>
+                    <SiteLink href={link.href.startsWith("#") && !homePage ? `/${link.href}` : link.href} className={linkClass}>
                       {link.label}
-                    </Link>
+                    </SiteLink>
                   </li>
                 ))}
                 {group.title === "Company" ? (

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { PortalCta } from "@/components/portal-entry/PortalCta";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Icon } from "@/components/ui/Icon";
+import { SiteLink } from "@/components/ui/DocsLink";
 import { cn } from "@/lib/utils";
 import { isCurrentPage, isRouteActive } from "@/lib/nav";
 
@@ -162,7 +163,7 @@ export function MobileNav({ isOpen, onClose, pathname, items }: MobileNavProps) 
                       const current = isCurrentPage(pathname, link.href);
                       return (
                         <li key={link.href}>
-                          <Link
+                          <SiteLink
                             href={link.href}
                             aria-current={current ? "page" : undefined}
                             onClick={() => onClose(false)}
@@ -173,7 +174,7 @@ export function MobileNav({ isOpen, onClose, pathname, items }: MobileNavProps) 
                           >
                             {link.icon ? <Icon name={link.icon} size={17} className="text-accent-ink" /> : null}
                             {link.label}
-                          </Link>
+                          </SiteLink>
                         </li>
                       );
                     })}

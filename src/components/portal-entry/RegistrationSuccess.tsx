@@ -5,6 +5,8 @@ import { registrationSuccessCopy as copy, supportEmail, type registrationEmailFa
 import type { RegistrationAcceptedBody } from "@/lib/onboarding/contract";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
+import { DocsLink } from "@/components/ui/DocsLink";
+import { docsLinks } from "@/content/docs-links";
 
 const RESEND_COOLDOWN_SECONDS = 60;
 
@@ -84,6 +86,26 @@ export function RegistrationSuccess({
           {copy.trialHeading}
         </h3>
         <p className="mt-1.5 text-body-sm text-ink-muted">{copy.trialBody}</p>
+      </section>
+
+      <section aria-labelledby="registration-guides-heading" className="mt-3 rounded-2xl border border-border-subtle p-4">
+        <h3 id="registration-guides-heading" className="flex items-center gap-2 text-body-sm font-semibold text-ink">
+          <Icon name="file-text" size={16} className="text-accent-ink" />
+          {copy.guidesHeading}
+        </h3>
+        <p className="mt-1.5 text-body-sm text-ink-muted">{copy.guidesLead}</p>
+        <ul className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-body-sm">
+          <li>
+            <DocsLink href={docsLinks.installation} className="font-semibold text-accent-ink underline-offset-4 hover:underline">
+              {copy.installGuideLabel}
+            </DocsLink>
+          </li>
+          <li>
+            <DocsLink href={docsLinks.signIn} className="font-semibold text-accent-ink underline-offset-4 hover:underline">
+              {copy.signInGuideLabel}
+            </DocsLink>
+          </li>
+        </ul>
       </section>
 
       {emailFailed ? null : <p className="mt-4 text-body-sm text-ink-muted">{copy.notArrived}</p>}

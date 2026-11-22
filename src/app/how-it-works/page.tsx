@@ -13,6 +13,8 @@ import { StructuredData } from "@/components/marketing/StructuredData";
 import { featureIcons, formatMeta } from "@/components/industries/IndustryParts";
 import { Container } from "@/components/ui/Container";
 import { Icon } from "@/components/ui/Icon";
+import { DocsLink } from "@/components/ui/DocsLink";
+import { docsLinks } from "@/content/docs-links";
 import { FeatureVisual } from "@/components/features/FeatureVisual";
 import type { MediaFormat } from "@/lib/marketing/industries";
 import { buildPageMetadata } from "@/lib/seo/metadata";
@@ -104,6 +106,9 @@ export default function HowItWorksPage() {
             </ul>
             <p className="mt-10 border-t border-border-subtle/60 pt-6 text-[0.9375rem] leading-7 text-ink-muted">
               See how the lifecycle applies to your sector in the <Link href="/industries" className="font-semibold text-accent-ink hover:text-accent-ink-hover">industry guides</Link>, or read <Link href="/blog/understanding-document-redaction" className="font-semibold text-accent-ink hover:text-accent-ink-hover">why visual hiding is not the same as redaction</Link>.
+            </p>
+            <p className="mt-3 text-[0.9375rem] leading-7 text-ink-muted">
+              Ready to try it? Follow the guides to <DocsLink href={docsLinks.installation} className="font-semibold text-accent-ink hover:text-accent-ink-hover">install RedactPlus</DocsLink> and <DocsLink href={docsLinks.signIn} className="font-semibold text-accent-ink hover:text-accent-ink-hover">sign in for the first time</DocsLink>.
             </p>
           </Container>
         </section>

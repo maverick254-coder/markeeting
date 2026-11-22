@@ -3,6 +3,7 @@ import test from "node:test";
 import { demoHref, documentationLink, footerGroups, primaryNav } from "../src/content/navigation";
 import { isCurrentPage, isRouteActive } from "../src/lib/nav";
 import { marketingRoutes } from "../src/lib/marketing/site-routes";
+import { docsLinks, isDocsUrl } from "../src/content/docs-links";
 
 // /pricing is listed in the sitemap directly rather than through the marketing registry.
 const knownPaths = new Set<string>([...marketingRoutes().map((route) => route.path), "/blog", "/pricing"]);
@@ -20,9 +21,10 @@ test("primary navigation follows the approved multipage model", () => {
   };
   // Only the marketed formats: no video or image redaction.
   assert.deepEqual(menu("features").links.map((link) => link.label), ["Features Overview", "Document Redaction", "Audio Redaction"]);
-  // Documentation stays out until a published address is configured; no dead links.
-  assert.equal(documentationLink, null);
-  assert.deepEqual(menu("resources").links.map((link) => link.href), ["/how-it-works", "/why-redactplus", "/redaction-services"]);
+  // Documentation is the published GitBook home, listed under Resources and in the footer.
+  assert.equal(documentationLink.href, docsLinks.home);
+  assert.deepEqual(menu("resources").links.map((link) => link.href), ["/how-it-works", "/why-redactplus", "/redaction-services", docsLinks.home]);
+  assert.ok(footerGroups.find((group) => group.title === "Resources")!.links.some((link) => link.label === "Documentation" && link.href === docsLinks.home));
   // Contact leaves the header but stays reachable from the footer; demo CTAs lead to /book-a-demo.
   assert.ok(!primaryNav.some((item) => item.href === "/contact"));
   assert.ok(footerGroups.some((group) => group.links.some((link) => link.href === "/contact")));
@@ -37,6 +39,7 @@ test("every navigation and footer destination resolves to a published route or h
   ];
   for (const href of hrefs) {
     if (href.startsWith("#")) assert.ok(homepageAnchors.has(href.slice(1)), `${href} is not a preserved homepage anchor`);
+    else if (/^https?:/.test(href)) assert.ok(isDocsUrl(href), `${href}: the only external destination is the documentation`);
     else assert.ok(knownPaths.has(href), `${href} is not a published route`);
   }
   const footerHrefs = footerGroups.flatMap((group) => group.links.map((link) => link.href));

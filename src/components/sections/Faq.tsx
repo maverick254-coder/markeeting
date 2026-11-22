@@ -9,6 +9,7 @@ const items = faqItems.map((item, index) => ({
   id: `faq-${index + 1}`,
   title: item.question,
   description: item.answer,
+  links: item.links,
 }));
 
 export function Faq() {

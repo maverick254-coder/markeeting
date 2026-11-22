@@ -12,7 +12,6 @@
 #
 # Optional environment, fixed into the image at build time:
 #   SITE_NOINDEX=true                 review builds only; tag gets a -noindex suffix
-#   NEXT_PUBLIC_DOCUMENTATION_URL=…   documentation link in the navigation
 #   NEXT_PUBLIC_PORTAL_URL=…          portal origin (https://home.redactplus.io): the Download
 #                                     dialog with Create account and Sign in. Production
 #                                     always sets it; unset, the site uses the same origin
@@ -57,7 +56,6 @@ docker build \
   --build-arg GIT_COMMIT="$commit" \
   --build-arg RELEASE_ID="redactplus-${short}" \
   --build-arg SITE_NOINDEX="${SITE_NOINDEX:-}" \
-  --build-arg NEXT_PUBLIC_DOCUMENTATION_URL="${NEXT_PUBLIC_DOCUMENTATION_URL:-}" \
   --build-arg NEXT_PUBLIC_PORTAL_URL="${NEXT_PUBLIC_PORTAL_URL:-}" \
   --build-arg NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH="${NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH:-}" \
   --build-arg NEXT_PUBLIC_TURNSTILE_SITE_KEY="${NEXT_PUBLIC_TURNSTILE_SITE_KEY:-}" \

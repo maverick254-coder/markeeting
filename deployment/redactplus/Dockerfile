@@ -32,16 +32,15 @@ FROM deps AS build
 COPY . .
 
 # Read by the build and fixed into the output; changing any needs a new image.
-#   NEXT_PUBLIC_DOCUMENTATION_URL  inlined into the navigation bundle
-#   NEXT_PUBLIC_PORTAL_URL         customer portal origin for the Download dialog with Create
+#   NEXT_PUBLIC_PORTAL_URL        customer portal origin for the Download dialog with Create
 #                                  account and Sign in (empty: https://home.redactplus.io)
 #   SITE_NOINDEX                  next.config.ts headers and the static /robots.txt
 #   SITE_CANONICAL_ORIGIN          canonical links, sitemap, robots.txt, structured data
 #                                  (also baked into the runtime ENV below, so the
 #                                  prerendered and per-request output agree)
-# Production images leave the documentation URL and SITE_NOINDEX empty and set
+# Production images leave SITE_NOINDEX empty and set
 # NEXT_PUBLIC_PORTAL_URL=https://home.redactplus.io (build-image.sh then requires the site key).
-ARG NEXT_PUBLIC_DOCUMENTATION_URL=""
+# The documentation link is a fixed address in src/content/docs-links.ts, not a build setting.
 ARG NEXT_PUBLIC_PORTAL_URL=""
 ARG NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH=""
 # Registration security check: the Turnstile site key is public (its secret is on the Control
@@ -52,7 +51,6 @@ ARG SITE_CANONICAL_ORIGIN="https://redactplus.io"
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production \
     CMS_ENABLED=false \
-    NEXT_PUBLIC_DOCUMENTATION_URL=${NEXT_PUBLIC_DOCUMENTATION_URL} \
     NEXT_PUBLIC_PORTAL_URL=${NEXT_PUBLIC_PORTAL_URL} \
     NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH=${NEXT_PUBLIC_PORTAL_CREDENTIAL_AUTH} \
     NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY} \

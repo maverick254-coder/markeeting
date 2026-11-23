@@ -13,6 +13,8 @@ tags:
   - Scanned Documents
 date: 2026-11-12T09:00:00.000Z
 updatedDate: ""
+featuredImage: /images/blog/redacting-scanned-documents-ocr.webp
+imageAlt: image
 publication: immediate
 featured: false
 seoDescription: How optical character recognition supports the redaction of

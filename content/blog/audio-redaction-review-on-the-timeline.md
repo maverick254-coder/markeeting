@@ -1,8 +1,8 @@
 ---
 title: Why Audio Redaction Is Reviewed on a Timeline
 slug: audio-redaction-review-on-the-timeline
-excerpt: Interviews, calls and hearings carry personal information too. Unlike
-  a page, a recording has to be reviewed in time, which changes how redaction
+excerpt: Interviews, calls and hearings carry personal information too. Unlike a
+  page, a recording has to be reviewed in time, which changes how redaction
   works.
 author: RedactPlus Team
 type: article
@@ -13,6 +13,8 @@ tags:
   - Review Workflow
 date: 2026-11-18T09:00:00.000Z
 updatedDate: ""
+featuredImage: /images/blog/audio-redaction-review-on-the-timeline.webp
+imageAlt: image
 publication: immediate
 featured: false
 seoDescription: Why redacting audio recordings depends on precise time ranges,

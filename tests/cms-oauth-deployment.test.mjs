@@ -93,7 +93,7 @@ test("the CMS scope is public_repo or repo, never broader", async () => {
   for (const scope of ["public_repo", "repo"]) {
     assert.match(buildCmsConfig({ ...base, CMS_AUTH_SCOPE: scope }), new RegExp(`auth_scope: ${scope}\\n`));
   }
-  for (const scope of ["repo,user", "user", "admin:org", "repo:status"]) {
+  for (const scope of ["repo,user", "repo user", "repo public_repo", "REPO", "Public_Repo", "user", "admin:org", "repo:status"]) {
     assert.throws(() => buildCmsConfig({ ...base, CMS_AUTH_SCOPE: scope }), /public_repo .* or repo/);
   }
 });

@@ -6,8 +6,8 @@ import {
 } from "@/lib/marketing/industries";
 
 const documentGuide = {
-  href: "/blog/understanding-document-redaction",
-  title: "Understanding document redaction and why it matters",
+  href: "/blog",
+  title: "Read more on the RedactPlus blog",
 } as const;
 
 export const industryGroups: readonly IndustryGroup[] = [

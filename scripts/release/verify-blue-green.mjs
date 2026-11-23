@@ -5,6 +5,10 @@ import path from "node:path";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 
+// Editors publish and delete posts through the CMS, so acceptance checks whichever
+// article is newest in content/blog rather than a fixed slug.
+import { escapeHtml, publishedArticles } from "../../tests/helpers/published-blog.mjs";
+
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const bundleDirectory = path.join(repositoryRoot, ".release", "bundle");
 const serverPath = path.join(bundleDirectory, "server.js");
@@ -128,14 +132,16 @@ try {
     throw new Error("Traffic did not switch to the ready candidate.");
   }
 
+  const [acceptedArticle] = publishedArticles();
+  if (!acceptedArticle) throw new Error("content/blog publishes no article to accept.");
   const [article, insights, cmsConfig, cmsValidation] = await Promise.all([
-    fetch(`${publicOrigin}/blog/understanding-document-redaction`),
+    fetch(`${publicOrigin}/blog/${acceptedArticle.slug}`),
     fetch(`${publicOrigin}/blog`),
     fetch(`${publicOrigin}/admin/config.yml`, { cache: "no-store" }),
     fetch(`${publicOrigin}/admin/editor-validation.js`),
   ]);
   const [insightsHtml, cmsConfigText] = await Promise.all([insights.text(), cmsConfig.text()]);
-  if (!article.ok || !insights.ok || !insightsHtml.includes("Understanding Document Redaction")) {
+  if (!article.ok || !insights.ok || !insightsHtml.includes(escapeHtml(acceptedArticle.title))) {
     throw new Error("Published article acceptance failed on the candidate release.");
   }
   if (

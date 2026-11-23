@@ -105,7 +105,7 @@ export default function HowItWorksPage() {
               ))}
             </ul>
             <p className="mt-10 border-t border-border-subtle/60 pt-6 text-[0.9375rem] leading-7 text-ink-muted">
-              See how the lifecycle applies to your sector in the <Link href="/industries" className="font-semibold text-accent-ink hover:text-accent-ink-hover">industry guides</Link>, or read <Link href="/blog/understanding-document-redaction" className="font-semibold text-accent-ink hover:text-accent-ink-hover">why visual hiding is not the same as redaction</Link>.
+              See how the lifecycle applies to your sector in the <Link href="/industries" className="font-semibold text-accent-ink hover:text-accent-ink-hover">industry guides</Link>, or read more on the <Link href="/blog" className="font-semibold text-accent-ink hover:text-accent-ink-hover">RedactPlus blog</Link>.
             </p>
             <p className="mt-3 text-[0.9375rem] leading-7 text-ink-muted">
               Ready to try it? Follow the guides to <DocsLink href={docsLinks.installation} className="font-semibold text-accent-ink hover:text-accent-ink-hover">install RedactPlus</DocsLink> and <DocsLink href={docsLinks.signIn} className="font-semibold text-accent-ink hover:text-accent-ink-hover">sign in for the first time</DocsLink>.

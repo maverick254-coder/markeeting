@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { publishedArticles } from "./helpers/published-blog.mjs";
+
 const baseUrl = process.env.TEST_BASE_URL;
 if (!baseUrl) throw new Error("TEST_BASE_URL is required.");
 
@@ -23,7 +25,7 @@ test("public pages render RedactPlus without leaking the retired display brands"
   const pages = await Promise.all([
     html("/"),
     html("/blog"),
-    html("/blog/understanding-document-redaction"),
+    html(`/blog/${publishedArticles()[0].slug}`),
   ]);
 
   for (const page of pages) {
@@ -36,13 +38,18 @@ test("public pages render RedactPlus without leaking the retired display brands"
 });
 
 test("every page links the official favicon set, manifest and social card", async () => {
-  for (const path of ["/", "/pricing", "/book-a-demo", "/blog", "/blog/understanding-document-redaction", "/features"]) {
+  const article = publishedArticles()[0];
+  for (const path of ["/", "/pricing", "/book-a-demo", "/blog", `/blog/${article.slug}`, "/features"]) {
     const page = await html(path);
+    // An article with its own featured image shares that image; every other page the brand card.
+    const socialImage = path === `/blog/${article.slug}` && article.featuredImage
+      ? article.featuredImage.replace(/[.]/g, "\\.")
+      : "/images/brand/redactplus-og\\.png";
     assert.match(page, /<link rel="icon" href="\/favicon\.ico" sizes="48x48"/, path);
     assert.match(page, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml"/, path);
     assert.match(page, /<link rel="apple-touch-icon" href="\/apple-touch-icon\.png" sizes="180x180"/, path);
     assert.match(page, /<link rel="manifest" href="\/site\.webmanifest"/, path);
-    assert.match(page, /<meta property="og:image" content="[^"]*\/images\/brand\/redactplus-og\.png"/, path);
+    assert.match(page, new RegExp(`<meta property="og:image" content="[^"]*${socialImage}"`), path);
     assert.doesNotMatch(page, /OpenRedakt/, path);
   }
   for (const asset of ["/favicon.ico", "/favicon.svg", "/apple-touch-icon.png", "/site.webmanifest", "/images/brand/redactplus-og.png", "/images/brand/redactplus-horizontal-on-light.svg", "/images/brand/redactplus-horizontal-white.svg", "/images/brand/redactplus-mark.svg"]) {

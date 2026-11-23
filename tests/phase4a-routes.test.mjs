@@ -1,6 +1,18 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import {
+  archiveMonth,
+  articleHeadings,
+  escapeHtml,
+  escapeRegExp,
+  featuredArticle,
+  headingId,
+  publishedArticles,
+  slugify,
+  unpublishedArticles,
+} from "./helpers/published-blog.mjs";
+
 const baseUrl = process.env.TEST_BASE_URL || "http://127.0.0.1:3000";
 
 // The same build started with CMS_ENABLED=true (scripts/run-route-tests.mjs), for the Decap
@@ -15,76 +27,92 @@ async function getCmsEnabled(pathname, options) {
   return fetch(`${cmsEnabledBaseUrl}${pathname}`, { redirect: "manual", ...options });
 }
 
-test("the published CMS article renders and remains discoverable across Insights", async () => {
-  const [hub, article, search, tag, archived, sitemap] = await Promise.all([
-    get("/blog"),
-    get("/blog/understanding-document-redaction"),
-    get("/blog?query=document"),
-    get("/blog?tag=data-privacy"),
-    get("/blog/cms-publishing-test"),
-    get("/sitemap.xml"),
-  ]);
-  const [hubHtml, articleHtml, searchHtml, tagHtml, sitemapXml] = await Promise.all([
-    hub.text(),
-    article.text(),
-    search.text(),
-    tag.text(),
-    sitemap.text(),
-  ]);
+// Expectations come from content/blog (tests/helpers/published-blog.mjs), so publishing
+// or deleting a post in the Content Studio never needs a test change.
+const articles = publishedArticles();
+const typeLabels = {
+  news: "Company News",
+  "product-update": "Product Updates",
+  article: "Industry Insights",
+  guide: "Guides &amp; Tutorials",
+};
+const titlePattern = (article) => new RegExp(escapeRegExp(escapeHtml(article.title)));
+// A word from the title that the hub search will match.
+const searchWord = (article) =>
+  article.title.split(/[^A-Za-z]+/).find((word) => word.length >= 5)?.toLowerCase() ?? article.slug.split("-")[0];
 
-  for (const response of [hub, article, search, tag, sitemap]) assert.equal(response.status, 200);
-  assert.equal(archived.status, 404);
+test("every published CMS article renders and stays discoverable across Insights", async () => {
+  assert.ok(articles.length > 0, "content/blog should publish at least one article");
+  const featured = featuredArticle(articles);
+  const [hub, sitemap] = await Promise.all([get("/blog"), get("/sitemap.xml")]);
+  const [hubHtml, sitemapXml] = await Promise.all([hub.text(), sitemap.text()]);
+
+  for (const response of [hub, sitemap]) assert.equal(response.status, 200);
   assert.equal((hubHtml.match(/<h1\b/g) ?? []).length, 1);
   assert.match(hubHtml, /data-insights-page="true"/);
   assert.doesNotMatch(hubHtml, /data-editorial-theme="light"/);
   assert.match(hubHtml, /<h1[^>]*>\s*Blog\s*<\/h1>/);
   assert.doesNotMatch(hubHtml, /Practical guidance for safer redaction/);
   assert.match(hubHtml, /aria-label="Featured insight"/);
-  assert.match(hubHtml, /%2Fimages%2Fproduct%2Feditorial-document-cover\.png/);
-  // Four published stories across two types (article, guide): the hub's only controls are
-  // the search and the type filters, never a filter for an empty type, and no category
-  // or tag rows (categories keep their own pages; posts list their category and tags).
-  assert.match(hubHtml, /aria-label="Filter content by type"/);
-  assert.match(hubHtml, />\s*Industry Insights\s*</);
-  assert.match(hubHtml, />\s*Guides &amp; Tutorials\s*</);
-  assert.doesNotMatch(hubHtml, />\s*Company News\s*</);
-  assert.doesNotMatch(hubHtml, />\s*Product Updates\s*</);
+  const featuredImage = featured.featuredImage ?? "/images/product/editorial-document-cover.png";
+  assert.match(hubHtml, new RegExp(escapeRegExp(encodeURIComponent(featuredImage))));
+  // The hub's only controls are the search and type filters for the types that have posts
+  // (none when there is only one), never category or tag rows.
+  const types = new Set(articles.map((article) => article.type));
+  for (const [type, label] of Object.entries(typeLabels)) {
+    const pattern = new RegExp(`>\\s*${label}\\s*<`);
+    if (types.size > 1 && types.has(type)) assert.match(hubHtml, pattern, label);
+    else assert.doesNotMatch(hubHtml, pattern, label);
+  }
+  if (types.size > 1) assert.match(hubHtml, /aria-label="Filter content by type"/);
   assert.doesNotMatch(hubHtml, /aria-label="Article categories"/);
   assert.doesNotMatch(hubHtml, /aria-label="Filter content by tag"/);
   assert.doesNotMatch(hubHtml, />\s*Topics\s*</);
-  assert.match(hubHtml, /Understanding Document Redaction and Why It Matters/);
-  assert.match(hubHtml, /Why Audio Redaction Is Reviewed on a Timeline/);
-  assert.match(hubHtml, /A Reviewer&#x27;s Checklist Before You Share a Redacted File/);
-  assert.match(hubHtml, /Redacting Scanned Documents: Where OCR Helps and Where to Look Twice/);
   assert.doesNotMatch(hubHtml, /No content has been published yet/i);
   assert.doesNotMatch(hubHtml, /coming soon|sample article|untitled article/i);
-  assert.match(articleHtml, /rel="canonical" href="https:\/\/saferedact\.io\/blog\/understanding-document-redaction"/);
-  assert.match(searchHtml, /Understanding Document Redaction and Why It Matters/);
-  assert.match(tagHtml, /Understanding Document Redaction and Why It Matters/);
-  assert.match(sitemapXml, /\/blog\/understanding-document-redaction<\/loc>/);
-  assert.doesNotMatch(sitemapXml, /cms-publishing-test/);
   assert.match(hubHtml, /<form[^>]+role="search"/);
-  assert.match(tagHtml, /<form[^>]+role="search"/);
-  assert.match(tagHtml, /aria-label="Filter content by type"/);
-  assert.doesNotMatch(tagHtml, /aria-label="Filter content by tag"/);
+
+  for (const article of articles) {
+    const tag = slugify(article.tags[0] ?? article.category);
+    const [page, search, tagged] = await Promise.all([
+      get(`/blog/${article.slug}`),
+      get(`/blog?query=${encodeURIComponent(searchWord(article))}`),
+      get(`/blog?tag=${tag}`),
+    ]);
+    const [pageHtml, searchHtml, taggedHtml] = await Promise.all([page.text(), search.text(), tagged.text()]);
+    for (const response of [page, search, tagged]) assert.equal(response.status, 200, article.slug);
+    assert.match(hubHtml, titlePattern(article), article.slug);
+    assert.match(searchHtml, titlePattern(article), article.slug);
+    assert.match(taggedHtml, titlePattern(article), article.slug);
+    assert.match(pageHtml, new RegExp(`rel="canonical" href="https://saferedact\\.io/blog/${escapeRegExp(article.slug)}"`));
+    assert.match(sitemapXml, new RegExp(`/blog/${escapeRegExp(article.slug)}</loc>`));
+    assert.match(taggedHtml, /<form[^>]+role="search"/);
+    assert.doesNotMatch(taggedHtml, /aria-label="Filter content by tag"/);
+  }
+
+  for (const article of unpublishedArticles()) {
+    assert.equal((await get(`/blog/${article.slug}`)).status, 404, article.slug);
+    assert.doesNotMatch(sitemapXml, new RegExp(`/blog/${escapeRegExp(article.slug)}</loc>`));
+  }
 });
 
 test("categories keep their pages and sitemap entries; posts still show category and tags", async () => {
-  const [category, article, sitemap] = await Promise.all([
-    get("/blog/category/data-privacy"),
-    get("/blog/understanding-document-redaction"),
-    get("/sitemap.xml"),
-  ]);
-  const [categoryHtml, articleHtml, sitemapXml] = await Promise.all([category.text(), article.text(), sitemap.text()]);
-
-  assert.equal(category.status, 200);
-  assert.match(categoryHtml, /aria-label="Article categories"/);
-  assert.match(categoryHtml, /Understanding Document Redaction and Why It Matters/);
-  for (const slug of ["data-privacy", "audio-redaction", "redaction-practice", "document-redaction"]) {
+  const sitemapXml = await (await get("/sitemap.xml")).text();
+  for (const slug of new Set(articles.map((article) => slugify(article.category)))) {
     assert.match(sitemapXml, new RegExp(`/blog/category/${slug}</loc>`));
   }
-  assert.match(articleHtml, /href="\/blog\/category\/data-privacy"/);
-  assert.match(articleHtml, /<nav aria-label="Article topics"[\s\S]*?href="\/blog\?tag=data-privacy"/);
+  for (const article of articles) {
+    const category = slugify(article.category);
+    const [categoryPage, page] = await Promise.all([get(`/blog/category/${category}`), get(`/blog/${article.slug}`)]);
+    const [categoryHtml, pageHtml] = await Promise.all([categoryPage.text(), page.text()]);
+    assert.equal(categoryPage.status, 200, category);
+    assert.match(categoryHtml, /aria-label="Article categories"/);
+    assert.match(categoryHtml, titlePattern(article));
+    assert.match(pageHtml, new RegExp(`href="/blog/category/${category}"`));
+    if (article.tags.length) {
+      assert.match(pageHtml, new RegExp(`<nav aria-label="Article topics"[\\s\\S]*?href="/blog\\?tag=${slugify(article.tags[0])}"`));
+    }
+  }
 });
 
 test("an empty Insights search explains the result and offers a server-rendered reset", async () => {
@@ -98,26 +126,30 @@ test("an empty Insights search explains the result and offers a server-rendered 
 });
 
 test("filtered Insights results use a chronological archive with semantic month headings", async () => {
-  const response = await get("/blog?query=document");
+  const article = articles[0];
+  const response = await get(`/blog?query=${encodeURIComponent(searchWord(article))}`);
   const html = await response.text();
 
   assert.equal(response.status, 200);
   assert.match(html, /aria-label="Chronological article archive"/);
-  assert.match(html, /<h2[^>]*>October 2026<\/h2>/);
-  assert.match(html, /href="\/blog\/understanding-document-redaction"/);
+  assert.match(html, new RegExp(`<h2[^>]*>${archiveMonth(article.date)}</h2>`));
+  assert.match(html, new RegExp(`href="/blog/${escapeRegExp(article.slug)}"`));
 });
 
 test("a long-form article exposes breadcrumbs, matching heading anchors, TOC, and a sales side CTA", async () => {
-  const response = await get("/blog/understanding-document-redaction");
+  const article = articles.find((candidate) => articleHeadings(candidate).length >= 2);
+  assert.ok(article, "at least one published article should have two or more section headings");
+  const response = await get(`/blog/${article.slug}`);
   const html = await response.text();
+  const firstHeading = headingId(articleHeadings(article)[0]);
 
   assert.equal(response.status, 200);
   assert.equal((html.match(/<h1\b/g) ?? []).length, 1);
   assert.match(html, /aria-label="Breadcrumb"/);
   assert.match(html, /aria-label="On this page"/);
-  assert.match(html, /href="#what-is-document-redaction"/);
-  assert.match(html, /<h2[^>]*id="what-is-document-redaction"/);
-  assert.match(html, /alt="RedactPlus document review workspace"/);
+  assert.match(html, new RegExp(`href="#${escapeRegExp(firstHeading)}"`));
+  assert.match(html, new RegExp(`<h2[^>]*id="${escapeRegExp(firstHeading)}"`));
+  if (article.featuredImage) assert.match(html, new RegExp(`alt="${escapeRegExp(escapeHtml(article.imageAlt))}"`));
   assert.match(html, /aria-label="Talk to the RedactPlus team"/);
   assert.match(html, /href="\/book-a-demo"/);
   // The shared footer invitation closes the article; there is no second closing CTA.
@@ -127,8 +159,16 @@ test("a long-form article exposes breadcrumbs, matching heading anchors, TOC, an
   assert.ok(sidebar, "the sticky article sidebar should have an explicit scroll-owner boundary");
   assert.doesNotMatch(sidebar[1], /(?:max-h-|overflow-y-auto|overscroll-contain)/);
   assert.match(html, /data-toc-scroll-region="true"/);
-  // Other published stories exist, so the article closes with related posts.
-  assert.match(html, /id="related-articles-heading"/);
+  // Related posts close the article when another story shares its category, type or a tag
+  // (getRelatedArticles in src/lib/blog/content.ts).
+  const tags = new Set(article.tags.map(slugify));
+  const hasRelated = articles.some((other) => other.slug !== article.slug && (
+    slugify(other.category) === slugify(article.category) ||
+    other.type === article.type ||
+    other.tags.some((tag) => tags.has(slugify(tag)))
+  ));
+  if (hasRelated) assert.match(html, /id="related-articles-heading"/);
+  else assert.doesNotMatch(html, /id="related-articles-heading"/);
   // The article itself makes no download or sign-in claim; the shared header and dialog do offer Download.
   const main = html.match(/<main\b[\s\S]*<\/main>/);
   assert.ok(main, "the article has a main element");

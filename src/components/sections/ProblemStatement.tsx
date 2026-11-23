@@ -93,10 +93,10 @@ export function ProblemStatement() {
 
         <div className="mt-12 text-center">
           <Link
-            href="/blog/understanding-document-redaction"
+            href="/blog"
             className="inline-flex items-center gap-2 text-sm font-semibold text-accent-ink transition-colors hover:text-accent-ink-hover motion-reduce:transition-none"
           >
-            Why hiding is not the same as redaction
+            Read more on the RedactPlus blog
             <Icon name="arrow" size={16} />
           </Link>
         </div>

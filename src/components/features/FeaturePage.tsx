@@ -82,7 +82,7 @@ export function FeaturePage({ page }: { page: FeaturePageContent }) {
               <p className="mt-3 text-[0.9375rem] leading-7 text-ink-muted">{page.availabilityNote?.description}</p>
               {page.insightsHref ? (
                 <Link href={page.insightsHref} className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-accent-ink transition-colors hover:text-accent-ink-hover motion-reduce:transition-none">
-                  Read the document redaction guide
+                  Read more on the RedactPlus blog
                   <Icon name="arrow" size={16} />
                 </Link>
               ) : null}

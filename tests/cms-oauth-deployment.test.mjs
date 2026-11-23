@@ -107,3 +107,41 @@ test("changes to the broker's server files are reported for manual review, never
   ];
   assert.deepEqual(serverConfigFiles([...files, "deployment/cms-oauth/README.md"]), files);
 });
+
+// GitHub skips every workflow for a push whose commit message carries one of these, so a
+// CMS publish or delete would land on main without CI or a deploy.
+const skipCiMarker = /\[(?:skip ci|ci skip|no ci|skip actions|actions skip)\]|\*\*\*NO_CI\*\*\*|skip-checks\s*:\s*true/i;
+
+test("CMS commits to main never carry a skip-CI marker", async () => {
+  const { buildCmsConfig } = await import("../scripts/render-cms-config.mjs");
+  const profiles = [
+    { CMS_ENABLED: "false" },
+    {
+      CMS_ENABLED: "true",
+      PUBLIC_SITE_ORIGIN: "https://redactplus.io",
+      CMS_OAUTH_PUBLIC_BASE_URL: "https://cms-auth.redactplus.io",
+      CMS_GITHUB_REPOSITORY: "Safe-Redact/Marketing-Site",
+      CMS_PUBLISH_BRANCH: "main",
+      CMS_AUTH_SCOPE: "repo",
+    },
+  ];
+  for (const environment of profiles) {
+    const rendered = buildCmsConfig(environment);
+    const config = YAML.parse(rendered);
+    // Decap's skip_ci adds [skip ci] to its commits; it must stay off.
+    assert.notEqual(config.backend.skip_ci, true, "backend.skip_ci must not be enabled");
+    assert.notEqual(config.skip_ci, true, "skip_ci must not be enabled");
+    for (const [name, template] of Object.entries(config.backend.commit_messages ?? {})) {
+      assert.doesNotMatch(String(template), skipCiMarker, `commit_messages.${name}`);
+    }
+    assert.doesNotMatch(rendered, skipCiMarker);
+  }
+});
+
+test("CI runs on every push to main, CMS content included", () => {
+  const workflow = YAML.parse(readFileSync(path.join(root, ".github", "workflows", "ci.yml"), "utf8"));
+  const push = workflow.on.push;
+  assert.deepEqual(push.branches, ["main"]);
+  assert.equal(push.paths, undefined, "a paths filter could leave CMS commits without CI");
+  assert.equal(push["paths-ignore"], undefined, "a paths-ignore filter could leave CMS commits without CI");
+});

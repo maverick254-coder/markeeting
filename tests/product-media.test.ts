@@ -63,5 +63,5 @@ test("masked masters carry no metadata and come from hash-checked originals", as
 
 test("Next image optimization accepts versioned product captures at the showcase quality", () => {
   assert.deepEqual(nextConfig.images?.qualities, [92]);
-  assert.deepEqual(nextConfig.images?.localPatterns, [{ pathname: "/images/product/**" }]);
+  assert.deepEqual(nextConfig.images?.localPatterns, [{ pathname: "/images/product/**" }, { pathname: "/images/blog/**" }]);
 });

@@ -74,7 +74,7 @@ export type IndustryPageContent = {
   faq: readonly MarketingFaq[];
   relatedFeatures: readonly FeatureSlug[];
   relatedIndustries: readonly IndustrySlug[];
-  relatedInsights: readonly { href: `/blog/${string}`; title: string }[];
+  relatedInsights: readonly { href: "/blog" | `/blog/${string}`; title: string }[];
   cta: { eyebrow: string; title: string; description: string };
   /** Optional approved imagery. No industry image has been approved yet. */
   image?: { src: `/${string}`; alt: string; width: number; height: number };

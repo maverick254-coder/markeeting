@@ -24,7 +24,8 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
-    localPatterns: [{ pathname: "/images/product/**" }],
+    // Product captures and the images editors upload through the Content Studio.
+    localPatterns: [{ pathname: "/images/product/**" }, { pathname: "/images/blog/**" }],
     qualities: [92],
   },
   async redirects() {

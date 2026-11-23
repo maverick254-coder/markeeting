@@ -40,9 +40,9 @@ test("feature metadata and cross-links satisfy the public content contract", () 
     assert.ok(page.faq.length >= 4);
     assert.ok(page.workflow.length >= 3);
     assert.ok(page.relatedFeatures.length === 1);
-    if (page.insightsHref) assert.equal(page.insightsHref, "/blog/understanding-document-redaction");
+    if (page.insightsHref) assert.equal(page.insightsHref, "/blog");
   }
-  assert.equal(getFeaturePage("document-redaction")?.insightsHref, "/blog/understanding-document-redaction");
+  assert.equal(getFeaturePage("document-redaction")?.insightsHref, "/blog");
   assert.equal(getFeaturePage("audio-redaction")?.insightsHref, undefined);
   assert.equal(getFeaturePage("video-redaction"), undefined);
 });

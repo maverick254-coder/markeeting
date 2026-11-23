@@ -199,7 +199,7 @@ for (const pathname of [
   "/package.json",
   "/server.js",
   "/.next/BUILD_ID",
-  "/content/blog/understanding-document-redaction.md",
+  "/content/blog/audio-redaction-review-on-the-timeline.md",
   "/src/lib/comments/postgres/schema.sql",
   "/assets/product-screenshots/raw/",
   "/docs/",

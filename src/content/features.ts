@@ -160,7 +160,7 @@ export const featurePages: readonly FeaturePageContent[] = [
       { question: "Does output checking guarantee every item was removed?", answer: "No. It adds a second inspection step against the rendered result. It cannot prove that the source review identified every sensitive item." },
     ],
     relatedFeatures: ["audio-redaction"],
-    insightsHref: "/blog/understanding-document-redaction",
+    insightsHref: "/blog",
     availabilityNote: { status: "configuration-dependent", title: "Format support is explicit", description: "OCR, office conversion, and optional detection engines depend on the source format and configured local or per-job tooling." },
     cta: { eyebrow: "Document workflow review", title: "Bring a representative document set to your evaluation.", description: "Our team can walk through source preparation, reviewer controls, and the output-checking path without assuming unsupported formats or outcomes." },
   },

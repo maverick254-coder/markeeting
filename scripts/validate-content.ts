@@ -25,10 +25,11 @@ async function main() {
 
   for (const article of articles) validatePublicationTiming(article, now);
 
-  // Industry pages may only link to Insights that are publicly visible right now.
-  const visibleInsights = articles
+  // Industry pages may only link to Insights that are publicly visible right now, or to
+  // the /blog index, which exists whatever the CMS publishes or deletes.
+  const visibleInsights = ["/blog", ...articles
     .filter((article) => article.publication === "immediate" || (article.publication === "scheduled" && new Date(article.date) <= now))
-    .map((article) => `/blog/${article.slug}`);
+    .map((article) => `/blog/${article.slug}`)];
   const marketingErrors = [
     ...validateIndustryContent(
       industryPages,

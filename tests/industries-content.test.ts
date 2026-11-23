@@ -32,7 +32,7 @@ const targetSlugs = [
   "ai-data-teams",
 ];
 const knownFeatures = publishedFeaturePages.map((page) => page.slug);
-const knownInsights = ["/blog/understanding-document-redaction"];
+const knownInsights = ["/blog"];
 const validate = (pages: readonly IndustryPageContent[]) =>
   validateIndustryContent(pages, industryGroups, capabilityClaims, knownFeatures, knownInsights);
 

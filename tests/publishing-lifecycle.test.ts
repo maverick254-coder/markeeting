@@ -218,5 +218,7 @@ test("the CMS form blocks invalid entries before the editorial branch is saved",
 
 test("the current checked-out content repository passes the same validation used by builds", async () => {
   const articles = await loadArticlesFromDirectory(path.join(repositoryRoot, "content", "blog"));
-  assert.ok(articles.some((entry) => entry.slug === "understanding-document-redaction"));
+  // Which posts exist is the editors' call (they publish and delete through the CMS);
+  // the build only needs at least one valid article.
+  assert.ok(articles.length > 0);
 });

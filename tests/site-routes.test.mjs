@@ -98,7 +98,8 @@ test("industry pages link into features, related industries, the lifecycle page,
   assert.ok(html.indexOf('id="media-journalism-workflows"') < html.indexOf('id="media-journalism-challenges"'));
   const legal = (await page("/industries/legal")).html;
   assert.ok(legal.indexOf('id="legal-sensitive"') < legal.indexOf('id="legal-workflows"'));
-  assert.match(legal, /href="\/blog\/understanding-document-redaction"/);
+  // Industry pages point at the blog index, which no CMS deletion can remove.
+  assert.match(legal, /href="\/blog"[^>]*>[\s\S]*?Read more on the RedactPlus blog/);
 });
 
 test("the on-demand services page is email-only, covers every category and promises nothing unconfirmed", async () => {

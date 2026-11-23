@@ -66,8 +66,6 @@ test("no visible OpenRedakt or SafeRedact branding remains in site source or con
   ];
   const offenders: string[] = [];
   for (const file of files) {
-    // Archived CMS acceptance entry: never published, kept as an editorial record.
-    if (file === "content/blog/cms-publishing-test.md") continue;
     const text = await read(file);
     for (const [index, line] of text.split("\n").entries()) {
       // Technical identifiers stay: env names, the health contract, the legacy support domain,

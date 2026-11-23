@@ -87,7 +87,7 @@ export type FeaturePageContent = {
   formatNote: string;
   faq: readonly MarketingFaq[];
   relatedFeatures: readonly FeatureSlug[];
-  insightsHref?: "/blog/understanding-document-redaction";
+  insightsHref?: "/blog";
   availabilityNote?: {
     status: "manual-first" | "configuration-dependent";
     title: string;

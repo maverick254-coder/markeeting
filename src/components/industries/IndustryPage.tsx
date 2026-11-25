@@ -1,17 +1,22 @@
 import React, { type ReactNode } from "react";
 import Link from "next/link";
 import type { IndustryLayout, IndustryPageContent, MediaFormat } from "@/lib/marketing/industries";
-import { featureHref, getFeaturePage } from "@/content/features";
+import { capabilityClaims, featureHref, getFeaturePage } from "@/content/features";
 import { getIndustryPage, industryHref, liveIndustryPages } from "@/content/industries";
 import { Breadcrumbs } from "@/components/marketing/Breadcrumbs";
-import { FaqSection } from "@/components/marketing/FaqSection";
-import { PageHero } from "@/components/marketing/PageHero";
-import { SectionIntro } from "@/components/marketing/SectionIntro";
-import { FeatureVisual, type FeatureVisualId } from "@/components/features/FeatureVisual";
+import { PhotoPageHero } from "@/components/marketing/PhotoPageHero";
+import { SectionTag, darkCard, darkH2 } from "@/components/marketing/DarkParts";
+import { StructuredData } from "@/components/marketing/StructuredData";
+import type { FeatureVisualId } from "@/components/features/FeatureVisual";
+import { CardPhoto, cardPhotos } from "@/components/media/CardPhoto";
+import { Faq } from "@/components/sections/Faq";
+import type { LandscapeName } from "@/content/landscapes";
+import { buildFaqPageJsonLd } from "@/lib/seo/structured-data";
 import { Container } from "@/components/ui/Container";
 import { Icon } from "@/components/ui/Icon";
 import type { BreadcrumbItem } from "@/lib/seo/structured-data";
-import { CapabilityList, FormatBadge, IndustrySignal, featureIcons, featureLinkFor } from "./IndustryParts";
+import { IndustrySignal, featureIcons, featureLinkFor, formatMeta } from "./IndustryParts";
+import { IndustryWorkflowTabs, type WorkflowTab } from "./IndustryWorkflowTabs";
 
 type SectionKey = "sensitive" | "challenges" | "workflows";
 
@@ -43,8 +48,29 @@ export function industryBreadcrumbs(page: IndustryPageContent): BreadcrumbItem[]
   ];
 }
 
+/** Banner landscapes rotate through the guides so neighbouring sectors differ. */
+const heroLandscapes: readonly LandscapeName[] = ["dolomites", "seaOfClouds", "mistyPeak", "mawenzi"];
+
+function Intro({ id, tag, title, description }: { id: string; tag: string; title: string; description?: string }) {
+  return (
+    <div>
+      <SectionTag>{tag}</SectionTag>
+      <h2 id={id} className={`${darkH2} mt-5 max-w-[24ch]`}>{title}</h2>
+      {description ? <p className="mt-4 max-w-[34rem] text-[0.9375rem] leading-6 text-white/55">{description}</p> : null}
+    </div>
+  );
+}
+
+/**
+ * An industry guide in the Hobbes Solutions pattern, dark throughout: photo hero with
+ * the sector's profile on the black, who it is for, then the sensitive information,
+ * challenges and workflows in the sector's order, the capability boundaries, related
+ * links, and the dark photo FAQ.
+ */
 export function IndustryPage({ page }: { page: IndustryPageContent }) {
   const primaryFeature = featureLinkFor(page.mediaEmphasis[0]);
+  const pageIndex = Math.max(0, liveIndustryPages.findIndex((live) => live.slug === page.slug));
+  const faqs = page.faq.map((item) => ({ question: item.question, answer: item.answer }));
   const sections: Record<SectionKey, ReactNode> = {
     sensitive: <SensitiveSection key="sensitive" page={page} />,
     challenges: <ChallengesSection key="challenges" page={page} />,
@@ -53,71 +79,96 @@ export function IndustryPage({ page }: { page: IndustryPageContent }) {
 
   return (
     <>
-      <PageHero
-        eyebrow={page.eyebrow}
-        title={page.h1}
-        summary={page.summary}
-        primaryCta={{ label: "Contact Sales", href: "/contact" }}
-        secondaryCta={primaryFeature ? { label: `Explore ${primaryFeature.label.toLowerCase()}`, href: primaryFeature.href } : { label: "All features", href: "/features" }}
-        breadcrumbs={<Breadcrumbs items={industryBreadcrumbs(page)} />}
-        media={<IndustrySignal page={page} />}
-      />
+      <StructuredData data={buildFaqPageJsonLd(faqs)} />
+      <div className="home-dark theme-dark pricing-dark bg-[#0e0e0e] text-ink">
+        <PhotoPageHero
+          id={`${page.slug}-heading`}
+          eyebrow={page.eyebrow}
+          title={page.h1}
+          summary={page.summary}
+          primaryCta={{ label: "Contact Sales", href: "/contact" }}
+          secondaryCta={primaryFeature ? { label: `Explore ${primaryFeature.label.toLowerCase()}`, href: primaryFeature.href } : { label: "All features", href: "/features" }}
+          breadcrumbs={<Breadcrumbs items={industryBreadcrumbs(page)} />}
+          landscape={heroLandscapes[pageIndex % heroLandscapes.length]}
+        >
+          <Container>
+            <div className="mx-auto max-w-[44rem]">
+              <IndustrySignal page={page} />
+            </div>
+          </Container>
+        </PhotoPageHero>
 
-      <section className="section-y-sm bg-canvas text-ink" aria-labelledby={`${page.slug}-audience`}>
-        <Container>
-          <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16">
-            <SectionIntro id={`${page.slug}-audience`} eyebrow="Who this is for" title={page.audience.title} description={page.audience.description} tone="warm" />
-            <ul className="grid content-start border-t border-border-subtle/60 sm:grid-cols-2 sm:gap-x-8 lg:mt-10">
-              {page.audience.roles.map((role) => (
-                <li key={role} className="flex gap-3 border-b border-border-subtle/60 py-3.5 text-[0.9375rem] leading-6 text-ink-muted">
-                  <Icon name="users" size={17} className="mt-0.5 shrink-0 text-accent-ink" />
-                  {role}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Container>
-      </section>
-
-      {sectionOrder[page.layout].map((key) => sections[key])}
-
-      <section className="section-y-sm bg-canvas text-ink" aria-labelledby={`${page.slug}-considerations`}>
-        <Container>
-          <div className="rounded-[16px] border border-accent-warm/25 bg-accent-warm/[0.06] p-6 sm:p-8 lg:p-10">
-            <div className="grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-14">
-              <SectionIntro id={`${page.slug}-considerations`} eyebrow="Capability boundaries" title="Considerations before you evaluate" tone="warm" />
-              <ul className="border-t border-accent-warm/15">
-                {page.considerations.map((item) => (
-                  <li key={item} className="flex gap-3 border-b border-accent-warm/15 py-4 text-[0.9375rem] leading-7 text-ink-muted">
-                    <Icon name="info" size={17} className="mt-1 shrink-0 text-accent-ink" />
-                    {item}
+        <section className="section-y" aria-labelledby={`${page.slug}-audience`}>
+          <Container>
+            <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-16">
+              <Intro id={`${page.slug}-audience`} tag="Who this is for" title={page.audience.title} description={page.audience.description} />
+              <ul className="flex flex-wrap content-start gap-2 lg:pt-14">
+                {page.audience.roles.map((role) => (
+                  <li key={role} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-2 text-[0.875rem] text-white/75">
+                    <Icon name="users" size={15} className="text-[#ff9a62]" />
+                    {role}
                   </li>
                 ))}
               </ul>
             </div>
-          </div>
-        </Container>
-      </section>
+          </Container>
+        </section>
 
-      <RelatedSection page={page} />
+        {sectionOrder[page.layout].map((key) => sections[key])}
 
-      <FaqSection idPrefix={page.slug} items={page.faq} title={`${page.navLabel} redaction questions`} description="Answers reflect the current product boundary, including the configuration and review conditions that matter in practice." />
+        <section className="section-y-sm" aria-labelledby={`${page.slug}-considerations`}>
+          <Container>
+            <div className={`${darkCard} p-6 sm:p-8 lg:p-10`}>
+              <div className="grid gap-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-14">
+                <Intro id={`${page.slug}-considerations`} tag="Capability boundaries" title="Considerations before you evaluate" />
+                <ul className="space-y-3">
+                  {page.considerations.map((item) => (
+                    <li key={item} className="flex gap-3 rounded-xl border border-white/[0.06] bg-black/20 px-4 py-3.5 text-[0.9375rem] leading-7 text-white/70">
+                      <Icon name="info" size={17} className="mt-1 shrink-0 text-[#ff9a62]" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </Container>
+        </section>
 
+        <RelatedSection page={page} />
+      </div>
+
+      <Faq id={`${page.slug}-faq`} heading={`${page.navLabel} redaction questions`} items={faqs} tone="dark" />
     </>
   );
 }
 
+const sensitivePhotos = [cardPhotos.seaOfClouds, cardPhotos.mawenzi, cardPhotos.dolomites, cardPhotos.mistyPeak, cardPhotos.clouds] as const;
+
 function SensitiveSection({ page }: { page: IndustryPageContent }) {
   return (
-    <section className="section-y bg-canvas text-ink" aria-labelledby={`${page.slug}-sensitive`}>
+    <section className="section-y" aria-labelledby={`${page.slug}-sensitive`}>
       <Container>
-        <SectionIntro id={`${page.slug}-sensitive`} eyebrow="Sensitive information" title={`What ${page.navLabel.toLowerCase()} teams commonly need to protect`} />
-        <ul className="mt-12 grid border-t border-border-subtle/60 sm:grid-cols-2 xl:grid-cols-4">
-          {page.sensitiveInformation.map((item) => (
-            <li key={item.label} className="relative border-b border-border-subtle/60 py-7 sm:pr-8">
-              <span aria-hidden="true" className="absolute -top-px left-0 h-px w-12 bg-accent-warm" />
-              <h3 className="type-h3">{item.label}</h3>
-              <p className="mt-2 text-[0.9375rem] leading-6 text-ink-muted">{item.examples}</p>
+        <Intro id={`${page.slug}-sensitive`} tag="Sensitive information" title={`What ${page.navLabel.toLowerCase()} teams commonly need to protect`} />
+        <ul className="mt-10 grid gap-x-8 gap-y-10 md:grid-cols-2">
+          {page.sensitiveInformation.map((item, index) => (
+            <li key={item.label}>
+              <div aria-hidden="true" className="relative isolate aspect-[16/7] overflow-hidden rounded-xl border border-white/10">
+                <CardPhoto photo={sensitivePhotos[index % sensitivePhotos.length]} className="journey-card-photo" sizes="(min-width: 768px) 560px, 100vw" />
+                <div className="absolute inset-0 grid place-items-center p-6">
+                  <div className="w-full max-w-[20rem] rounded-lg border border-white/[0.12] bg-[rgb(18_18_20/0.75)] p-3 text-[0.75rem] text-white shadow-[0_12px_30px_-12px_rgb(0_0_0/0.6)] backdrop-blur-md">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold">{item.label}</span>
+                      <span className="rounded bg-[#ff7a33] px-1.5 font-semibold text-[#1c1917]">Review</span>
+                    </div>
+                    <div className="mt-2.5 space-y-1.5">
+                      <span className="block h-1.5 w-full rounded-full bg-white/15" />
+                      <span className="flex gap-1.5"><span className="block h-1.5 w-1/4 rounded-full bg-white/15" /><span className="block h-1.5 w-1/3 rounded-full bg-[#ff7a33]/85" /><span className="block h-1.5 flex-1 rounded-full bg-white/15" /></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <h3 className="mt-5 text-[1.125rem] font-medium leading-7 text-white">{item.label}</h3>
+              <p className="mt-1.5 text-[0.9375rem] leading-6 text-white/55">{item.examples}</p>
             </li>
           ))}
         </ul>
@@ -128,18 +179,20 @@ function SensitiveSection({ page }: { page: IndustryPageContent }) {
 
 function ChallengesSection({ page }: { page: IndustryPageContent }) {
   return (
-    <section className="section-y bg-canvas text-ink" aria-labelledby={`${page.slug}-challenges`}>
+    <section className="section-y" aria-labelledby={`${page.slug}-challenges`}>
       <Container>
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-20">
-          <SectionIntro id={`${page.slug}-challenges`} eyebrow="Practical challenges" title="Why redaction is harder than it looks here" tone="cool" className="lg:sticky lg:top-28 lg:self-start" />
-          <ol className="border-t border-border-subtle/60">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.6fr)] lg:gap-16">
+          <div className="lg:sticky lg:top-28 lg:self-start">
+            <Intro id={`${page.slug}-challenges`} tag="Practical challenges" title="Why redaction is harder than it looks here" />
+          </div>
+          <ol className="grid gap-x-12 gap-y-11 sm:grid-cols-2">
             {page.challenges.map((item, index) => (
-              <li key={item.title} className="grid grid-cols-[auto_1fr] gap-5 border-b border-border-subtle/60 py-7">
-                <span className="type-meta pt-1 text-accent-ink">0{index + 1}</span>
-                <div>
-                  <h3 className="type-h3">{item.title}</h3>
-                  <p className="mt-2 text-[0.9375rem] leading-7 text-ink-muted">{item.description}</p>
-                </div>
+              <li key={item.title}>
+                <span aria-hidden="true" className="grid size-10 place-items-center rounded-full border border-white/10 bg-white/[0.05] text-[0.8125rem] font-semibold text-white">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <h3 className="mt-5 text-[1.125rem] font-medium leading-7 tracking-[-0.015em] text-white">{item.title}</h3>
+                <p className="mt-1 text-[0.9375rem] leading-6 text-white/55">{item.description}</p>
               </li>
             ))}
           </ol>
@@ -152,38 +205,26 @@ function ChallengesSection({ page }: { page: IndustryPageContent }) {
 function WorkflowsSection({ page }: { page: IndustryPageContent }) {
   const seen: Partial<Record<MediaFormat, number>> = {};
   const pageIndex = Math.max(0, liveIndustryPages.findIndex((live) => live.slug === page.slug));
+  const tabs: WorkflowTab[] = page.workflows.map((workflow) => {
+    const feature = featureLinkFor(workflow.format);
+    const occurrence = seen[workflow.format] ?? 0;
+    seen[workflow.format] = occurrence + 1;
+    const options = workflowVisuals[workflow.format];
+    return {
+      title: workflow.title,
+      formatLabel: formatMeta[workflow.format].label,
+      formatIcon: formatMeta[workflow.format].icon,
+      description: workflow.description,
+      capabilities: workflow.claimIds.map((claimId) => ({ wording: capabilityClaims[claimId].publicWording, condition: capabilityClaims[claimId].condition || undefined })),
+      visual: options[(pageIndex + occurrence) % options.length],
+      link: feature ? { href: feature.href, label: `${feature.label} workflow` } : undefined,
+    };
+  });
   return (
-    <section className="section-y bg-canvas text-ink" aria-labelledby={`${page.slug}-workflows`}>
+    <section className="section-y" aria-labelledby={`${page.slug}-workflows`}>
       <Container>
-        <SectionIntro id={`${page.slug}-workflows`} eyebrow="Relevant workflows" title={`How RedactPlus supports ${page.navLabel.toLowerCase()} workflows`} description="Each workflow lists the capabilities that apply, with the conditions that affect them in practice." tone="warm" />
-        <div className="mt-8">
-          {page.workflows.map((workflow, index) => {
-            const feature = featureLinkFor(workflow.format);
-            const occurrence = seen[workflow.format] ?? 0;
-            seen[workflow.format] = occurrence + 1;
-            const options = workflowVisuals[workflow.format];
-            return (
-              <article key={workflow.title} className="grid gap-8 py-12 sm:py-14 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:gap-14">
-                <div className="min-w-0">
-                  <FormatBadge format={workflow.format} primary={index === 0} />
-                  <h3 className="type-h2 mt-4 max-w-[24ch] text-[clamp(1.375rem,1.15rem+0.8vw,1.75rem)]">{workflow.title}</h3>
-                  <p className="type-body mt-4 max-w-xl">{workflow.description}</p>
-                  <p className="type-meta mb-3 mt-8">Supported capabilities</p>
-                  <CapabilityList claimIds={workflow.claimIds} />
-                  {feature ? (
-                    <Link href={feature.href} className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-accent-ink transition-colors hover:text-accent-ink-hover motion-reduce:transition-none">
-                      {feature.label} workflow
-                      <Icon name="arrow" size={16} />
-                    </Link>
-                  ) : null}
-                </div>
-                <div className="min-w-0 lg:sticky lg:top-28 lg:self-start">
-                  <FeatureVisual visual={options[(pageIndex + occurrence) % options.length]} displayWidth={520} />
-                </div>
-              </article>
-            );
-          })}
-        </div>
+        <Intro id={`${page.slug}-workflows`} tag="Relevant workflows" title={`How RedactPlus supports ${page.navLabel.toLowerCase()} workflows`} description="Each workflow lists the capabilities that apply, with the conditions that affect them in practice." />
+        <IndustryWorkflowTabs tabs={tabs} />
       </Container>
     </section>
   );
@@ -191,37 +232,54 @@ function WorkflowsSection({ page }: { page: IndustryPageContent }) {
 
 function RelatedSection({ page }: { page: IndustryPageContent }) {
   const industries = page.relatedIndustries.map((slug) => getIndustryPage(slug)).filter((item): item is IndustryPageContent => Boolean(item));
-  const linkClass = "inline-flex min-h-10 items-center gap-2.5 text-[0.9375rem] text-ink-muted transition-colors hover:text-ink motion-reduce:transition-none";
+  const primary = page.relatedFeatures[0] ? getFeaturePage(page.relatedFeatures[0]) : undefined;
+  const linkClass = "inline-flex min-h-10 items-center gap-2.5 text-[0.9375rem] text-white/70 transition-colors hover:text-white motion-reduce:transition-none";
   return (
-    <section className="section-y bg-canvas text-ink" aria-labelledby={`${page.slug}-related`}>
+    <section className="section-y" aria-labelledby={`${page.slug}-related`}>
       <Container>
-        <SectionIntro id={`${page.slug}-related`} eyebrow="Continue exploring" title="Related workflows, sectors, and guides" />
-        <div className="mt-12 grid gap-px overflow-hidden rounded-[16px] border border-border-subtle/50 bg-border-subtle/50 lg:grid-cols-3">
-          <div className="bg-canvas p-6 sm:p-7">
-            <h3 className="type-meta">Feature workflows</h3>
+        <Intro id={`${page.slug}-related`} tag="Keep exploring" title="Related workflows, sectors, and guides" />
+        {primary ? (
+          <Link
+            href={featureHref(primary.slug)}
+            className="group relative isolate mt-10 flex min-h-[18rem] flex-col justify-end overflow-hidden rounded-2xl border border-white/10 p-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:p-10"
+          >
+            <div aria-hidden="true" className="feature-related-photo">
+              <CardPhoto photo={cardPhotos.clouds} className="feature-related-photo-img" sizes="(min-width: 1280px) 1160px, 100vw" />
+            </div>
+            <p className="text-[0.8125rem] font-semibold text-[#ff9a62]">Other ways to use RedactPlus · {primary.eyebrow}</p>
+            <h3 className="mt-2 max-w-[30ch] text-[clamp(1.375rem,1.15rem+0.8vw,1.875rem)] font-medium leading-tight tracking-[-0.02em] text-white">{primary.h1}</h3>
+            <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-white">
+              Explore {primary.eyebrow.toLowerCase()}
+              <Icon name="arrow" size={16} className="transition-transform group-hover:translate-x-1 motion-reduce:transform-none motion-reduce:transition-none" />
+            </span>
+          </Link>
+        ) : null}
+        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          <div className={`${darkCard} p-6 sm:p-7`}>
+            <h3 className="text-[0.8125rem] font-semibold text-white/50">Feature workflows</h3>
             <ul className="mt-4 space-y-1">
               {page.relatedFeatures.map((slug) => {
                 const feature = getFeaturePage(slug);
-                return feature ? <li key={slug}><Link href={featureHref(slug)} className={linkClass}><Icon name={featureIcons[slug]} size={16} className="text-accent-ink" />{feature.eyebrow}</Link></li> : null;
+                return feature ? <li key={slug}><Link href={featureHref(slug)} className={linkClass}><Icon name={featureIcons[slug]} size={16} className="text-[#ff9a62]" />{feature.eyebrow}</Link></li> : null;
               })}
-              <li><Link href="/how-it-works" className={linkClass}><Icon name="layers" size={16} className="text-accent-ink" />How the review lifecycle works</Link></li>
+              <li><Link href="/how-it-works" className={linkClass}><Icon name="layers" size={16} className="text-[#ff9a62]" />How the review lifecycle works</Link></li>
             </ul>
           </div>
-          <div className="bg-canvas p-6 sm:p-7">
-            <h3 className="type-meta">Related industries</h3>
+          <div className={`${darkCard} p-6 sm:p-7`}>
+            <h3 className="text-[0.8125rem] font-semibold text-white/50">Related industries</h3>
             <ul className="mt-4 space-y-1">
-              {industries.map((item) => <li key={item.slug}><Link href={industryHref(item.slug)} className={linkClass}><Icon name={item.icon} size={16} className="text-accent-ink" />{item.navLabel}</Link></li>)}
-              <li><Link href="/industries" className={linkClass}><Icon name="arrow" size={16} className="text-accent-ink" />All industries</Link></li>
+              {industries.map((item) => <li key={item.slug}><Link href={industryHref(item.slug)} className={linkClass}><Icon name={item.icon} size={16} className="text-[#ff9a62]" />{item.navLabel}</Link></li>)}
+              <li><Link href="/industries" className={linkClass}><Icon name="arrow" size={16} className="text-[#ff9a62]" />All industries</Link></li>
             </ul>
           </div>
-          <div className="bg-canvas p-6 sm:p-7">
-            <h3 className="type-meta">From the blog</h3>
+          <div className={`${darkCard} p-6 sm:p-7`}>
+            <h3 className="text-[0.8125rem] font-semibold text-white/50">From the blog</h3>
             {page.relatedInsights.length > 0 ? (
               <ul className="mt-4 space-y-1">
-                {page.relatedInsights.map((insight) => <li key={insight.href}><Link href={insight.href} className={linkClass}><Icon name="file-text" size={16} className="text-accent-ink" />{insight.title}</Link></li>)}
+                {page.relatedInsights.map((insight) => <li key={insight.href}><Link href={insight.href} className={linkClass}><Icon name="file-text" size={16} className="text-[#ff9a62]" />{insight.title}</Link></li>)}
               </ul>
             ) : (
-              <p className="mt-4 text-[0.9375rem] leading-6 text-ink-muted">Sector guides are in preparation. Browse the <Link href="/blog" className="font-semibold text-accent-ink hover:text-accent-ink-hover">blog</Link> for current articles.</p>
+              <p className="mt-4 text-[0.9375rem] leading-6 text-white/60">Sector guides are in preparation. Browse the <Link href="/blog" className="font-semibold text-[#ff9a62] hover:text-[#ffb487]">blog</Link> for current articles.</p>
             )}
           </div>
         </div>

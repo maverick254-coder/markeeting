@@ -1,0 +1,140 @@
+# PROPOSED .github/workflows/release-images.yml (review copy; inactive in docs/ci).
+#
+# Builds ONE production image from a commit already on main whose CI passed, pushes it to
+# registry.safaridesk.io and reports its digest. It deploys nothing: deployment is the separate,
+# approved deploy-production workflow, which takes this digest as input.
+#
+# Secrets (environment "image-publishing", which may require a reviewer):
+#   REGISTRY_USERNAME, REGISTRY_PASSWORD   push-only account on registry.safaridesk.io
+# Repository variables (public values, not secrets):
+#   TURNSTILE_SITE_KEY                     only used when registration=enabled
+name: Release image
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: Which image
+        type: choice
+        options: [marketing, portal]
+        required: true
+      commit:
+        description: Full 40-character commit SHA on main
+        type: string
+        required: true
+      portal_url:
+        description: "Marketing only: NEXT_PUBLIC_PORTAL_URL (empty keeps Contact Sales)"
+        type: string
+        default: ""
+      registration:
+        description: "Marketing only: trial registration form"
+        type: choice
+        options: [disabled, enabled]
+        default: disabled
+
+permissions:
+  contents: read
+  checks: read
+
+concurrency:
+  group: release-image-${{ inputs.component }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: publish ${{ inputs.component }} image
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    environment: image-publishing
+    steps:
+      - name: Validate inputs
+        env:
+          COMMIT: ${{ inputs.commit }}
+          PORTAL_URL: ${{ inputs.portal_url }}
+        run: |
+          [[ "$COMMIT" =~ ^[0-9a-f]{40}$ ]] || { echo "commit must be a full 40-character SHA"; exit 1; }
+          [[ -z "$PORTAL_URL" || "$PORTAL_URL" == "https://home.redactplus.io" ]] || { echo "portal_url must be empty or https://home.redactplus.io"; exit 1; }
+
+      - name: Check out the exact commit
+        uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          ref: ${{ inputs.commit }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Commit is on main and its CI passed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          # fetch-depth: 0 above already brought origin/main; no credentialed fetch is needed.
+          git merge-base --is-ancestor "$COMMIT" origin/main || { echo "commit is not on main"; exit 1; }
+          for check in "marketing / verify" "portal / verify" "security / secrets" "security / dependencies" "images / build"; do
+            conclusion=$(gh api "repos/${GITHUB_REPOSITORY}/commits/${COMMIT}/check-runs" --paginate \
+              --jq ".check_runs[] | select(.name == \"${check}\") | .conclusion" | head -1)
+            echo "${check}: ${conclusion:-missing}"
+            [ "$conclusion" = "success" ] || { echo "required check did not pass"; exit 1; }
+          done
+
+      - name: Set up Node.js (smoke test)
+        uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 22
+
+      - name: Build marketing image
+        if: inputs.component == 'marketing'
+        env:
+          COMMIT: ${{ inputs.commit }}
+          NEXT_PUBLIC_PORTAL_URL: ${{ inputs.portal_url }}
+          NEXT_PUBLIC_REDACTPLUS_REGISTRATION: ${{ inputs.registration == 'enabled' && 'enabled' || '' }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ inputs.registration == 'enabled' && vars.TURNSTILE_SITE_KEY || '' }}
+        run: |
+          bash deployment/redactplus/scripts/build-image.sh "$COMMIT"
+          tag="$COMMIT"; [ "$NEXT_PUBLIC_REDACTPLUS_REGISTRATION" = enabled ] && tag="${tag}-registration"
+          echo "IMAGE=registry.safaridesk.io/safari/redactplus-landing:${tag}" >> "$GITHUB_ENV"
+
+      - name: Smoke-test marketing image
+        if: inputs.component == 'marketing'
+        env:
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          docker run --rm -d --name redactplus-smoke -p 127.0.0.1:3095:3000 --read-only \
+            --tmpfs /tmp --tmpfs /app/.next/cache:mode=1777 --tmpfs /app/.next/server/route-cache:mode=1777 \
+            --env-file deployment/redactplus/app.env.example "$IMAGE"
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:3095/api/health >/dev/null 2>&1 && break; sleep 2; done
+          EXPECT_CANONICAL_ORIGIN=https://redactplus.io node deployment/redactplus/scripts/smoke-test.mjs http://127.0.0.1:3095 "$COMMIT"
+          docker rm -f redactplus-smoke >/dev/null
+
+      - name: Build portal image
+        if: inputs.component == 'portal'
+        env:
+          COMMIT: ${{ inputs.commit }}
+        run: |
+          image="registry.safaridesk.io/safari/redactplus-portal:${COMMIT}"
+          docker build --platform linux/amd64 -f deployment/portal/Dockerfile \
+            --build-arg GIT_COMMIT="$COMMIT" -t "$image" apps/portal
+          echo "IMAGE=$image" >> "$GITHUB_ENV"
+
+      - name: Push and record the digest
+        env:
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        run: |
+          # The password goes through stdin only; it never appears in the command line or the log.
+          printf '%s' "$REGISTRY_PASSWORD" | docker login registry.safaridesk.io --username "$REGISTRY_USERNAME" --password-stdin >/dev/null
+          docker push --quiet "$IMAGE"
+          digest=$(docker image inspect "$IMAGE" --format '{{range .RepoDigests}}{{println .}}{{end}}' | sed -n 's/.*@\(sha256:[0-9a-f]\{64\}\)$/\1/p' | head -1)
+          docker logout registry.safaridesk.io >/dev/null
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "no digest recorded"; exit 1; }
+          {
+            echo "### ${{ inputs.component }} image published"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Image | \`${IMAGE}\` |"
+            echo "| Digest | \`${digest}\` |"
+            echo "| Commit | \`${{ inputs.commit }}\` |"
+            echo "| Registration | ${{ inputs.registration }} |"
+            echo ""
+            echo "Deploy with **Deploy to production** using this tag and digest."
+          } >> "$GITHUB_STEP_SUMMARY"

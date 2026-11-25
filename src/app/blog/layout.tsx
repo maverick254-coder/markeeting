@@ -8,7 +8,7 @@ export default function BlogLayout({ children }: { children: React.ReactNode }) 
       <main
         id="main-content"
         data-insights-page
-        className="min-h-screen bg-canvas text-ink"
+        className="home-dark theme-dark pricing-dark min-h-screen bg-[#0e0e0e] text-ink"
       >
         {children}
       </main>

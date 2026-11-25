@@ -1,0 +1,287 @@
+{
+  "portal": {
+    "1440": {
+      "home-signed-out": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "download": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "downloadHref": "/api/downloads/9.9.0",
+      "signOutHeight": 38,
+      "account": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "docs": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "consoleErrors": [
+        "error: Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    "1280": {
+      "home-signed-out": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "download": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "downloadHref": "/api/downloads/9.9.0",
+      "signOutHeight": 38,
+      "account": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "docs": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "consoleErrors": []
+    },
+    "768": {
+      "home-signed-out": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "download": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "downloadHref": "/api/downloads/9.9.0",
+      "signOutHeight": 0,
+      "account": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "docs": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "menuClosedByEscape": true,
+      "focusAfterEscape": "Open menu",
+      "consoleErrors": []
+    },
+    "375": {
+      "home-signed-out": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "download": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "downloadHref": "/api/downloads/9.9.0",
+      "signOutHeight": 0,
+      "account": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "docs": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "menuClosedByEscape": true,
+      "focusAfterEscape": "Open menu",
+      "consoleErrors": []
+    },
+    "320": {
+      "home-signed-out": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "download": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "downloadHref": "/api/downloads/9.9.0",
+      "signOutHeight": 0,
+      "account": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "docs": {
+        "overflowX": 0,
+        "clipped": []
+      },
+      "menuClosedByEscape": true,
+      "focusAfterEscape": "Open menu",
+      "consoleErrors": []
+    }
+  },
+  "marketing": {
+    "1440": {
+      "overflowX": 0,
+      "dialogOpen": true,
+      "dialogName": "Download RedactPlus Desktop",
+      "focusInDialog": true,
+      "dialogBox": {
+        "x": 496,
+        "y": 244,
+        "width": 448,
+        "height": 413
+      },
+      "links": [
+        {
+          "origin": "https://home.redactplus.io",
+          "path": "/auth/start",
+          "query": {
+            "intent": "register",
+            "return": "/download"
+          }
+        },
+        {
+          "origin": "https://home.redactplus.io",
+          "path": "/auth/start",
+          "query": {
+            "intent": "signin",
+            "return": "/download"
+          }
+        }
+      ],
+      "closedByEscape": true,
+      "focusReturned": "Download",
+      "consoleErrors": []
+    },
+    "1280": {
+      "overflowX": 0,
+      "dialogOpen": true,
+      "dialogName": "Download RedactPlus Desktop",
+      "focusInDialog": true,
+      "dialogBox": {
+        "x": 416,
+        "y": 194,
+        "width": 448,
+        "height": 413
+      },
+      "links": [
+        {
+          "origin": "https://home.redactplus.io",
+          "path": "/auth/start",
+          "query": {
+            "intent": "register",
+            "return": "/download"
+          }
+        },
+        {
+          "origin": "https://home.redactplus.io",
+          "path": "/auth/start",
+          "query": {
+            "intent": "signin",
+            "return": "/download"
+          }
+        }
+      ],
+      "closedByEscape": true,
+      "focusReturned": "Download",
+      "consoleErrors": []
+    },
+    "768": {
+      "overflowX": 0,
+      "dialogOpen": true,
+      "dialogName": "Download RedactPlus Desktop",
+      "focusInDialog": true,
+      "dialogBox": {
+        "x": 160,
+        "y": 306,
+        "width": 448,
+        "height": 413
+      },
+      "links": [
+        {
+          "origin": "https://home.redactplus.io",
+          "path": "/auth/start",
+          "query": {
+            "intent": "register",
+            "return": "/download"
+          }
+        },
+        {
+          "origin": "https://home.redactplus.io",
+          "path": "/auth/start",
+          "query": {
+            "intent": "signin",
+            "return": "/download"
+          }
+        }
+      ],
+      "closedByEscape": true,
+      "focusReturned": "Download",
+      "mobileMenuStillOpen": true,
+      "consoleErrors": []
+    },
+    "375": {
+      "overflowX": 0,
+      "dialogOpen": true,
+      "dialogName": "Download RedactPlus Desktop",
+      "focusInDialog": true,
+      "dialogBox": {
+        "x": 16,
+        "y": 181,
+        "width": 343,
+        "height": 450
+      },
+      "links": [
+        {
+          "origin": "https://home.redactplus.io",
+          "path": "/auth/start",
+          "query": {
+            "intent": "register",
+            "return": "/download"
+          }
+        },
+        {
+          "origin": "https://home.redactplus.io",
+          "path": "/auth/start",
+          "query": {
+            "intent": "signin",
+            "return": "/download"
+          }
+        }
+      ],
+      "closedByEscape": true,
+      "focusReturned": "Download",
+      "mobileMenuStillOpen": true,
+      "consoleErrors": []
+    },
+    "320": {
+      "overflowX": 0,
+      "dialogOpen": true,
+      "dialogName": "Download RedactPlus Desktop",
+      "focusInDialog": true,
+      "dialogBox": {
+        "x": 16,
+        "y": 73,
+        "width": 288,
+        "height": 494
+      },
+      "links": [
+        {
+          "origin": "https://home.redactplus.io",
+          "path": "/auth/start",
+          "query": {
+            "intent": "register",
+            "return": "/download"
+          }
+        },
+        {
+          "origin": "https://home.redactplus.io",
+          "path": "/auth/start",
+          "query": {
+            "intent": "signin",
+            "return": "/download"
+          }
+        }
+      ],
+      "closedByEscape": true,
+      "focusReturned": "Download",
+      "mobileMenuStillOpen": true,
+      "consoleErrors": []
+    }
+  }
+}

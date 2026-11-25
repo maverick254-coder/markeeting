@@ -94,7 +94,7 @@ export function htmlBodyFor(enquiry: LeadEnquiry, referenceId: string): string {
 <body style="margin:0; padding:0; background:#F5F5F4;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F5F5F4;">
 <tr><td align="center" style="padding:24px 12px;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; background:#FFFFFF; border:1px solid ${rule}; border-top:4px solid #FF735C;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px; background:#FFFFFF; border:1px solid ${rule}; border-top:4px solid #ff7a33;">
 <tr><td style="padding:24px 32px 0 32px; font-family:${font}; font-size:20px; font-weight:700; color:${ink};">Redact<span style="color:${accent};">Plus</span></td></tr>
 <tr><td style="padding:16px 32px 4px 32px; font-family:${font}; font-size:22px; font-weight:600; color:${ink};">${escapeHtml(heading)}</td></tr>
 <tr><td style="padding:0 32px 16px 32px; font-family:${font}; font-size:14px; color:${muted};">Sent from the enquiry form on redactplus.io.</td></tr>

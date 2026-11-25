@@ -39,7 +39,7 @@ export function AuthDialogPreview() {
 
   return (
     <main id="main-content" className="min-h-screen bg-[rgb(10_10_10/0.55)] px-4 py-10">
-      <div className="mx-auto mb-6 max-w-[28rem] rounded-2xl border-2 border-dashed border-[#ff735c] bg-white p-4 text-body-sm text-ink">
+      <div className="mx-auto mb-6 max-w-[28rem] rounded-2xl border-2 border-dashed border-[#ff7a33] bg-white p-4 text-body-sm text-ink">
         <p className="font-semibold">Design preview — development only</p>
         <p className="mt-1 text-ink-muted">Nothing is sent and no one is registered or signed in. Outcomes below are simulated to show each state.</p>
         <div className="mt-3 grid gap-2 sm:grid-cols-3">

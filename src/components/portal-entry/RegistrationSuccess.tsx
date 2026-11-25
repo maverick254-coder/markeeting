@@ -75,7 +75,7 @@ export function RegistrationSuccess({
       </p>
 
       {accepted.demo ? (
-        <p role="note" className="mt-3 rounded-xl border-2 border-dashed border-[#ff735c] px-3.5 py-2 text-caption text-ink">
+        <p role="note" className="mt-3 rounded-xl border-2 border-dashed border-[#ff7a33] px-3.5 py-2 text-caption text-ink">
           {copy.demoNote}
         </p>
       ) : null}

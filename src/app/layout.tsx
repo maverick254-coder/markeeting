@@ -1,3 +1,4 @@
+import { SmoothScroll } from "@/components/layout/SmoothScroll";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
@@ -128,6 +129,7 @@ export default async function RootLayout({
             </Script>
           </>
         ) : null}
+        <SmoothScroll />
         <PortalDialogProvider entry={portalEntry}>{children}</PortalDialogProvider>
         {chatwootConfig ? (
           <SupportChat config={chatwootConfig} fallbackEmail={publicSupportEmail} />

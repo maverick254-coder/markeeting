@@ -1,0 +1,565 @@
+{
+  "new/desktop-1440": {
+    "gridHeight": 675,
+    "cardHeights": [
+      675,
+      675,
+      675
+    ],
+    "overflowX": 0,
+    "clipped": [],
+    "consoleErrors": []
+  },
+  "old/desktop-1440": {
+    "gridHeight": 992,
+    "cardHeights": [
+      992,
+      992,
+      992
+    ],
+    "overflowX": 0,
+    "clipped": [],
+    "consoleErrors": []
+  },
+  "new/laptop-1280": {
+    "gridHeight": 675,
+    "cardHeights": [
+      675,
+      675,
+      675
+    ],
+    "overflowX": 0,
+    "clipped": [],
+    "consoleErrors": []
+  },
+  "old/laptop-1280": {
+    "gridHeight": 992,
+    "cardHeights": [
+      992,
+      992,
+      992
+    ],
+    "overflowX": 0,
+    "clipped": [],
+    "consoleErrors": []
+  },
+  "new/tablet-768": {
+    "gridHeight": 1138,
+    "cardHeights": [
+      655,
+      655,
+      467
+    ],
+    "overflowX": 0,
+    "clipped": [],
+    "consoleErrors": []
+  },
+  "old/tablet-768": {
+    "gridHeight": 1629,
+    "cardHeights": [
+      932,
+      932,
+      674
+    ],
+    "overflowX": 0,
+    "clipped": [],
+    "consoleErrors": []
+  },
+  "new/mobile-375": {
+    "gridHeight": 1939,
+    "cardHeights": [
+      647,
+      645,
+      615
+    ],
+    "overflowX": 0,
+    "clipped": [],
+    "consoleErrors": []
+  },
+  "old/mobile-375": {
+    "gridHeight": 2749,
+    "cardHeights": [
+      896,
+      916,
+      890
+    ],
+    "overflowX": 0,
+    "clipped": [],
+    "consoleErrors": []
+  },
+  "new/mobile-320": {
+    "gridHeight": 2061,
+    "cardHeights": [
+      689,
+      685,
+      655
+    ],
+    "overflowX": 0,
+    "clipped": [],
+    "consoleErrors": []
+  },
+  "old/mobile-320": {
+    "gridHeight": 3109,
+    "cardHeights": [
+      1076,
+      1024,
+      962
+    ],
+    "overflowX": 0,
+    "clipped": [],
+    "consoleErrors": []
+  },
+  "pages": {
+    "desktop-1440/": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "mono-white",
+          "src": "/images/brand/redactplus-horizontal-white.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "0x0",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "desktop-1440/pricing": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "desktop-1440/book-a-demo?package=enterprise": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "desktop-1440/blog": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "desktop-1440/features": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "desktop-1440/why-redactplus": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "desktop-1440/industries": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "mobile-375/": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "mono-white",
+          "src": "/images/brand/redactplus-horizontal-white.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "0x0",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "mobile-375/pricing": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "mobile-375/book-a-demo?package=enterprise": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "mobile-375/blog": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "mobile-375/features": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "mobile-375/why-redactplus": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "mobile-375/industries": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "mobile-320/": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "mono-white",
+          "src": "/images/brand/redactplus-horizontal-white.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "0x0",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "mobile-320/pricing": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "mobile-320/book-a-demo?package=enterprise": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "mobile-320/blog": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "mobile-320/features": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "mobile-320/why-redactplus": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    },
+    "mobile-320/industries": {
+      "overflowX": 0,
+      "logos": [
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        },
+        {
+          "tone": "light",
+          "src": "/images/brand/redactplus-horizontal-on-light.svg",
+          "w": 160,
+          "h": 40,
+          "natural": "1996x500",
+          "ratio": 3.993
+        }
+      ]
+    }
+  },
+  "hydration": {
+    "desktop-1440": [],
+    "mobile-375": [],
+    "mobile-320": []
+  },
+  "preselect": {
+    "desktop-1440": "enterprise | RedactPlus Enterprise",
+    "mobile-375": "enterprise | RedactPlus Enterprise",
+    "mobile-320": "enterprise | RedactPlus Enterprise"
+  }
+}

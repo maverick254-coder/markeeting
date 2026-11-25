@@ -6,7 +6,6 @@ import { WhySafeRedact } from "@/components/sections/WhySafeRedact";
 import { HowItWorks } from "@/components/sections/HowItWorks";
 import { Services } from "@/components/sections/Services";
 import { Industries } from "@/components/sections/Industries";
-import { InsightsPreview } from "@/components/sections/InsightsPreview";
 import { Faq } from "@/components/sections/Faq";
 import { StructuredData } from "@/components/marketing/StructuredData";
 import { faqItems } from "@/content/faq";
@@ -15,8 +14,8 @@ import { buildFaqPageJsonLd } from "@/lib/seo/structured-data";
 /**
  * The homepage story (docs/design/homepage-storytelling-revision.md): the promise with
  * the product in the first screen, the problem, document and audio evidence and the
- * shared workflow on one warm band, why RedactPlus, who it is for, questions, the blog,
- * then the footer's closing invitation.
+ * shared workflow on one warm band, why RedactPlus, who it is for, questions, then the
+ * footer's closing invitation. The blog lives on /blog, not here, to keep the close short.
  */
 export default function HomePage() {
   return (
@@ -25,15 +24,18 @@ export default function HomePage() {
       <main id="main-content" data-home-page>
         <StructuredData data={buildFaqPageJsonLd(faqItems)} />
         <Hero />
-        <ProblemStatement />
-        <div className="story-surface">
-          <WhySafeRedact />
-          <HowItWorks />
+        {/* Hobbes-style rhythm: the hero's black carries on through the problem, the product
+            stories and Workflow, then Services and Industries are white. */}
+        <div className="home-dark theme-dark">
+          <ProblemStatement />
+          <div className="story-surface">
+            <WhySafeRedact />
+            <HowItWorks />
+          </div>
         </div>
         <Services />
         <Industries />
         <Faq />
-        <InsightsPreview />
       </main>
       <Footer homePage />
     </>

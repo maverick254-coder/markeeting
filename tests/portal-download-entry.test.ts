@@ -125,8 +125,8 @@ test("header, tablet bar, mobile menu and homepage hero all use the same Downloa
   const hero = read("src/components/sections/Hero.tsx");
   assert.match(hero, /<PortalCta\s+label=\{heroContent\.downloadCta\.label\}/);
   assert.equal(heroContent.downloadCta.label, "Download RedactPlus");
-  // The approved styling is kept: the same class string as the original hero button.
-  assert.match(hero, /bg-white px-6 text-\[0\.9375rem\] font-semibold text-\[#1c1917\]/);
+  // Brand-orange primary over the photo hero (homepage redesign), dark text for contrast.
+  assert.match(hero, /bg-\[#ff7a33\] px-6 text-\[0\.9375rem\] font-semibold text-\[#1c1917\]/);
 });
 
 test("Download buttons never turn into Contact Sales: the portal defaults to home.redactplus.io", () => {

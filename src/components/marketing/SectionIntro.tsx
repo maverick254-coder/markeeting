@@ -1,12 +1,8 @@
 import React from "react";
 import { cn } from "@/lib/utils";
 
-// Coral leads; cyan stays restrained, so "cool" eyebrows read as neutral metadata.
-const tones = {
-  warm: "text-accent-ink",
-  cool: "text-ink-muted",
-  mint: "text-accent-mint",
-} as const;
+// Kept for existing callers; every eyebrow is now the same pill tag with an orange dot.
+const tones = { warm: "", cool: "", mint: "" } as const;
 
 /**
  * Eyebrow, H2 and optional lede shared by the marketing sections. `continuation`
@@ -33,8 +29,11 @@ export function SectionIntro({
 }) {
   return (
     <div className={cn("max-w-3xl", align === "center" && "mx-auto text-center", className)}>
-      <p className={cn("type-eyebrow", tones[tone])}>{eyebrow}</p>
-      <h2 id={id} className={cn("type-h2 mt-4", align === "center" && "mx-auto")}>
+      <p className={cn("inline-flex min-h-8 items-center gap-2 rounded-full border border-border-subtle bg-surface-raised px-3 text-[0.8125rem] font-medium text-ink", align === "center" && "mx-auto")} data-tone={tone}>
+        <span aria-hidden="true" className="size-1.5 rounded-full bg-[#ff7a33]" />
+        {eyebrow}
+      </p>
+      <h2 id={id} className={cn("type-h2 mt-5", align === "center" && "mx-auto")}>
         {title}
         {continuation ? (
           <>

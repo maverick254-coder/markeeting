@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Icon } from "@/components/ui/Icon";
 import { PortalCta } from "@/components/portal-entry/PortalCta";
+import { ShowcasePhoto } from "@/components/media/ShowcaseStage";
 import { pricingPackages, pricingSharedLicenseNote, type PricingPackage } from "@/content/pricing";
 import { cn } from "@/lib/utils";
 
@@ -65,22 +66,30 @@ export function PricingCards() {
               aria-labelledby={`package-${plan.slug}`}
               data-package={plan.slug}
               className={cn(
-                "relative flex min-w-0 flex-col rounded-[20px] border bg-surface-raised p-5 sm:p-6 lg:row-span-4 lg:grid lg:grid-rows-subgrid lg:gap-y-0",
+                "relative isolate flex min-w-0 flex-col overflow-hidden rounded-[20px] border bg-surface-raised p-5 sm:p-6 lg:row-span-4 lg:grid lg:grid-rows-subgrid lg:gap-y-0",
                 plan.slug === "enterprise" && "md:col-span-2 lg:col-span-1",
                 highlighted
-                  ? "border-accent-warm/55 shadow-[0_18px_44px_-24px_rgb(194_65_42/0.45)]"
-                  : "border-border-subtle shadow-[0_1px_2px_rgb(var(--or-shadow)/0.05)]"
+                  ? "border-white/15 shadow-[0_24px_60px_-28px_rgb(0_0_0/0.8)]"
+                  : "border-border-subtle"
               )}
             >
+              {highlighted ? (
+                // Hobbes-style: the recommended plan carries a strip of the homepage landscape.
+                <div aria-hidden="true" className="pricing-card-photo">
+                  <ShowcasePhoto className="pricing-card-photo-img" sizes="360px" />
+                </div>
+              ) : null}
               <header>
-                {highlighted ? (
-                  <span className="absolute -top-3 left-5 rounded-full border border-accent-warm/40 bg-canvas px-2.5 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.06em] text-accent-ink sm:left-6">
-                    {"highlight" in plan ? plan.highlight : null}
-                  </span>
-                ) : null}
-                <h3 id={`package-${plan.slug}`} className="font-heading text-xl font-semibold tracking-[-0.02em] text-ink">
-                  {plan.name}
-                </h3>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <h3 id={`package-${plan.slug}`} className="font-heading text-xl font-semibold tracking-[-0.02em] text-ink">
+                    {plan.name}
+                  </h3>
+                  {highlighted ? (
+                    <span className="rounded-md border border-white/20 bg-black/30 px-2 py-0.5 text-[0.75rem] font-medium text-ink backdrop-blur-sm">
+                      {"highlight" in plan ? plan.highlight : null}
+                    </span>
+                  ) : null}
+                </div>
                 <p className="mt-1.5 text-sm leading-6 text-ink-muted">{plan.summary}</p>
               </header>
 

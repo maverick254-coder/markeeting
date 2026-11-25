@@ -1,21 +1,16 @@
 import type { FaqItem } from "@/types";
 import { docsLinks } from "@/content/docs-links";
 
+/**
+ * Homepage questions: only ones with a short, plain answer that holds for the product
+ * as shipped. Anything that depends on setup (optional engines, offline models,
+ * detection coverage) belongs in the documentation, not here.
+ */
 export const faqItems: FaqItem[] = [
-  {
-    question: "What is document redaction?",
-    answer:
-      "Document redaction is the process of identifying sensitive information, selecting what should be removed, and creating an output intended for controlled sharing. The exported result should always be reviewed before use.",
-  },
   {
     question: "What types of files can you redact?",
     answer:
-      "RedactPlus has workflows for PDFs and supported converted documents, plus supported audio recordings. Some document conversions and local AI features require optional components, so confirm a specific format before planning a production workflow around it.",
-  },
-  {
-    question: "What information can be redacted?",
-    answer:
-      "Document and transcript workflows can identify configured sensitive-information categories and patterns. Detection coverage varies, so reviewers should confirm every proposed redaction before export.",
+      "PDFs and supported converted documents, and supported audio recordings. Some document conversions need optional components.",
   },
   {
     question: "How does RedactPlus work?",
@@ -23,29 +18,17 @@ export const faqItems: FaqItem[] = [
       "Open a file in a RedactPlus project, run the appropriate detection or transcription workflow, review or adjust the selections, and export the redacted output.",
   },
   {
-    question: "Does RedactPlus work offline?",
-    answer:
-      "RedactPlus supports on-device detection, OCR, transcription, and rendering after the required local models and tools are installed. Optional AWS-backed engines can be selected per job; they are not required for local processing. Licensing requirements still apply.",
-  },
-  {
     question: "Can I review detected information?",
     answer:
-      "Yes. RedactPlus lets reviewers approve, reject, adjust, add, or remove findings before export, with page and transcript views suited to the content.",
-  },
-  {
-    question: "What should I check before sharing an output?",
-    answer:
-      "Review the complete output, confirm that intended content remains readable, and verify that every selected redaction appears as expected for the file type.",
+      "Yes. You approve, reject, adjust, add or remove findings before export, with page and transcript views suited to the content.",
   },
   {
     question: "Which operating system is supported?",
-    answer:
-      "RedactPlus is available as desktop software for Windows.",
+    answer: "Windows. RedactPlus is desktop software for Windows.",
   },
   {
     question: "How do I get started?",
-    answer:
-      "Contact sales through the enquiry form to discuss packages and licensing, or email support@redactplus.io with questions about evaluating RedactPlus for your workflow.",
+    answer: "Download RedactPlus, install it on your Windows PC and sign in. These guides walk you through both steps.",
     links: [
       { label: "Install RedactPlus", href: docsLinks.installation },
       { label: "Sign in to RedactPlus", href: docsLinks.signIn },

@@ -101,7 +101,7 @@ export function DemoEnquiry({
     "w-full rounded-[10px] border border-ink-muted/55 bg-canvas/70 px-4 py-3 text-base text-ink placeholder:text-ink-muted/60 transition-colors hover:border-ink-muted/75 focus:border-accent-cool focus:outline-none focus:ring-1 focus:ring-accent-cool motion-reduce:transition-none";
 
   const panel = (
-    <div className={cn("rounded-[18px] border border-border-subtle/60 bg-surface-raised/80 p-5 shadow-panel backdrop-blur-sm sm:p-8", variant === "panel" && "rounded-[24px] border-[rgb(28_25_23/0.06)] bg-white/90 shadow-[0_30px_80px_-36px_rgb(120_40_12/0.35)] sm:p-9")}>
+    <div className={cn("rounded-[18px] border border-border-subtle/60 bg-surface-raised/80 p-5 shadow-panel backdrop-blur-sm sm:p-8", variant === "panel" && "rounded-[24px] shadow-[0_30px_80px_-36px_rgb(0_0_0/0.6)] sm:p-9")}>
       <p
         id="contact-form-status"
         role={hasError ? "alert" : "status"}

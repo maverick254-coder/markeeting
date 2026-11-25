@@ -161,9 +161,9 @@ export function NavDropdown({
         ref={panelRef}
         hidden={!isOpen}
         onKeyDown={handlePanelKeyDown}
-        className="absolute left-1/2 top-full z-10 -translate-x-1/2 pt-3.5 motion-safe:animate-fade-in"
+        className="absolute left-1/2 top-full z-10 -translate-x-1/2 pt-3.5"
       >
-        <div className={cn("rounded-[24px] border border-[rgb(28_25_23/0.06)] bg-white p-3 shadow-[0_24px_60px_-20px_rgb(28_25_23/0.28),0_2px_6px_rgb(28_25_23/0.04)]", item.id === "industries" ? "w-[38rem]" : "w-[26rem]")}>
+        <div className={cn("rounded-[18px] border border-white/[0.1] motion-safe:animate-fade-in bg-[rgb(30_30_30/0.55)] p-2 shadow-[0_24px_60px_-20px_rgb(0_0_0/0.6)] backdrop-blur-2xl backdrop-saturate-150", item.id === "industries" ? "w-[38rem]" : "w-[26rem]")}>
           <ul className={cn(item.id === "industries" && "grid grid-cols-2 gap-x-1")}>
             {item.links.map((link) => {
               const current = isCurrentPage(pathname, link.href);
@@ -174,18 +174,18 @@ export function NavDropdown({
                     aria-current={current ? "page" : undefined}
                     onClick={() => setOpen(false)}
                     className={cn(
-                      "flex items-start gap-3.5 rounded-[14px] px-3.5 py-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-cool motion-reduce:transition-none",
-                      current ? "bg-surface-raised" : "hover:bg-surface-raised focus-visible:bg-surface-raised"
+                      "group flex items-start gap-3.5 rounded-[12px] px-3 py-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-cool motion-reduce:transition-none",
+                      current ? "bg-white/[0.08]" : "hover:bg-white/[0.07] focus-visible:bg-white/[0.07]"
                     )}
                   >
                     {link.icon ? (
-                      <span className={cn("mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-[10px]", current ? "bg-accent-warm/15 text-accent-ink" : "bg-surface-active text-ink-muted")}>
+                      <span className={cn("mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-[9px] border transition-colors motion-reduce:transition-none", current ? "border-[#ff7a33]/30 bg-[#ff7a33]/15 text-[#ff9a62]" : "border-white/[0.08] bg-black/25 text-white/75 group-hover:border-white/[0.14] group-hover:text-white")}>
                         <Icon name={link.icon} size={16} />
                       </span>
                     ) : null}
                     <span className="min-w-0">
-                      <span className="block text-body-sm font-semibold text-ink">{link.label}</span>
-                      {link.description ? <span className="mt-0.5 block text-caption leading-5 text-ink-muted">{link.description}</span> : null}
+                      <span className="block text-body-sm font-semibold text-white">{link.label}</span>
+                      {link.description ? <span className="mt-0.5 block text-caption leading-5 text-white/55 transition-colors group-hover:text-white/75 motion-reduce:transition-none">{link.description}</span> : null}
                     </span>
                   </SiteLink>
                 </li>
@@ -193,12 +193,12 @@ export function NavDropdown({
             })}
           </ul>
           {item.footerLink ? (
-            <div className="mt-1 border-t border-border-subtle px-1 pt-1">
+            <div className="mt-1 border-t border-white/[0.08] px-1 pt-1">
               <Link
                 href={item.footerLink.href}
                 aria-current={isCurrentPage(pathname, item.footerLink.href) ? "page" : undefined}
                 onClick={() => setOpen(false)}
-                className="flex items-center justify-between rounded-[12px] px-3 py-2.5 text-body-sm font-semibold text-accent-ink transition-colors hover:bg-surface-raised focus-visible:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-cool motion-reduce:transition-none"
+                className="flex items-center justify-between rounded-[12px] px-3 py-2.5 text-body-sm font-semibold text-[#ff9a62] transition-colors hover:bg-white/[0.07] focus-visible:bg-white/[0.07] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-cool motion-reduce:transition-none"
               >
                 {item.footerLink.label}
                 <Icon name="arrow" size={16} />

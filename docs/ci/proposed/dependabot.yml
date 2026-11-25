@@ -1,0 +1,30 @@
+# PROPOSED .github/dependabot.yml (review copy; inactive in docs/ci).
+# Weekly, grouped, so updates arrive as a few reviewable PRs that CI must pass like any other.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    groups:
+      production: { dependency-type: production }
+      development: { dependency-type: development }
+  - package-ecosystem: npm
+    directory: /apps/portal
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    groups:
+      production: { dependency-type: production }
+      development: { dependency-type: development }
+  - package-ecosystem: npm
+    directory: /services/cms-oauth-broker
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 3
+  # The pinned action SHAs in the workflows.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly, day: monday }
+  # The digest-pinned Node base images in both Dockerfiles.
+  - package-ecosystem: docker
+    directories: [/deployment/redactplus, /deployment/portal]
+    schedule: { interval: weekly, day: monday }

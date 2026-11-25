@@ -1,0 +1,89 @@
+#!/bin/bash
+# PROPOSED server-side forced command for the "Deploy to production" workflow (review copy).
+#
+# Install (separate, approved change):
+#   install -m 750 -o root -g root redactplus-deploy /usr/local/sbin/redactplus-deploy
+#   one line in /root/.ssh/authorized_keys, for a NEW key used by nothing else:
+#     restrict,command="/usr/local/sbin/redactplus-deploy" ssh-ed25519 AAAA… github-actions-redactplus-deploy
+#
+# `restrict` turns off port, agent and X11 forwarding and the PTY. The command ignores whatever the
+# client asked to run except through SSH_ORIGINAL_COMMAND, which is parsed strictly below. It never
+# prints app.env, db.env or any credential; it echoes only fixed text, tags, digests and health.
+set -euo pipefail
+umask 077
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+read -r -a args <<< "${SSH_ORIGINAL_COMMAND:-}"
+action="${args[0]:-}"; component="${args[1]:-}"
+fail() { echo "refused: $1"; exit 2; }
+
+case "$component" in
+  marketing) dir=/root/deploy/redactplus-landing; service=redactplus-landing; repo=registry.safaridesk.io/safari/redactplus-landing; port=6095 ;;
+  portal)    dir=/root/deploy/redactplus-portal;  service=redactplus-portal;  repo=registry.safaridesk.io/safari/redactplus-portal;  port=6096 ;;
+  *) fail "unknown component" ;;
+esac
+cd "$dir"
+exec 9>"$dir/.deploy.lock"; flock -n 9 || fail "another deployment of $component is running"
+
+stamp() { date -u +%FT%TZ; }
+current() { grep -E '^RELEASE_(SHA|DIGEST)=' .env 2>/dev/null | tr '\n' ' '; }
+healthy() {
+  for _ in $(seq 1 45); do
+    state=$(docker inspect "$service" --format '{{.State.Health.Status}}' 2>/dev/null || echo missing)
+    [ "$state" = healthy ] && return 0
+    sleep 2
+  done
+  return 1
+}
+up() { docker compose up -d --no-deps "$service" >/dev/null 2>&1; }
+
+case "$action" in
+  status)
+    echo "$component: $(current)"
+    echo "container: $(docker inspect "$service" --format '{{.State.Status}} {{.State.Health.Status}}' 2>/dev/null || echo absent)"
+    echo "health: $(curl -s --max-time 5 "http://127.0.0.1:${port}/api/health" | head -c 300)"
+    ;;
+
+  deploy)
+    tag="${args[2]:-}"; digest="${args[3]:-}"
+    [[ "$tag" =~ ^[0-9a-f]{40}(-registration)?$ ]] || fail "bad tag"
+    [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]] || fail "bad digest"
+    [ "${#args[@]}" -eq 4 ] || fail "unexpected arguments"
+    # A registration-on marketing image only with the runtime switch already decided in app.env.
+    if [[ "$tag" == *-registration ]] && [ "$component" != marketing ]; then fail "registration tags are marketing only"; fi
+
+    echo "$(stamp) $component before: $(current)"
+    docker pull --quiet "${repo}:${tag}@${digest}" >/dev/null || fail "image not found in the registry"
+    [ -f .env ] && cp -p .env .env.previous
+    printf 'RELEASE_SHA=%s\nRELEASE_DIGEST=%s\n' "$tag" "$digest" > .env.next
+    chmod 600 .env.next && mv .env.next .env
+    docker compose config --quiet || { [ -f .env.previous ] && cp -p .env.previous .env; fail "compose rejected the pin; previous restored"; }
+
+    if up && healthy; then
+      echo "$(stamp) $component deployed ${tag} ${digest}: healthy"
+      echo "$(stamp) ${tag} ${digest} github-actions deploy" >> releases.log
+      echo "health: $(curl -s --max-time 5 "http://127.0.0.1:${port}/api/health" | head -c 300)"
+    else
+      echo "$(stamp) $component ${tag} did not become healthy; restoring the previous pin"
+      if [ -f .env.previous ]; then cp -p .env.previous .env; up; healthy && echo "previous release healthy again"; fi
+      echo "$(stamp) ${tag} ${digest} github-actions deploy FAILED, rolled back" >> releases.log
+      exit 1
+    fi
+    ;;
+
+  rollback)
+    [ "${#args[@]}" -eq 2 ] || fail "unexpected arguments"
+    [ -f .env.previous ] || fail "no previous release recorded"
+    echo "$(stamp) $component rolling back from: $(current)"
+    cp -p .env .env.rolled-back-from
+    cp -p .env.previous .env
+    if up && healthy; then
+      echo "$(stamp) $component now: $(current) healthy"
+      echo "$(stamp) rollback to $(current) github-actions" >> releases.log
+    else
+      echo "rollback did not become healthy; manual attention needed"; exit 1
+    fi
+    ;;
+
+  *) fail "unknown action" ;;
+esac

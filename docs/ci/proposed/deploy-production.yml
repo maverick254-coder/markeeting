@@ -1,0 +1,105 @@
+# PROPOSED .github/workflows/deploy-production.yml (review copy; inactive in docs/ci).
+#
+# Manually started AND manually approved. Never runs on push. It changes exactly one thing on the
+# server: the digest-pinned release in /root/deploy/<component>/.env (keeping .env.previous), then
+# `docker compose up -d` for that one service, a health check, and an automatic return to the
+# previous pin if the new one is not healthy. "rollback" restores .env.previous on demand.
+#
+# The runner never gets a shell on the server. Its SSH key is pinned in authorized_keys to one
+# forced command (docs/ci/proposed/server/redactplus-deploy), which accepts only:
+#     deploy <component> <tag> <sha256:digest>   |   rollback <component>   |   status <component>
+# It cannot read app.env, db.env, SMTP or Keycloak settings, and prints none of them.
+#
+# Environment "production": required reviewers, deployment branch policy = main only.
+#   Secrets:   DEPLOY_SSH_KEY          ed25519 private key, used only by the forced command
+#              DEPLOY_SSH_KNOWN_HOSTS  the server's pinned host key line(s)
+#   Variables: DEPLOY_HOST             31.97.42.73
+name: Deploy to production
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: deploy a published image, roll back to the previous pin, or report status
+        type: choice
+        options: [deploy, rollback, status]
+        required: true
+      component:
+        description: Which service
+        type: choice
+        options: [marketing, portal]
+        required: true
+      tag:
+        description: "deploy only: image tag from Release image (<sha> or <sha>-registration)"
+        type: string
+        default: ""
+      digest:
+        description: "deploy only: sha256 digest from Release image"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-${{ inputs.component }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: ${{ inputs.action }} ${{ inputs.component }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: ${{ inputs.component == 'portal' && 'https://home.redactplus.io' || 'https://redactplus.io' }}
+    steps:
+      - name: Validate inputs
+        env:
+          ACTION: ${{ inputs.action }}
+          TAG: ${{ inputs.tag }}
+          DIGEST: ${{ inputs.digest }}
+        run: |
+          if [ "$ACTION" = deploy ]; then
+            [[ "$TAG" =~ ^[0-9a-f]{40}(-registration)?$ ]] || { echo "tag must be <40-hex sha> or <sha>-registration"; exit 1; }
+            [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]] || { echo "digest must be sha256:<64 hex>"; exit 1; }
+          fi
+
+      - name: Prepare SSH (key and pinned host key in the runner's temp directory)
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_SSH_KNOWN_HOSTS: ${{ secrets.DEPLOY_SSH_KNOWN_HOSTS }}
+        run: |
+          umask 077
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$RUNNER_TEMP/deploy_key"
+          printf '%s\n' "$DEPLOY_SSH_KNOWN_HOSTS" > "$RUNNER_TEMP/known_hosts"
+
+      - name: Run the forced command on the server
+        env:
+          HOST: ${{ vars.DEPLOY_HOST }}
+          ACTION: ${{ inputs.action }}
+          COMPONENT: ${{ inputs.component }}
+          TAG: ${{ inputs.tag }}
+          DIGEST: ${{ inputs.digest }}
+        run: |
+          case "$ACTION" in
+            deploy) request="deploy $COMPONENT $TAG $DIGEST" ;;
+            *) request="$ACTION $COMPONENT" ;;
+          esac
+          ssh -i "$RUNNER_TEMP/deploy_key" -o IdentitiesOnly=yes -o BatchMode=yes \
+              -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
+              -o ConnectTimeout=20 "root@${HOST}" "$request" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Remove SSH material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/deploy_key" "$RUNNER_TEMP/known_hosts"
+
+      - name: Public check
+        if: inputs.action != 'status'
+        env:
+          COMPONENT: ${{ inputs.component }}
+        run: |
+          url=https://redactplus.io/
+          [ "$COMPONENT" = portal ] && url=https://home.redactplus.io/
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$url")
+          echo "public ${url}: ${code}" | tee -a "$GITHUB_STEP_SUMMARY"

@@ -1,0 +1,327 @@
+{
+  "portal": {
+    "1440": {
+      "unauthenticatedGoesToSignIn": true,
+      "home": {
+        "overflowX": 0,
+        "signInControls": 0,
+        "order": [
+          211,
+          652.390625
+        ]
+      },
+      "initials": "QA",
+      "menuItems": [
+        "Sign out"
+      ],
+      "focusOnSignOut": "Sign out",
+      "menuClosedByEscape": true,
+      "focusBackOnAvatar": "menu",
+      "searchResults": [
+        "Tutorials"
+      ],
+      "/forum": {
+        "overflowX": 0
+      },
+      "/release-notes": {
+        "overflowX": 0
+      },
+      "/docs": {
+        "overflowX": 0
+      },
+      "/download": {
+        "overflowX": 0
+      },
+      "filteredTitles": [
+        "[Sample] Choosing between beep and voice disguise for interviews"
+      ],
+      "newDiscussionDisabled": true,
+      "consoleErrors": []
+    },
+    "1280": {
+      "unauthenticatedGoesToSignIn": true,
+      "home": {
+        "overflowX": 0,
+        "signInControls": 0,
+        "order": [
+          211,
+          652.390625
+        ]
+      },
+      "initials": "QA",
+      "menuItems": [
+        "Sign out"
+      ],
+      "focusOnSignOut": "Sign out",
+      "menuClosedByEscape": true,
+      "focusBackOnAvatar": "menu",
+      "searchResults": [
+        "Tutorials"
+      ],
+      "/forum": {
+        "overflowX": 0
+      },
+      "/release-notes": {
+        "overflowX": 0
+      },
+      "/docs": {
+        "overflowX": 0
+      },
+      "/download": {
+        "overflowX": 0
+      },
+      "filteredTitles": [
+        "[Sample] Choosing between beep and voice disguise for interviews"
+      ],
+      "newDiscussionDisabled": true,
+      "consoleErrors": []
+    },
+    "768": {
+      "unauthenticatedGoesToSignIn": true,
+      "home": {
+        "overflowX": 0,
+        "signInControls": 0,
+        "order": [
+          211,
+          770.46875
+        ]
+      },
+      "initials": "QA",
+      "menuItems": [
+        "Sign out"
+      ],
+      "focusOnSignOut": "Sign out",
+      "menuClosedByEscape": true,
+      "focusBackOnAvatar": "menu",
+      "mobileMenuLinks": [
+        "Forum",
+        "Documentation",
+        "News",
+        "Release Notes"
+      ],
+      "/forum": {
+        "overflowX": 0
+      },
+      "/release-notes": {
+        "overflowX": 0
+      },
+      "/docs": {
+        "overflowX": 0
+      },
+      "/download": {
+        "overflowX": 0
+      },
+      "filteredTitles": [
+        "[Sample] Choosing between beep and voice disguise for interviews"
+      ],
+      "newDiscussionDisabled": true,
+      "consoleErrors": []
+    },
+    "375": {
+      "unauthenticatedGoesToSignIn": true,
+      "home": {
+        "overflowX": 0,
+        "signInControls": 0,
+        "order": [
+          207,
+          884.359375
+        ]
+      },
+      "initials": "QA",
+      "menuItems": [
+        "Sign out"
+      ],
+      "focusOnSignOut": "Sign out",
+      "menuClosedByEscape": true,
+      "focusBackOnAvatar": "menu",
+      "mobileMenuLinks": [
+        "Forum",
+        "Documentation",
+        "News",
+        "Release Notes"
+      ],
+      "/forum": {
+        "overflowX": 0
+      },
+      "/release-notes": {
+        "overflowX": 0
+      },
+      "/docs": {
+        "overflowX": 0
+      },
+      "/download": {
+        "overflowX": 0
+      },
+      "filteredTitles": [
+        "[Sample] Choosing between beep and voice disguise for interviews"
+      ],
+      "newDiscussionDisabled": true,
+      "consoleErrors": []
+    },
+    "320": {
+      "unauthenticatedGoesToSignIn": true,
+      "home": {
+        "overflowX": 0,
+        "signInControls": 0,
+        "order": [
+          207,
+          1039.4375
+        ]
+      },
+      "initials": "QA",
+      "menuItems": [
+        "Sign out"
+      ],
+      "focusOnSignOut": "Sign out",
+      "menuClosedByEscape": true,
+      "focusBackOnAvatar": "menu",
+      "mobileMenuLinks": [
+        "Forum",
+        "Documentation",
+        "News",
+        "Release Notes"
+      ],
+      "/forum": {
+        "overflowX": 0
+      },
+      "/release-notes": {
+        "overflowX": 0
+      },
+      "/docs": {
+        "overflowX": 0
+      },
+      "/download": {
+        "overflowX": 0
+      },
+      "filteredTitles": [
+        "[Sample] Choosing between beep and voice disguise for interviews"
+      ],
+      "newDiscussionDisabled": true,
+      "consoleErrors": []
+    }
+  },
+  "marketing": {
+    "1440": {
+      "overflowX": 0,
+      "dialogsInDom": 1,
+      "heroLabel": "Download RedactPlus",
+      "heroClass": "inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-[0.9375rem] font-semibold text-[#1c1917] shadow-[0_10px_30px_-8px_rgb(40_8_4/0.5)] transition-[background-color,transform] duration-200 hover:bg-[#fff1ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#a44116] motion-safe:hover:-translate-y-0.5 motion-reduce:transition-none",
+      "heroOpensDialog": true,
+      "headerLabel": "Download",
+      "headerOpensSameDialog": true,
+      "focusInDialog": true,
+      "dialogLinks": [
+        "https://home.redactplus.io/auth/start?intent=register&return=%2Fdownload",
+        "https://home.redactplus.io/auth/start?intent=signin&return=%2Fdownload"
+      ],
+      "closed": true,
+      "headerHasRequestDemo": 0,
+      "pricingCtas": [
+        "Contact Sales",
+        "Contact Sales",
+        "Contact Sales"
+      ],
+      "pricingOverflowX": 0,
+      "featuresHeroCtas": 1,
+      "consoleErrors": []
+    },
+    "1280": {
+      "overflowX": 0,
+      "dialogsInDom": 1,
+      "heroLabel": "Download RedactPlus",
+      "heroClass": "inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-[0.9375rem] font-semibold text-[#1c1917] shadow-[0_10px_30px_-8px_rgb(40_8_4/0.5)] transition-[background-color,transform] duration-200 hover:bg-[#fff1ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#a44116] motion-safe:hover:-translate-y-0.5 motion-reduce:transition-none",
+      "heroOpensDialog": true,
+      "headerLabel": "Download",
+      "headerOpensSameDialog": true,
+      "focusInDialog": true,
+      "dialogLinks": [
+        "https://home.redactplus.io/auth/start?intent=register&return=%2Fdownload",
+        "https://home.redactplus.io/auth/start?intent=signin&return=%2Fdownload"
+      ],
+      "closed": true,
+      "headerHasRequestDemo": 0,
+      "pricingCtas": [
+        "Contact Sales",
+        "Contact Sales",
+        "Contact Sales"
+      ],
+      "pricingOverflowX": 0,
+      "featuresHeroCtas": 1,
+      "consoleErrors": []
+    },
+    "768": {
+      "overflowX": 0,
+      "dialogsInDom": 1,
+      "heroLabel": "Download RedactPlus",
+      "heroClass": "inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-[0.9375rem] font-semibold text-[#1c1917] shadow-[0_10px_30px_-8px_rgb(40_8_4/0.5)] transition-[background-color,transform] duration-200 hover:bg-[#fff1ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#a44116] motion-safe:hover:-translate-y-0.5 motion-reduce:transition-none",
+      "heroOpensDialog": true,
+      "headerLabel": "Download",
+      "headerOpensSameDialog": true,
+      "focusInDialog": true,
+      "dialogLinks": [
+        "https://home.redactplus.io/auth/start?intent=register&return=%2Fdownload",
+        "https://home.redactplus.io/auth/start?intent=signin&return=%2Fdownload"
+      ],
+      "closed": true,
+      "headerHasRequestDemo": 0,
+      "pricingCtas": [
+        "Contact Sales",
+        "Contact Sales",
+        "Contact Sales"
+      ],
+      "pricingOverflowX": 0,
+      "featuresHeroCtas": 1,
+      "consoleErrors": []
+    },
+    "375": {
+      "overflowX": 0,
+      "dialogsInDom": 1,
+      "heroLabel": "Download RedactPlus",
+      "heroClass": "inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-[0.9375rem] font-semibold text-[#1c1917] shadow-[0_10px_30px_-8px_rgb(40_8_4/0.5)] transition-[background-color,transform] duration-200 hover:bg-[#fff1ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#a44116] motion-safe:hover:-translate-y-0.5 motion-reduce:transition-none",
+      "heroOpensDialog": true,
+      "mobileLabel": "Download",
+      "mobileMenuClosed": true,
+      "headerOpensSameDialog": true,
+      "focusInDialog": true,
+      "dialogLinks": [
+        "https://home.redactplus.io/auth/start?intent=register&return=%2Fdownload",
+        "https://home.redactplus.io/auth/start?intent=signin&return=%2Fdownload"
+      ],
+      "closed": true,
+      "headerHasRequestDemo": 0,
+      "pricingCtas": [
+        "Contact Sales",
+        "Contact Sales",
+        "Contact Sales"
+      ],
+      "pricingOverflowX": 0,
+      "featuresHeroCtas": 1,
+      "consoleErrors": []
+    },
+    "320": {
+      "overflowX": 0,
+      "dialogsInDom": 1,
+      "heroLabel": "Download RedactPlus",
+      "heroClass": "inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-white px-6 text-[0.9375rem] font-semibold text-[#1c1917] shadow-[0_10px_30px_-8px_rgb(40_8_4/0.5)] transition-[background-color,transform] duration-200 hover:bg-[#fff1ec] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#a44116] motion-safe:hover:-translate-y-0.5 motion-reduce:transition-none",
+      "heroOpensDialog": true,
+      "mobileLabel": "Download",
+      "mobileMenuClosed": true,
+      "headerOpensSameDialog": true,
+      "focusInDialog": true,
+      "dialogLinks": [
+        "https://home.redactplus.io/auth/start?intent=register&return=%2Fdownload",
+        "https://home.redactplus.io/auth/start?intent=signin&return=%2Fdownload"
+      ],
+      "closed": true,
+      "headerHasRequestDemo": 0,
+      "pricingCtas": [
+        "Contact Sales",
+        "Contact Sales",
+        "Contact Sales"
+      ],
+      "pricingOverflowX": 0,
+      "featuresHeroCtas": 1,
+      "consoleErrors": []
+    }
+  }
+}

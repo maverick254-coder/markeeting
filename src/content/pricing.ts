@@ -271,29 +271,6 @@ export function comparisonRowStatus(
   return packageIncludesFamily(plan, row.scope);
 }
 
-export const pricingLicensingSteps = [
-  {
-    title: "Choose the package and quantity",
-    description:
-      "Request a sales conversation with the package and number of named-user licenses your organization needs.",
-  },
-  {
-    title: "RedactPlus provisions access",
-    description:
-      "RedactPlus provisions your organization, one-year term, approved package, and purchased license quantity in the Control Center.",
-  },
-  {
-    title: "Your team assigns licenses",
-    description:
-      "An organization owner/admin invites colleagues and assigns or releases named-user licenses by email in the Control Center.",
-  },
-  {
-    title: "Each computer is activated",
-    description:
-      "Each named user signs in on the Windows desktop. The Control Center issues a signed, device-bound license, and an owner/admin can view and release activated computers. Device allowances are confirmed in your quote.",
-  },
-] as const;
-
 export const pricingFaqs = [
   {
     id: "package-differences",
@@ -341,6 +318,12 @@ export const pricingFaqs = [
     title: "Can we talk to someone before choosing a package?",
     description:
       "Yes. Use the sales enquiry form to describe the formats and review workflow you want to evaluate, and select the package you are considering if you already know it. We reply by email.",
+  },
+  {
+    id: "licensing",
+    title: "How does licensing work?",
+    description:
+      "Choose a package and the number of named-user licenses with our sales team. RedactPlus provisions your organization for a one-year term in the Control Center, where an owner/admin assigns licenses by email. Each named user signs in on the Windows desktop to receive a signed, device-bound license, and an owner/admin can view and release activated computers. Device allowances are confirmed in your quote.",
   },
   {
     id: "installation-activation",

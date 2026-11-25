@@ -128,7 +128,7 @@ test("all shared layouts render the official logo through one component", async 
   }
 
   const header = await read("src/components/layout/SiteHeader.tsx");
-  assert.match(header, /tone=\{!compact && overDarkHero \? "mono-white" : "light"\}/);
+  assert.match(header, /tone=\{compact \? \(overDarkSurface \? "dark" : "light"\) : overDarkHero \? "mono-white" : "light"\}/);
 });
 
 test("favicons, manifest and structured data use the RedactPlus assets", async () => {

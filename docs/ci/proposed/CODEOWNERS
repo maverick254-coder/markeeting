@@ -1,0 +1,8 @@
+# PROPOSED .github/CODEOWNERS (review copy; inactive in docs/ci). Replace the placeholder team
+# with the real GitHub team or users before installing. With "Require review from Code Owners"
+# on, changes here need an owner's approval in addition to green CI.
+/.github/                 @Safe-Redact/replace-with-release-owners
+/deployment/              @Safe-Redact/replace-with-release-owners
+/scripts/check-secrets.mjs @Safe-Redact/replace-with-release-owners
+/src/middleware.ts        @Safe-Redact/replace-with-release-owners
+/apps/portal/src/lib/     @Safe-Redact/replace-with-release-owners

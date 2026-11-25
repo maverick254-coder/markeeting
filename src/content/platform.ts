@@ -56,8 +56,7 @@ export const workflowSteps = [
     icon: "upload",
     label: "Open or prepare a file",
     title: "Files are prepared for review",
-    description:
-      "Add documents or recordings to a project. Supported office files are prepared as PDFs, and each file shows whether it is ready.",
+    description: "Add documents or recordings to a project.",
     previewLabel: "Source ready",
   },
   {
@@ -65,8 +64,7 @@ export const workflowSteps = [
     icon: "search",
     label: "Review and apply redactions",
     title: "A reviewer applies every mark",
-    description:
-      "Accept or reject candidate findings, and add your own marks or time ranges, each with a reason, before anything is exported.",
+    description: "Accept findings or add your own marks, each with a reason.",
     previewLabel: "Marks under review",
   },
   {
@@ -74,8 +72,7 @@ export const workflowSteps = [
     icon: "download",
     label: "Export the resulting copy",
     title: "A new copy; the original stays",
-    description:
-      "Export writes a redacted copy to a folder you choose and leaves the original untouched. Inspect the result before you share it.",
+    description: "Export a redacted copy. The original stays untouched.",
     previewLabel: "Output prepared",
   },
 ] as const;

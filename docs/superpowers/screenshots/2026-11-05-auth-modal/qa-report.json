@@ -1,0 +1,94 @@
+{
+  "dialog-desktop": {
+    "opened": true,
+    "focusOn": "name",
+    "errors": [
+      "Enter your full name.",
+      "Enter a valid email address, like name@company.com.",
+      "Use at least 8 characters.",
+      "The passwords don\u2019t match."
+    ],
+    "ariaInvalid": [
+      "name",
+      "email",
+      "password",
+      "confirmPassword"
+    ],
+    "passwordVisible": true,
+    "togglePressed": "true",
+    "submitDisabled": true,
+    "signinHeading": "Sign in to download",
+    "focusAfterSwitch": "H2",
+    "signinFields": [
+      "email:username",
+      "password:current-password"
+    ],
+    "resetHeading": "Reset your password",
+    "fallbackHref": "http://localhost:3299/auth/start?intent=signin&return=%2F",
+    "closedByEscape": true,
+    "focusReturned": "Download RedactPlus",
+    "credentialRequestsSent": []
+  },
+  "preview-desktop": {
+    "loadingLabel": "Creating account\u2026",
+    "ariaBusy": "true",
+    "successNotice": [
+      "Preview: a real sign-in would now open RedactPlus Home. Nothing was sent."
+    ],
+    "errorAlert": [
+      "That email and password weren\u2019t recognised."
+    ],
+    "credentialRequestsSent": []
+  },
+  "portal-desktop": {
+    "landedOnHub": true,
+    "sha256Visible": true,
+    "overflowX": 0
+  },
+  "dialog-mobile": {
+    "opened": true,
+    "focusOn": "name",
+    "errors": [
+      "Enter your full name.",
+      "Enter a valid email address, like name@company.com.",
+      "Use at least 8 characters.",
+      "The passwords don\u2019t match."
+    ],
+    "ariaInvalid": [
+      "name",
+      "email",
+      "password",
+      "confirmPassword"
+    ],
+    "passwordVisible": true,
+    "togglePressed": "true",
+    "submitDisabled": true,
+    "signinHeading": "Sign in to download",
+    "focusAfterSwitch": "H2",
+    "signinFields": [
+      "email:username",
+      "password:current-password"
+    ],
+    "resetHeading": "Reset your password",
+    "fallbackHref": "http://localhost:3299/auth/start?intent=signin&return=%2F",
+    "closedByEscape": true,
+    "focusReturned": "Download RedactPlus",
+    "credentialRequestsSent": []
+  },
+  "preview-mobile": {
+    "loadingLabel": "Creating account\u2026",
+    "ariaBusy": "true",
+    "successNotice": [
+      "Preview: a real sign-in would now open RedactPlus Home. Nothing was sent."
+    ],
+    "errorAlert": [
+      "That email and password weren\u2019t recognised."
+    ],
+    "credentialRequestsSent": []
+  },
+  "portal-mobile": {
+    "landedOnHub": true,
+    "sha256Visible": true,
+    "overflowX": 0
+  }
+}

@@ -1,0 +1,51 @@
+PASS  desktop: form has name, email, optional organisation, 18+ consent
+PASS  desktop: Turnstile widget rendered and passed (test key)
+PASS  desktop: no password field
+PASS  desktop: background scroll locked
+PASS  desktop: missing consent shows the 18+ terms error
+PASS  desktop: missing consent sends nothing
+PASS  desktop: accepted → Check your email
+PASS  desktop: trial facts are the backend's
+PASS  desktop: backend got the visitor's address as CF-Connecting-IP  (198.51.100.10)
+PASS  desktop: backend got the verified body and a Turnstile token, no credential  ({"path":"/public/trial-registrations","cfConnectingIp":"198.51.100.10","authorization":null,"keys":["acceptedTerms","email","fullName","organisationName","turnstileToken"],"turnstileToken":"present"})
+PASS  registration resent: /already registered with this address/
+PASS  registration emailfail: /Your email didn’t go out/
+PASS  email_failed never says Check your email
+PASS  registration used: /already used its RedactPlus trial/
+PASS  registration customer: /already has a RedactPlus account/
+PASS  registration location: /Too many trials have been started from this location/
+PASS  registration closed: /Trials can’t be started right now, and nothing was created/
+PASS  registration outage: /Trials can’t be started right now/
+PASS  registration limited: /Too many attempts/
+PASS  registration invalid: /temporary addresses cannot start a trial/
+PASS  existing customer → Sign in instead opens sign-in
+PASS  mobile: form has name, email, optional organisation, 18+ consent
+PASS  mobile: Turnstile widget rendered and passed (test key)
+PASS  mobile: no password field
+PASS  mobile: background scroll locked
+PASS  mobile: missing consent shows the 18+ terms error
+PASS  mobile: missing consent sends nothing
+PASS  mobile: accepted → Check your email
+PASS  mobile: trial facts are the backend's
+PASS  mobile: backend got the visitor's address as CF-Connecting-IP  (198.51.100.50)
+PASS  mobile: backend got the verified body and a Turnstile token, no credential  ({"path":"/public/trial-registrations","cfConnectingIp":"198.51.100.50","authorization":null,"keys":["acceptedTerms","email","fullName","organisationName","turnstileToken"],"turnstileToken":"present"})
+PASS  desktop: /welcome hands off to the identity provider (no session assumed)
+PASS  desktop: signed in and landed on home
+PASS  desktop: trial panel from GET /portal/me
+PASS  desktop: credits shown as reported
+PASS  desktop: account initials in the header
+PASS  desktop: download remains first
+PASS  desktop: no horizontal scroll
+PASS  desktop: no token in the URL
+PASS  account menu offers Sign out  (true)
+PASS  sign-out lands on the signed-out page or the provider's logout  (http://localhost:3299/signed-out)
+PASS  after sign-out, protected pages send you to sign-in
+PASS  an unknown or expired session cookie sends you to sign-in
+PASS  mobile: /welcome hands off to the identity provider (no session assumed)
+PASS  mobile: signed in and landed on home
+PASS  mobile: trial panel from GET /portal/me
+PASS  mobile: credits shown as reported
+PASS  mobile: account initials in the header
+PASS  mobile: download remains first
+PASS  mobile: no horizontal scroll
+PASS  mobile: no token in the URL

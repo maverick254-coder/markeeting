@@ -79,7 +79,7 @@ routeTest("pricing presents Document, Document + Media and Enterprise with verif
   assert.match(text, /owner\/admin/i);
   assert.match(text, /view and release/i);
   assert.match(text, /Confirmed in (?:your )?quote/i);
-  assert.match(text, /How licensing works/i);
+  assert.match(text, /How does licensing work\?/i);
   assert.match(text, /RedactPlus provisions/i);
   assert.match(text, /signs in on the Windows desktop/i);
   assert.match(text, /signed, device-bound license/i);

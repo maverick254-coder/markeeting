@@ -18,6 +18,8 @@ import { NavDropdown } from "./NavDropdown";
 
 /** The homepage hero's dark field: before scrolling, the open bar uses light text over it. */
 const DARK_HERO = "[data-hero-dark]";
+/** Dark surfaces: over these the scrolled pill turns to dark, translucent glass with light text. */
+const DARK_SURFACES = "[data-hero-dark], .home-dark, .footer-dark, .faq-scene-dark";
 /** The header's own band: the top 8% of the viewport. */
 const HEADER_BAND = "0px 0px -92% 0px";
 
@@ -29,6 +31,7 @@ export function SiteHeader({ items }: { items: readonly PrimaryNavItem[] }) {
   const [isScrolled, setIsScrolled] = useState(false);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const overDarkHero = useElementInView(DARK_HERO, { rootMargin: HEADER_BAND, key: pathname, initial: isHomePage });
+  const overDarkSurface = useElementInView(DARK_SURFACES, { rootMargin: HEADER_BAND, key: pathname, initial: isHomePage });
   const menuOpen = Boolean(openMenu) || isOpen;
   // At rest the bar is open and transparent; scrolled (or with a menu open) it becomes a
   // compact frosted pill with dark text, readable over the hero, dark and light sections.
@@ -97,13 +100,22 @@ export function SiteHeader({ items }: { items: readonly PrimaryNavItem[] }) {
       <header className="pointer-events-none fixed inset-x-0 top-0 z-[60] px-3 pt-3 sm:px-5" style={{ right: "var(--scroll-lock-gap, 0px)" }}>
         <div
           className={cn(
-            "pointer-events-auto mx-auto rounded-full border transition-[max-width,background-color,border-color,box-shadow] duration-300 ease-standard motion-reduce:transition-none",
+            "pointer-events-auto relative isolate mx-auto rounded-full border transition-[max-width,background-color,border-color,box-shadow] duration-300 ease-standard motion-reduce:transition-none",
             compact
-              ? "max-w-[62rem] border-[rgb(28_25_23/0.06)] bg-white/80 shadow-[0_10px_34px_-14px_rgb(28_25_23/0.28)] backdrop-blur-xl"
+              ? cn(
+                  "max-w-[62rem]",
+                  overDarkSurface
+                    ? "theme-dark nav-on-hero border-white/[0.1] shadow-[0_10px_34px_-14px_rgb(0_0_0/0.7)]"
+                    : "border-[rgb(28_25_23/0.08)] shadow-[0_10px_34px_-14px_rgb(28_25_23/0.24)]"
+                )
               : cn("max-w-[74rem] border-transparent bg-transparent", overDarkHero && "theme-dark nav-on-hero")
           )}
         >
-          <nav aria-label="Main navigation" className="grid h-14 grid-cols-[1fr_auto] items-center gap-4 pl-4 pr-2 min-[992px]:grid-cols-[1fr_auto_1fr]">
+          {/* The blur sits on its own layer, not on the bar: a backdrop-filter on the bar would make it
+              the backdrop root and stop the dropdown glass from blurring the page behind it. The tint lives
+                on the same layer so the glass is one surface (a tint over a separate blur layer glitched). */}
+          {compact ? <span aria-hidden="true" className={cn("pointer-events-none absolute inset-0 rounded-full backdrop-blur-xl backdrop-saturate-150", overDarkSurface ? "bg-[rgb(28_28_28/0.42)]" : "bg-white/50")} /> : null}
+          <nav aria-label="Main navigation" className="relative grid h-14 grid-cols-[1fr_auto] items-center gap-4 pl-4 pr-2 min-[992px]:grid-cols-[1fr_auto_1fr]">
             <Link
               href="/"
               className="-ml-1.5 inline-flex shrink-0 items-center justify-self-start rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool"
@@ -111,7 +123,7 @@ export function SiteHeader({ items }: { items: readonly PrimaryNavItem[] }) {
             >
               {/* Over the burnt-orange hero the orange mark would vanish, so the kit's white
                   single-colour logo is used there; everywhere else the primary logo. */}
-              <BrandLogo tone={!compact && overDarkHero ? "mono-white" : "light"} height={40} priority decorative />
+              <BrandLogo tone={compact ? (overDarkSurface ? "dark" : "light") : overDarkHero ? "mono-white" : "light"} height={40} priority decorative />
             </Link>
 
             <ul className="hidden items-center gap-0.5 min-[992px]:flex">

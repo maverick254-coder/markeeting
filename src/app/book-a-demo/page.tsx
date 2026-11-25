@@ -39,8 +39,9 @@ export default async function BookDemoPage({ searchParams }: BookDemoPageProps) 
   return (
     <>
       <Header />
-      <main id="main-content" className="demo-atmosphere text-ink">
+      <main id="main-content" className="home-dark theme-dark pricing-dark bg-[#0e0e0e] text-ink">
         <StructuredData data={buildBreadcrumbJsonLd(breadcrumbs)} />
+        <div data-hero-dark>
         <Container className="pb-20 pt-[7.5rem] sm:pb-24 sm:pt-[8.5rem] lg:pb-28 lg:pt-[9.5rem]">
           <Breadcrumbs items={breadcrumbs} />
           <div className="mt-8 grid gap-12 lg:mt-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16 xl:gap-24">
@@ -66,6 +67,7 @@ export default async function BookDemoPage({ searchParams }: BookDemoPageProps) 
             <DemoEnquiry variant="panel" initialPackage={initialPackage} />
           </div>
         </Container>
+        </div>
       </main>
       <Footer invitation={false} />
     </>

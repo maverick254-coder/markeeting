@@ -1,0 +1,403 @@
+{
+  "portal": {
+    "1440": {
+      "home": {
+        "overflowX": 0,
+        "forumBoardOnHome": 0,
+        "resourceCards": 4
+      },
+      "forum": {
+        "overflowX": 0,
+        "rows": 6,
+        "pinnedFirst": true,
+        "unansweredCounts": [
+          "0\nanswers",
+          "0\nanswers",
+          "0\nanswers",
+          "0\nanswers"
+        ],
+        "answeredAllAccepted": true,
+        "tagRows": 3,
+        "page2Rows": 6,
+        "searchRows": [
+          "Votes\n5 votes\nAnswers, one accepted\n1\nanswer\nViews\n120 views\n[Sample] Installing behind a corporate proxy\n\nThe installer finishes, but activation times out on our network.\n\nGetting started\ninstallation\nactivation\nnetwork\nSB\nSample Customer B\nasked 8 Oct 2026"
+        ]
+      },
+      "clickOpensDetail": true,
+      "detailLong": {
+        "overflowX": 0,
+        "imageLoaded": true,
+        "attachments": 1
+      },
+      "detailCode": {
+        "overflowX": 0,
+        "codeBlocks": 1,
+        "codeScrollsInside": true,
+        "accepted": true,
+        "nestedDepth": 2,
+        "voteDisabled": true
+      },
+      "composer": {
+        "errorSummary": 4,
+        "focusOnSummary": "alert",
+        "previewHasCode": true,
+        "notPostedNotice": "Your question looks ready, but the forum service isn\u2019t connected, so it was not posted and nothing was saved. Keep a copy if you need it.",
+        "overflowX": 0
+      },
+      "news": {
+        "overflowX": 0,
+        "articles": 2,
+        "draftShown": 0
+      },
+      "consoleErrors": [
+        "Failed to load resource: the server responded with a status of 404 (Not Found)"
+      ]
+    },
+    "1280": {
+      "home": {
+        "overflowX": 0,
+        "forumBoardOnHome": 0,
+        "resourceCards": 4
+      },
+      "forum": {
+        "overflowX": 0,
+        "rows": 6,
+        "pinnedFirst": true,
+        "unansweredCounts": [
+          "0\nanswers",
+          "0\nanswers",
+          "0\nanswers",
+          "0\nanswers"
+        ],
+        "answeredAllAccepted": true,
+        "tagRows": 3,
+        "page2Rows": 6,
+        "searchRows": [
+          "Votes\n5 votes\nAnswers, one accepted\n1\nanswer\nViews\n120 views\n[Sample] Installing behind a corporate proxy\n\nThe installer finishes, but activation times out on our network.\n\nGetting started\ninstallation\nactivation\nnetwork\nSB\nSample Customer B\nasked 8 Oct 2026"
+        ]
+      },
+      "clickOpensDetail": true,
+      "detailLong": {
+        "overflowX": 0,
+        "imageLoaded": true,
+        "attachments": 1
+      },
+      "detailCode": {
+        "overflowX": 0,
+        "codeBlocks": 1,
+        "codeScrollsInside": true,
+        "accepted": true,
+        "nestedDepth": 2,
+        "voteDisabled": true
+      },
+      "composer": {
+        "errorSummary": 4,
+        "focusOnSummary": "alert",
+        "previewHasCode": true,
+        "notPostedNotice": "Your question looks ready, but the forum service isn\u2019t connected, so it was not posted and nothing was saved. Keep a copy if you need it.",
+        "overflowX": 0
+      },
+      "news": {
+        "overflowX": 0,
+        "articles": 2,
+        "draftShown": 0
+      },
+      "consoleErrors": []
+    },
+    "768": {
+      "home": {
+        "overflowX": 0,
+        "forumBoardOnHome": 0,
+        "resourceCards": 4
+      },
+      "forum": {
+        "overflowX": 0,
+        "rows": 6,
+        "pinnedFirst": true,
+        "unansweredCounts": [
+          "0\nanswers",
+          "0\nanswers",
+          "0\nanswers",
+          "0\nanswers"
+        ],
+        "answeredAllAccepted": true,
+        "tagRows": 3,
+        "page2Rows": 6,
+        "searchRows": [
+          "Votes\n5 votes\nAnswers, one accepted\n1\nanswer\nViews\n120 views\n[Sample] Installing behind a corporate proxy\n\nThe installer finishes, but activation times out on our network.\n\nGetting started\ninstallation\nactivation\nnetwork\nSB\nSample Customer B\nasked 8 Oct 2026"
+        ]
+      },
+      "clickOpensDetail": true,
+      "detailLong": {
+        "overflowX": 0,
+        "imageLoaded": true,
+        "attachments": 1
+      },
+      "detailCode": {
+        "overflowX": 0,
+        "codeBlocks": 1,
+        "codeScrollsInside": true,
+        "accepted": true,
+        "nestedDepth": 2,
+        "voteDisabled": true
+      },
+      "composer": {
+        "errorSummary": 4,
+        "focusOnSummary": "alert",
+        "previewHasCode": true,
+        "notPostedNotice": "Your question looks ready, but the forum service isn\u2019t connected, so it was not posted and nothing was saved. Keep a copy if you need it.",
+        "overflowX": 0
+      },
+      "news": {
+        "overflowX": 0,
+        "articles": 2,
+        "draftShown": 0
+      },
+      "consoleErrors": []
+    },
+    "375": {
+      "home": {
+        "overflowX": 0,
+        "forumBoardOnHome": 0,
+        "resourceCards": 4
+      },
+      "forum": {
+        "overflowX": 0,
+        "rows": 6,
+        "pinnedFirst": true,
+        "unansweredCounts": [
+          "0\nanswers",
+          "0\nanswers",
+          "0\nanswers",
+          "0\nanswers"
+        ],
+        "answeredAllAccepted": true,
+        "tagRows": 3,
+        "page2Rows": 6,
+        "searchRows": [
+          "Votes\n5 votes\nAnswers, one accepted\n1\nanswer\nViews\n120 views\n[Sample] Installing behind a corporate proxy\n\nThe installer finishes, but activation times out on our network.\n\nGetting started\ninstallation\nactivation\nnetwork\nSB\nSample Customer B\nasked 8 Oct 2026"
+        ]
+      },
+      "clickOpensDetail": true,
+      "detailLong": {
+        "overflowX": 0,
+        "imageLoaded": true,
+        "attachments": 1
+      },
+      "detailCode": {
+        "overflowX": 0,
+        "codeBlocks": 1,
+        "codeScrollsInside": true,
+        "accepted": true,
+        "nestedDepth": 2,
+        "voteDisabled": true
+      },
+      "composer": {
+        "errorSummary": 4,
+        "focusOnSummary": "alert",
+        "previewHasCode": true,
+        "notPostedNotice": "Your question looks ready, but the forum service isn\u2019t connected, so it was not posted and nothing was saved. Keep a copy if you need it.",
+        "overflowX": 0
+      },
+      "news": {
+        "overflowX": 0,
+        "articles": 2,
+        "draftShown": 0
+      },
+      "consoleErrors": []
+    },
+    "320": {
+      "home": {
+        "overflowX": 0,
+        "forumBoardOnHome": 0,
+        "resourceCards": 4
+      },
+      "forum": {
+        "overflowX": 0,
+        "rows": 6,
+        "pinnedFirst": true,
+        "unansweredCounts": [
+          "0\nanswers",
+          "0\nanswers",
+          "0\nanswers",
+          "0\nanswers"
+        ],
+        "answeredAllAccepted": true,
+        "tagRows": 3,
+        "page2Rows": 6,
+        "searchRows": [
+          "Votes\n5 votes\nAnswers, one accepted\n1\nanswer\nViews\n120 views\n[Sample] Installing behind a corporate proxy\n\nThe installer finishes, but activation times out on our network.\n\nGetting started\ninstallation\nactivation\nnetwork\nSB\nSample Customer B\nasked 8 Oct 2026"
+        ]
+      },
+      "clickOpensDetail": true,
+      "detailLong": {
+        "overflowX": 0,
+        "imageLoaded": true,
+        "attachments": 1
+      },
+      "detailCode": {
+        "overflowX": 0,
+        "codeBlocks": 1,
+        "codeScrollsInside": true,
+        "accepted": true,
+        "nestedDepth": 2,
+        "voteDisabled": true
+      },
+      "composer": {
+        "errorSummary": 4,
+        "focusOnSummary": "alert",
+        "previewHasCode": true,
+        "notPostedNotice": "Your question looks ready, but the forum service isn\u2019t connected, so it was not posted and nothing was saved. Keep a copy if you need it.",
+        "overflowX": 0
+      },
+      "news": {
+        "overflowX": 0,
+        "articles": 2,
+        "draftShown": 0
+      },
+      "consoleErrors": []
+    }
+  },
+  "marketing": {
+    "1440": {
+      "register": {
+        "yBefore": 1400,
+        "lockedFlag": "true",
+        "headerShiftPx": 103.5,
+        "clientWidthChange": 0,
+        "visualTopHeld": true,
+        "dialogOverflows": false,
+        "dialogScrolled": true,
+        "bodyTopDuring": "-1400px",
+        "focusInsideAfterTabs": true,
+        "yAfterClose": 1400,
+        "stylesRestored": true
+      },
+      "signin": {
+        "yBefore": 1400,
+        "lockedFlag": "true",
+        "headerShiftPx": 103.5,
+        "clientWidthChange": 0,
+        "visualTopHeld": true,
+        "dialogOverflows": false,
+        "dialogScrolled": false,
+        "bodyTopDuring": "-1400px",
+        "focusInsideAfterTabs": true,
+        "yAfterClose": 1400,
+        "stylesRestored": true
+      }
+    },
+    "1280": {
+      "register": {
+        "yBefore": 1400,
+        "lockedFlag": "true",
+        "headerShiftPx": 103.44,
+        "clientWidthChange": 0,
+        "visualTopHeld": true,
+        "dialogOverflows": true,
+        "dialogScrolled": true,
+        "bodyTopDuring": "-1400px",
+        "focusInsideAfterTabs": true,
+        "yAfterClose": 1400,
+        "stylesRestored": true
+      },
+      "signin": {
+        "yBefore": 1400,
+        "lockedFlag": "true",
+        "headerShiftPx": 103.5,
+        "clientWidthChange": 0,
+        "visualTopHeld": true,
+        "dialogOverflows": false,
+        "dialogScrolled": false,
+        "bodyTopDuring": "-1400px",
+        "focusInsideAfterTabs": true,
+        "yAfterClose": 1400,
+        "stylesRestored": true
+      }
+    },
+    "768": {
+      "register": {
+        "yBefore": 1400,
+        "lockedFlag": "true",
+        "headerShiftPx": 0,
+        "clientWidthChange": 0,
+        "visualTopHeld": true,
+        "dialogOverflows": false,
+        "dialogScrolled": false,
+        "bodyTopDuring": "-1400px",
+        "focusInsideAfterTabs": true,
+        "yAfterClose": 1400,
+        "stylesRestored": true
+      },
+      "signin": {
+        "yBefore": 1400,
+        "lockedFlag": "true",
+        "headerShiftPx": 0,
+        "clientWidthChange": 0,
+        "visualTopHeld": true,
+        "dialogOverflows": false,
+        "dialogScrolled": false,
+        "bodyTopDuring": "-1400px",
+        "focusInsideAfterTabs": true,
+        "yAfterClose": 1400,
+        "stylesRestored": true
+      }
+    },
+    "375": {
+      "register": {
+        "yBefore": 1400,
+        "lockedFlag": "true",
+        "headerShiftPx": 0,
+        "clientWidthChange": 0,
+        "visualTopHeld": true,
+        "dialogOverflows": true,
+        "dialogScrolled": true,
+        "bodyTopDuring": "-1400px",
+        "focusInsideAfterTabs": true,
+        "yAfterClose": 1400,
+        "stylesRestored": true
+      },
+      "signin": {
+        "yBefore": 1400,
+        "lockedFlag": "true",
+        "headerShiftPx": 0,
+        "clientWidthChange": 0,
+        "visualTopHeld": true,
+        "dialogOverflows": false,
+        "dialogScrolled": false,
+        "bodyTopDuring": "-1400px",
+        "focusInsideAfterTabs": true,
+        "yAfterClose": 1400,
+        "stylesRestored": true
+      }
+    },
+    "320": {
+      "register": {
+        "yBefore": 1400,
+        "lockedFlag": "true",
+        "headerShiftPx": 0,
+        "clientWidthChange": 0,
+        "visualTopHeld": true,
+        "dialogOverflows": true,
+        "dialogScrolled": true,
+        "bodyTopDuring": "-1400px",
+        "focusInsideAfterTabs": true,
+        "yAfterClose": 1400,
+        "stylesRestored": true
+      },
+      "signin": {
+        "yBefore": 1400,
+        "lockedFlag": "true",
+        "headerShiftPx": 0,
+        "clientWidthChange": 0,
+        "visualTopHeld": true,
+        "dialogOverflows": true,
+        "dialogScrolled": true,
+        "bodyTopDuring": "-1400px",
+        "focusInsideAfterTabs": true,
+        "yAfterClose": 1400,
+        "stylesRestored": true
+      }
+    }
+  }
+}

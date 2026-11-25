@@ -109,7 +109,7 @@ export function MobileNav({ isOpen, onClose, pathname, items }: MobileNavProps) 
       <div
         id="mobile-navigation"
         ref={panelRef}
-        className="fixed inset-x-3 top-3 z-[70] max-h-[calc(100dvh-24px)] overscroll-contain overflow-y-auto rounded-[24px] border border-border-subtle bg-canvas px-4 pb-5 pt-2 shadow-panel motion-safe:animate-fade-in sm:inset-x-5 min-[992px]:hidden"
+        className="theme-light fixed inset-x-3 top-3 z-[70] max-h-[calc(100dvh-24px)] overscroll-contain overflow-y-auto rounded-[24px] border border-border-subtle bg-canvas px-4 pb-5 pt-2 shadow-panel motion-safe:animate-fade-in sm:inset-x-5 min-[992px]:hidden"
         role="dialog"
         aria-modal="true"
         aria-label="Mobile navigation"

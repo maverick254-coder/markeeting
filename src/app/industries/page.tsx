@@ -1,23 +1,24 @@
 import React from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { industryGroups, liveIndustryPages } from "@/content/industries";
+import { industryGroups, liveIndustryPages, industryHref } from "@/content/industries";
 import { industriesHub } from "@/content/pages";
 import { featureHref, getFeaturePage } from "@/content/features";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Breadcrumbs } from "@/components/marketing/Breadcrumbs";
-import { FaqSection } from "@/components/marketing/FaqSection";
-import { PageHero } from "@/components/marketing/PageHero";
-import { SectionIntro } from "@/components/marketing/SectionIntro";
+import { PhotoPageHero } from "@/components/marketing/PhotoPageHero";
+import { SectionTag, darkCard, darkH2 } from "@/components/marketing/DarkParts";
 import { StructuredData } from "@/components/marketing/StructuredData";
-import { IndustryCard, formatMeta, industriesForFormat } from "@/components/industries/IndustryParts";
-import { FeatureVisual, type FeatureVisualId } from "@/components/features/FeatureVisual";
+import { formatMeta, industriesForFormat } from "@/components/industries/IndustryParts";
+import { CardPhoto, cardPhotos } from "@/components/media/CardPhoto";
+import { Faq } from "@/components/sections/Faq";
+import { AnimateOnScroll } from "@/components/ui/AnimateOnScroll";
 import { Container } from "@/components/ui/Container";
 import { Icon } from "@/components/ui/Icon";
 import { formatFeature, type MediaFormat } from "@/lib/marketing/industries";
 import { buildPageMetadata } from "@/lib/seo/metadata";
-import { buildBreadcrumbJsonLd } from "@/lib/seo/structured-data";
+import { buildBreadcrumbJsonLd, buildFaqPageJsonLd } from "@/lib/seo/structured-data";
 
 export const dynamic = "force-dynamic";
 
@@ -25,8 +26,14 @@ export const metadata: Metadata = buildPageMetadata(industriesHub.seo);
 
 const breadcrumbs = [{ name: "Home", path: "/" as const }, { name: "Industries", path: "/industries" as const }];
 const formats: readonly MediaFormat[] = ["document", "audio"];
-const formatVisuals: Record<MediaFormat, FeatureVisualId> = { document: "doc-files-light", audio: "aud-effects-panel" };
+const faqs = industriesHub.faq.map((item) => ({ question: item.question, answer: item.answer }));
 
+/**
+ * Industries in the Hobbes Customer Stories pattern, dark throughout: the photo hero
+ * (peaks above a sea of clouds) with every guide as a quick link on the black, why
+ * sectors differ, the guide directory by group, the two workflows by media as photo
+ * cards, then the dark photo FAQ.
+ */
 export default function IndustriesPage() {
   const groups = industryGroups
     .map((group) => ({ ...group, pages: liveIndustryPages.filter((page) => page.group === group.id) }))
@@ -37,121 +44,152 @@ export default function IndustriesPage() {
       <Header />
       <main id="main-content">
         <StructuredData data={buildBreadcrumbJsonLd(breadcrumbs)} />
-        <PageHero
-          eyebrow={industriesHub.eyebrow}
-          title={industriesHub.h1}
-          summary={industriesHub.summary}
-          primaryCta={{ label: "Explore Features", href: "/features" }}
-          secondaryCta={{ label: "Browse the directory", href: "#industry-directory" }}
-          breadcrumbs={<Breadcrumbs items={breadcrumbs} />}
-          media={<DirectorySignal groups={groups} />}
-        />
+        <StructuredData data={buildFaqPageJsonLd(faqs)} />
+        <div className="home-dark theme-dark pricing-dark bg-[#0e0e0e] text-ink">
+          <PhotoPageHero
+            id="industries-heading"
+            eyebrow={industriesHub.eyebrow}
+            title={industriesHub.h1}
+            summary={industriesHub.summary}
+            primaryCta={{ label: "Explore Features", href: "/features" }}
+            secondaryCta={{ label: "Browse the directory", href: "#industry-directory" }}
+            breadcrumbs={<Breadcrumbs items={breadcrumbs} />}
+            landscape="seaOfClouds"
+          >
+            <Container>
+              <nav aria-label="Industry guides" className="mx-auto flex max-w-[60rem] flex-wrap justify-center gap-2">
+                {liveIndustryPages.map((page) => (
+                  <Link
+                    key={page.slug}
+                    href={industryHref(page.slug)}
+                    className="inline-flex min-h-10 items-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.05] px-4 text-[0.875rem] font-medium text-white/80 backdrop-blur-md transition-colors hover:border-white/25 hover:bg-white/[0.1] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white motion-reduce:transition-none"
+                  >
+                    <Icon name={page.icon} size={15} className="text-[#ff9a62]" />
+                    {page.navLabel}
+                  </Link>
+                ))}
+              </nav>
+            </Container>
+          </PhotoPageHero>
 
-        <section className="section-y bg-canvas text-ink" aria-labelledby="industry-variation">
-          <Container>
-            <SectionIntro id="industry-variation" eyebrow="Why sectors differ" title="How redaction needs vary from one sector to the next" description="The software workflow stays the same. What changes is what you protect, who receives the record, which media carry it, and how decisions will be scrutinised." tone="warm" />
-            <ol className="mt-12 grid border-t border-border-subtle/60 md:grid-cols-2 xl:grid-cols-4">
-              {industriesHub.dimensions.map((item, index) => (
-                <li key={item.title} className="relative border-b border-border-subtle/60 py-7 md:pr-8 xl:border-b-0">
-                  <span aria-hidden="true" className="absolute -top-px left-0 h-px w-12 bg-accent-warm" />
-                  <span className="type-meta text-accent-ink">0{index + 1}</span>
-                  <h3 className="type-h3 mt-3">{item.title}</h3>
-                  <p className="mt-2 text-[0.9375rem] leading-6 text-ink-muted">{item.description}</p>
-                </li>
-              ))}
-            </ol>
-          </Container>
-        </section>
+          {/* Why sectors differ: tag and heading left, the four dimensions right. */}
+          <section aria-labelledby="industry-variation" className="section-y">
+            <Container>
+              <div className="grid gap-12 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.6fr)] lg:gap-16">
+                <AnimateOnScroll>
+                  <SectionTag>Why sectors differ</SectionTag>
+                  <h2 id="industry-variation" className={`${darkH2} mt-5 max-w-[18ch] font-normal`}>Same workflow. Different records.</h2>
+                  <p className="mt-4 max-w-[24rem] text-[0.9375rem] leading-6 text-white/55">What changes from sector to sector is what you protect, who receives it and how decisions get checked.</p>
+                </AnimateOnScroll>
+                <AnimateOnScroll>
+                  <ol className="grid gap-x-12 gap-y-11 sm:grid-cols-2">
+                    {industriesHub.dimensions.map((item, index) => (
+                      <li key={item.title}>
+                        <span aria-hidden="true" className="grid size-10 place-items-center rounded-full border border-white/10 bg-white/[0.05] text-[0.8125rem] font-semibold text-white">
+                          {String(index + 1).padStart(2, "0")}
+                        </span>
+                        <h3 className="mt-5 text-[1.125rem] font-medium leading-7 tracking-[-0.015em] text-white">{item.title}</h3>
+                        <p className="mt-1 max-w-[25rem] text-[0.9375rem] leading-6 text-white/55">{item.description}</p>
+                      </li>
+                    ))}
+                  </ol>
+                </AnimateOnScroll>
+              </div>
+            </Container>
+          </section>
 
-        <section id="industry-directory" data-scroll-target className="section-y bg-canvas text-ink" aria-labelledby="industry-directory-heading">
-          <Container>
-            <SectionIntro id="industry-directory-heading" eyebrow="Industry directory" title="Find the guide for your records" description="Each guide covers the people a sector protects, the records and media involved, the practical challenges, and the RedactPlus capabilities that apply." />
-            <div className="mt-14 space-y-16">
-              {groups.map((group) => (
-                <div key={group.id} aria-labelledby={`group-${group.id}`} role="group">
-                  <div className="border-b border-border-subtle/60 pb-4">
-                    <h3 id={`group-${group.id}`} className="type-h3 text-[1.25rem]">{group.title}</h3>
-                    <p className="mt-1.5 max-w-2xl text-[0.9375rem] leading-6 text-ink-muted">{group.description}</p>
+          {/* The directory, by group (Hobbes: the story list). */}
+          <section id="industry-directory" data-scroll-target aria-labelledby="industry-directory-heading" className="scroll-mt-24 pb-[clamp(4.5rem,2.5rem+5.5vw,8.5rem)]">
+            <Container>
+              <SectionTag>Industry guides</SectionTag>
+              <h2 id="industry-directory-heading" className={`${darkH2} mt-5`}>Find the guide for your records.</h2>
+              <div className="mt-12 space-y-14">
+                {groups.map((group) => (
+                  <div key={group.id} role="group" aria-labelledby={`group-${group.id}`}>
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
+                      <h3 id={`group-${group.id}`} className="text-[1.125rem] font-medium text-white">{group.title}</h3>
+                      <p className="max-w-xl text-[0.875rem] leading-6 text-white/50">{group.description}</p>
+                    </div>
+                    <ul className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {group.pages.map((page) => (
+                        <li key={page.slug}>
+                          <Link
+                            href={industryHref(page.slug)}
+                            className={`group flex h-full flex-col ${darkCard} p-6 transition-colors hover:border-white/[0.16] hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white motion-reduce:transition-none`}
+                          >
+                            <span className="flex items-center gap-3">
+                              <span className="grid size-10 place-items-center rounded-full border border-white/10 bg-black/30 text-[#ff9a62]">
+                                <Icon name={page.icon} size={17} />
+                              </span>
+                              <span className="text-[1.125rem] font-medium text-white">{page.navLabel}</span>
+                            </span>
+                            <span className="mt-4 block flex-1 text-[0.9375rem] leading-6 text-white/60">{page.hubSummary}</span>
+                            <span className="mt-5 flex items-center justify-between gap-3 border-t border-white/[0.08] pt-4">
+                              <span className="flex flex-wrap gap-1.5">
+                                {page.mediaEmphasis.map((format) => (
+                                  <span key={format} className="inline-flex items-center gap-1 rounded-full border border-white/10 px-2.5 py-0.5 text-[0.75rem] text-white/60">
+                                    <Icon name={formatMeta[format].icon} size={12} />
+                                    {formatMeta[format].label}
+                                  </span>
+                                ))}
+                              </span>
+                              <span className="inline-flex items-center gap-1.5 text-[0.875rem] font-semibold text-[#ff9a62]">
+                                Read guide
+                                <Icon name="arrow" size={15} className="transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" />
+                              </span>
+                            </span>
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                  <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {group.pages.map((page) => <IndustryCard key={page.slug} page={page} headingLevel={4} />)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Container>
-        </section>
+                ))}
+              </div>
+            </Container>
+          </section>
 
-        <section className="section-y bg-canvas text-ink" aria-labelledby="industry-formats">
-          <Container>
-            <SectionIntro id="industry-formats" eyebrow="By media" title="Match the workflow to the media your sector relies on" tone="warm" />
-            <div className="mt-12 grid gap-12 md:grid-cols-3 md:gap-6">
-              {formats.map((format) => {
-                const feature = getFeaturePage(formatFeature[format]);
-                const covered = industriesForFormat(format);
-                const leading = covered.filter((page) => page.mediaEmphasis[0] === format);
-                if (!feature) return null;
-                return (
-                  <article key={format} className="flex min-w-0 flex-col">
-                    <FeatureVisual visual={formatVisuals[format]} displayWidth={400} diagramRatio="4 / 3" />
-                    <span className="type-meta mt-6 inline-flex items-center gap-2"><Icon name={formatMeta[format].icon} size={15} className="text-accent-ink" />{formatMeta[format].label}</span>
-                    <h3 className="type-h3 mt-3 text-[1.125rem] leading-7">{feature.h1}</h3>
-                    <p className="mt-2 text-[0.9375rem] leading-6 text-ink-muted">
-                      {covered.length} industry guides include a {formatMeta[format].label.toLowerCase()} workflow
-                      {leading.length > 0 ? <>; it is the primary format for {joinNames(leading.map((page) => page.navLabel))}.</> : "."}
-                    </p>
-                    <Link href={featureHref(feature.slug)} className="mt-auto inline-flex items-center gap-2 pt-5 text-sm font-semibold text-accent-ink transition-colors hover:text-accent-ink-hover motion-reduce:transition-none">
-                      Explore {feature.eyebrow.toLowerCase()}<Icon name="arrow" size={16} />
+          {/* By media: the two workflows as photo cards. */}
+          <section aria-labelledby="industry-formats" className="pb-[clamp(4.5rem,2.5rem+5.5vw,8.5rem)]">
+            <Container>
+              <SectionTag>By media</SectionTag>
+              <h2 id="industry-formats" className={`${darkH2} mt-5 max-w-[24ch]`}>Match the workflow to the media your sector relies on.</h2>
+              <div className="mt-10 grid gap-4 md:grid-cols-2">
+                {formats.map((format, index) => {
+                  const feature = getFeaturePage(formatFeature[format]);
+                  if (!feature) return null;
+                  const covered = industriesForFormat(format);
+                  return (
+                    <Link
+                      key={format}
+                      href={featureHref(feature.slug)}
+                      className="group relative isolate flex min-h-[20rem] flex-col justify-end overflow-hidden rounded-2xl border border-white/10 p-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white sm:p-8"
+                    >
+                      <div aria-hidden="true" className="feature-related-photo">
+                        <CardPhoto photo={index === 0 ? cardPhotos.seaOfClouds : cardPhotos.mawenzi} className="feature-related-photo-img" />
+                      </div>
+                      <span className="inline-flex w-fit items-center gap-2 rounded-full border border-white/15 bg-black/30 px-3 py-1 text-[0.8125rem] font-medium text-white backdrop-blur-md">
+                        <Icon name={formatMeta[format].icon} size={14} className="text-[#ff9a62]" />
+                        {formatMeta[format].label} · {covered.length} guides
+                      </span>
+                      <h3 className="mt-4 max-w-[26ch] text-[1.375rem] font-medium leading-8 tracking-[-0.02em] text-white">{feature.h1}</h3>
+                      <span className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-white">
+                        Explore {feature.eyebrow.toLowerCase()}
+                        <Icon name="arrow" size={16} className="transition-transform group-hover:translate-x-1 motion-reduce:transform-none motion-reduce:transition-none" />
+                      </span>
                     </Link>
-                  </article>
-                );
-              })}
-            </div>
-            <p className="mt-12 border-t border-border-subtle/60 pt-6 text-[0.9375rem] leading-7 text-ink-muted">
-              New to the process? Read <Link href="/how-it-works" className="font-semibold text-accent-ink hover:text-accent-ink-hover">how redaction review works</Link> or <Link href="/why-redactplus" className="font-semibold text-accent-ink hover:text-accent-ink-hover">why teams evaluate RedactPlus</Link>.
-            </p>
-          </Container>
-        </section>
+                  );
+                })}
+              </div>
+              <p className="mt-8 text-[0.9375rem] leading-7 text-white/55">
+                New to the process? Read <Link href="/how-it-works" className="font-semibold text-[#ff9a62] hover:text-[#ffb487]">how redaction review works</Link> or <Link href="/why-redactplus" className="font-semibold text-[#ff9a62] hover:text-[#ffb487]">why teams evaluate RedactPlus</Link>.
+              </p>
+            </Container>
+          </section>
+        </div>
 
-        <FaqSection idPrefix="industries" items={industriesHub.faq} title="Questions about industry guides" description="How the guides relate to the product, and what they do not claim." />
-
+        <Faq id="industries-faq" heading="Questions about industry guides" items={faqs} tone="dark" />
       </main>
       <Footer />
     </>
-  );
-}
-
-function joinNames(names: readonly string[]) {
-  if (names.length <= 1) return names.join("");
-  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
-}
-
-function DirectorySignal({ groups }: { groups: readonly { id: string; title: string; pages: readonly { slug: string; navLabel: string; icon: string }[] }[] }) {
-  return (
-    <div className="media-frame media-glow">
-      <div className="rounded-[0.7rem] bg-surface-raised p-5 sm:p-6">
-        <div className="flex items-center justify-between border-b border-border-subtle/60 pb-4">
-          <span className="text-sm font-semibold text-ink">Industry guides</span>
-          <span className="type-meta">{groups.reduce((total, group) => total + group.pages.length, 0)} published</span>
-        </div>
-        <ul className="divide-y divide-border-subtle/50">
-          {groups.map((group) => (
-            <li key={group.id} className="py-4">
-              <p className="type-meta">{group.title}</p>
-              <ul className="mt-2.5 flex flex-wrap gap-2">
-                {group.pages.map((page) => (
-                  <li key={page.slug}>
-                    <Link href={`/industries/${page.slug}`} className="inline-flex min-h-9 items-center gap-2 rounded-[10px] border border-border-subtle/70 bg-canvas/60 px-3 text-sm text-ink-muted transition-colors hover:border-ink-muted/40 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-cool motion-reduce:transition-none">
-                      <Icon name={page.icon} size={14} className="text-accent-ink" />
-                      {page.navLabel}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
   );
 }

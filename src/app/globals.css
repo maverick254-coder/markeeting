@@ -10,15 +10,15 @@
     /*
      * Palette as space-separated RGB channels, so Tailwind's opacity modifiers work.
      * The site is light by default; `.theme-dark` re-scopes the same channels to
-     * neutral black. Brand orange (#FF735C) fills buttons, the chat launcher and
+     * neutral black. Brand orange (#FF7A33) fills buttons, the chat launcher and
      * accents; orange *text* uses --or-coral-ink, which keeps 4.5:1 on either theme.
      * (The token names predate the light default and are kept so classes stay stable.)
      */
     --or-midnight: 255 255 255; /* canvas */
     --or-graphite: 250 250 249; /* raised surface, #FAFAF9 */
     --or-elevated: 245 245 244; /* active surface, #F5F5F4 */
-    --or-coral: 255 115 92; /* brand orange #FF735C */
-    --or-coral-soft: 255 140 118; /* fill hover */
+    --or-coral: 255 122 51; /* brand orange #FF7A33, the logo and hero button */
+    --or-coral-soft: 255 140 77; /* fill hover #FF8C4D */
     --or-coral-ink: 194 65 42; /* #C2412A: 5.1:1 on white */
     --or-coral-ink-hover: 163 54 35;
     --or-signal: 194 65 42; /* focus and audio signal follow the brand */
@@ -60,10 +60,10 @@
     --or-midnight: 10 10 10; /* #0A0A0A */
     --or-graphite: 20 20 20;
     --or-elevated: 31 31 31;
-    --or-coral-soft: 255 157 137;
-    --or-coral-ink: 255 115 92; /* brand orange reads at 7.4:1 on black */
-    --or-coral-ink-hover: 255 157 137;
-    --or-signal: 255 115 92;
+    --or-coral-soft: 255 140 77;
+    --or-coral-ink: 255 122 51; /* brand orange on black */
+    --or-coral-ink-hover: 255 180 135;
+    --or-signal: 255 122 51;
     --or-fg: 245 245 244;
     --or-fg-muted: 168 162 158; /* #A8A29E: 7.9:1 on black */
     --or-line: 46 46 46;
@@ -180,14 +180,29 @@
     line-height: 1.7;
     color: rgb(var(--or-fg-muted));
   }
+  /* Every eyebrow is the Hobbes pill: a rounded tag with an orange dot. */
   .type-eyebrow {
-    font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 0.75rem;
-    line-height: 1.5;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: fit-content;
+    min-height: 2rem;
+    padding: 0 0.75rem;
+    border-radius: 999px;
+    border: 1px solid rgb(var(--or-line));
+    background: rgb(var(--or-graphite));
+    font-size: 0.8125rem;
+    line-height: 1.4;
     font-weight: 500;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: rgb(var(--or-coral-ink));
+    color: rgb(var(--or-fg)) !important;
+  }
+  .type-eyebrow::before {
+    content: "";
+    width: 0.375rem;
+    height: 0.375rem;
+    flex-shrink: 0;
+    border-radius: 999px;
+    background: #ff7a33;
   }
   .type-meta {
     font-family: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -199,10 +214,10 @@
 
   /* Section rhythm: space and light separate sections, not boxes. */
   .section-y {
-    padding-block: clamp(3.75rem, 2.25rem + 4vw, 6.5rem);
+    padding-block: clamp(4.5rem, 2.5rem + 5.5vw, 8.5rem);
   }
   .section-y-sm {
-    padding-block: clamp(3.5rem, 2.5rem + 3vw, 5.5rem);
+    padding-block: clamp(4rem, 2.5rem + 4vw, 7rem);
   }
 
   /* Surfaces. One panel recipe; borders stay minimal and decorative. */
@@ -280,40 +295,132 @@
   }
 
   /*
-   * Homepage hero: one continuous atmosphere from deep burnt orange through coral into
-   * off-white. White text only ever sits on the upper field; the brightest coral glows
-   * behind the showcase card.
+   * Homepage hero: Mawenzi peak at first light, with the product at eye level.
    *
-   * The field spans two boxes whose heights are unrelated (.hero-ember follows the copy,
-   * .showcase-stage follows the product window), so the stops either side of the join are
-   * measured from the join in --hero-u, not as percentages of each box. Both sides then
-   * trace one eased colour curve with the same slope at every width, and the join has
-   * nothing to show. The stage's glow must also fade out before its box's top edge (its
-   * vertical reach, 24% x 0.72, is less than its 18% centre) or that edge clips it into
-   * a horizontal line. The sRGB declarations are the fallback for browsers without
-   * OKLab gradients; @supports guards the var() versions, which would otherwise
-   * replace the fallback and then fail.
+   * The photo is positioned from the showcase, not from the hero box, so the summit
+   * always sits on the showcase's top edge whatever the copy height or viewport width.
+   * In the cropped image (3024 x 3428, aspect 1.1336) the summit tip is 77.11% down,
+   * i.e. 0.8741 x its width from the top. --hero-peak-reveal is how much rock shows
+   * above the edge. Below the summit the photo fades into the page's black, and the
+   * section itself is black, so the gradient continues past the photo without a seam.
    */
-  .hero-ember,
-  .showcase-stage {
-    --hero-u: clamp(72px, 9.2vw, 132px);
+  .hero-scene {
+    --hero-black: #0e0d0c;
+    --hero-photo-w: max(100vw, 820px);
+    --hero-peak-reveal: clamp(14px, 1.9vw, 36px);
+    background-color: var(--hero-black);
   }
-  .hero-ember {
-    background: linear-gradient(180deg, #5a1f0c 0%, #6e2710 25%, #8a3311 50%, #a44116 calc(100% - var(--hero-u) * 1.4), #ab451a calc(100% - var(--hero-u) * 1.05), #b2491e calc(100% - var(--hero-u) * 0.7), #b94d23 calc(100% - var(--hero-u) * 0.35), #c2532a 100%);
+  .hero-scene::before {
+    /* Shade the top of the sky so the white copy stays legible over the brighter blue. */
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: min(46rem, 100svh);
+    background: linear-gradient(180deg, rgb(10 12 16 / 0.5), rgb(10 12 16 / 0.22) 60%, rgb(10 12 16 / 0));
+    z-index: -1;
+    pointer-events: none;
   }
-  .showcase-stage {
-    background:
-      radial-gradient(60% 24% at 50% 18%, rgb(255 138 104 / 0.38), transparent 72%),
-      linear-gradient(180deg, #c2532a 0, #cb5832 calc(var(--hero-u) * 0.25), #d85f3b calc(var(--hero-u) * 0.5), #e66846 calc(var(--hero-u) * 0.75), #f37151 var(--hero-u), #ff7a5c calc(var(--hero-u) * 1.25), #ff9e85 30%, #ffc9b8 39%, #ffe8e0 48%, #fff6f2 57%, #ffffff 66%);
+  .hero-photo {
+    position: absolute;
+    left: 50%;
+    width: var(--hero-photo-w);
+    top: calc(-1 * var(--hero-photo-w) * 0.8741 - var(--hero-peak-reveal));
+    transform: translateX(-50%);
+    z-index: -2;
+    pointer-events: none;
   }
-  @supports (background: linear-gradient(in oklab 180deg, red, blue)) {
-    .hero-ember {
-      background: linear-gradient(in oklab 180deg, #5a1f0c 0%, #6e2710 25%, #8a3311 50%, #a44116 calc(100% - var(--hero-u) * 1.4), #ab451a calc(100% - var(--hero-u) * 1.05), #b2491e calc(100% - var(--hero-u) * 0.7), #b94d23 calc(100% - var(--hero-u) * 0.35), #c2532a 100%);
+  .hero-photo img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  /* The hero's only motion: copy and showcase fade up once on load (motion-safe only). */
+  @keyframes hero-rise {
+    from {
+      opacity: 0;
+      transform: translateY(24px);
     }
-    .showcase-stage {
-      background:
-        radial-gradient(60% 24% at 50% 18%, rgb(255 138 104 / 0.38), transparent 72%),
-        linear-gradient(in oklab 180deg, #c2532a 0, #cb5832 calc(var(--hero-u) * 0.25), #d85f3b calc(var(--hero-u) * 0.5), #e66846 calc(var(--hero-u) * 0.75), #f37151 var(--hero-u), #ff7a5c calc(var(--hero-u) * 1.25), #ff9e85 30%, #ffc9b8 39%, #ffe8e0 48%, #fff6f2 57%, #ffffff 66%);
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  .hero-photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 0, transparent 80%, var(--hero-black) 97%);
+  }
+
+  /*
+   * Homepage FAQ: the hero's Mawenzi photo again, cut lower (mawenzi-slopes: 3024 x 2282,
+   * summit 39.3% down) so the lit summit and its slopes show under the conversation.
+   * Like the hero, the photo is sized from the width and anchored to the section's
+   * bottom; the content's bottom padding is derived from it, so the summit always sits
+   * level with the bottom of the last question. Summit to image bottom = (1 - 0.393) x 0.7546 widths
+   * = 0.458 widths. The black takes over about halfway down the slopes (54% -> 76%), so
+   * the bottom 16% of a width (already black) hangs below the section edge, clipped,
+   * and the padding is 0.458 - 0.16 = 0.298 widths.
+   */
+  .faq-scene {
+    --faq-photo-w: max(100vw, 1100px);
+    background-color: #90b5cf;
+  }
+  .faq-scene::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: min(40rem, 90svh);
+    background: linear-gradient(180deg, rgb(10 12 16 / 0.5), rgb(10 12 16 / 0.18) 60%, rgb(10 12 16 / 0));
+    z-index: -1;
+    pointer-events: none;
+  }
+  .faq-photo {
+    position: absolute;
+    left: 50%;
+    bottom: calc(var(--faq-photo-w) * -0.16);
+    width: var(--faq-photo-w);
+    transform: translateX(-50%);
+    z-index: -2;
+    pointer-events: none;
+  }
+  .faq-photo img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .faq-photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, transparent 0, transparent 54%, rgb(14 13 12 / 0.6) 66%, #0e0d0c 76%);
+  }
+  .faq-scene-dark {
+    background-color: #0e0e0e;
+  }
+  .faq-scene-dark::before {
+    height: 100%;
+    background: linear-gradient(180deg, #0e0e0e 0%, rgb(12 12 12 / 0.92) 10%, rgb(10 10 10 / 0.75) 26%, rgb(10 10 10 / 0.45) 58%, rgb(10 10 10 / 0.2) 80%, rgb(10 10 10 / 0));
+  }
+  /* The photo itself fades in from the black above, so there is no edge at the top. */
+  .faq-scene-dark .faq-photo {
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 30%);
+    mask-image: linear-gradient(180deg, transparent 0, #000 30%);
+  }
+  .faq-scene-dark .faq-photo::after {
+    background: linear-gradient(180deg, transparent 0, transparent 50%, rgb(14 14 14 / 0.65) 64%, #0e0e0e 74%);
+  }
+  .faq-body {
+    padding-bottom: calc(var(--faq-photo-w) * 0.298);
+  }
+  @keyframes faq-reply {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
     }
   }
 
@@ -322,22 +429,18 @@
    * well before any edge, so the CTA and the white footer read as one composition.
    */
   .closing-glow {
-    background: radial-gradient(ellipse 52% 42% at 50% 50%, rgb(255 115 92 / 0.14), rgb(255 115 92 / 0.05) 48%, transparent 72%);
+    background: radial-gradient(ellipse 52% 42% at 50% 50%, rgb(255 122 51 / 0.14), rgb(255 122 51 / 0.05) 48%, transparent 72%);
   }
 
-  /*
-   * Footer: white at the top edge so it meets any section without a seam, warming
-   * gradually to a pale coral floor under the invitation, links and wordmark.
-   */
-  .footer-canvas {
-    background:
-      radial-gradient(70% 45% at 50% 100%, rgb(255 115 92 / 0.12), transparent 70%),
-      linear-gradient(180deg, #ffffff 0%, #fffaf8 22%, #fff3ee 60%, #ffece4 100%);
+  /* Footer: black on every page, continuing the homepage's dark close. */
+  .footer-dark {
+    background-color: #0e0d0c;
   }
   /* About 86vw wide at any width, so it never forces horizontal scrolling. */
   .footer-wordmark {
     font-size: clamp(3rem, 17.2vw, 16.5rem);
-    background: linear-gradient(180deg, rgb(255 115 92 / 0.24), rgb(255 115 92 / 0.1));
+    /* Hobbes-style: a faint light wordmark that dissolves into the black below it. */
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.13) 0%, rgb(255 255 255 / 0.05) 60%, rgb(255 255 255 / 0) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -380,6 +483,408 @@
     border-bottom: 1px solid rgb(28 25 23 / 0.1);
   }
 
+  /*
+   * Homepage dark band (ProblemStatement, product stories, Workflow): the hero's black
+   * continues below it. .theme-dark remaps the colour tokens; these set the band to the
+   * same #0E0D0C as the hero, FAQ and footer, and darken the few hard-coded light pieces.
+   * Product screenshots stay light, like Hobbes's app shots on black.
+   */
+  .home-dark {
+    --or-midnight: 14 13 12; /* #0E0D0C */
+    --or-graphite: 26 24 22;
+    --or-elevated: 36 33 31;
+    background-color: #0e0d0c;
+    color: rgb(var(--or-fg));
+  }
+  .home-dark .story-surface {
+    background: transparent;
+    border: 0;
+  }
+  .home-dark .problem-map .problem-card {
+    background: #1a1816;
+    border-color: rgb(255 255 255 / 0.08);
+    box-shadow: 0 18px 40px -28px rgb(0 0 0 / 0.8);
+  }
+  .home-dark .problem-core {
+    background: linear-gradient(145deg, #2b1c15, #3d2216);
+    border-color: rgb(255 122 51 / 0.32);
+    box-shadow:
+      0 0 0 10px rgb(255 122 51 / 0.07),
+      0 0 0 22px rgb(255 122 51 / 0.04),
+      0 24px 50px -24px rgb(0 0 0 / 0.7);
+  }
+  .home-dark .problem-tag {
+    color: #ffb48a;
+  }
+
+  /*
+   * Homepage Use cases: a landscape panel (hills above a sea of clouds, in the hero's
+   * dusk palette) under a dark wash, with glass cards. Slides leave left and arrive from the
+   * right in 450ms; the progress line runs for the slide's duration (set inline).
+   */
+  .usecase-photo {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .usecase-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 60%;
+  }
+  .usecase-photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, rgb(10 12 18 / 0.7) 0%, rgb(10 12 18 / 0.48) 45%, rgb(10 12 18 / 0.4) 100%);
+  }
+  @keyframes usecase-in {
+    from {
+      opacity: 0;
+      transform: translateX(14%);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes usecase-out {
+    from {
+      opacity: 1;
+      transform: none;
+    }
+    to {
+      opacity: 0;
+      transform: translateX(-14%);
+    }
+  }
+  @keyframes usecase-progress {
+    from {
+      width: 0;
+    }
+    to {
+      width: 100%;
+    }
+  }
+  .usecase-in {
+    animation: usecase-in 450ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .usecase-out {
+    animation: usecase-out 450ms cubic-bezier(0.4, 0, 0.6, 1) both;
+  }
+  .usecase-progress {
+    animation-name: usecase-progress;
+    animation-timing-function: linear;
+    animation-fill-mode: both;
+  }
+
+  /*
+   * Showcase card (Hobbes "at work"): the Use Cases landscape behind a product window.
+   * The photo covers the card under a light dark wash; the window sits inset, centred.
+   */
+  .showcase-stage {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 18px;
+    background-color: #2a3848;
+  }
+  .showcase-stage-photo {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .showcase-stage-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 62%;
+  }
+  .showcase-stage-photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgb(8 12 22 / 0.4), rgb(8 12 22 / 0.6));
+  }
+  .showcase-stage-inner {
+    padding: clamp(1.25rem, 6%, 3.5rem) clamp(1rem, 7%, 4rem);
+  }
+  .showcase-stage-inner .app-window {
+    box-shadow: 0 30px 70px -24px rgb(0 0 0 / 0.55);
+  }
+
+  /*
+   * Workflow journey stage (Hobbes "Customer Journey"): a wide landscape; the step's
+   * window rises from the bottom edge, offset right, and a glass status note floats
+   * above it. Phones get a taller stage and a near-full-width window.
+   */
+  .workflow-stage {
+    aspect-ratio: 16 / 8;
+    min-height: 22rem;
+  }
+  .workflow-stage-photo {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .workflow-stage-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 50% 62%;
+  }
+  .workflow-stage-photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgb(8 12 22 / 0.42), rgb(8 12 22 / 0.62));
+  }
+  /* Feature pages: a taller, darker stage beside the step list. */
+  .workflow-stage-dark {
+    aspect-ratio: 16 / 11;
+  }
+  .workflow-stage-dark .workflow-stage-photo::after {
+    background: linear-gradient(180deg, rgb(10 10 10 / 0.5) 0%, rgb(10 10 10 / 0.35) 45%, rgb(10 10 10 / 0.75) 100%);
+  }
+  .workflow-stage-dark .workflow-stage-photo img {
+    filter: grayscale(0.25) brightness(0.62);
+  }
+  .workflow-stage-dark .workflow-window {
+    left: 9%;
+    top: 26%;
+    width: 82%;
+  }
+  .workflow-window {
+    position: absolute;
+    left: 18%;
+    top: 24%;
+    width: min(62%, 46rem);
+  }
+  .workflow-window .app-window {
+    box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.6);
+  }
+  .workflow-note {
+    position: absolute;
+    right: 6%;
+    top: 12%;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    max-width: 21rem;
+    padding: 0.875rem 1rem;
+    border-radius: 14px;
+    border: 1px solid rgb(255 255 255 / 0.16);
+    background: rgb(24 22 22 / 0.62);
+    backdrop-filter: blur(14px);
+    box-shadow: 0 20px 50px -20px rgb(0 0 0 / 0.6);
+  }
+  @media (max-width: 767px) {
+    .workflow-stage {
+      aspect-ratio: 4 / 5;
+    }
+    .workflow-window {
+      left: 6%;
+      top: 30%;
+      width: 94%;
+    }
+    .workflow-note {
+      left: 6%;
+      right: 6%;
+      top: 6%;
+      max-width: none;
+    }
+  }
+
+  /*
+   * Pricing (Hobbes palette): the Mawenzi landscape behind the heading, dimmed at the
+   * top for the header and dissolving into black; the recommended plan's card carries a
+   * strip of the clouds landscape that fades into the card.
+   */
+  /* Pricing surfaces in neutral black and greys (no warm tint), per the Hobbes palette. */
+  .pricing-dark {
+    --or-midnight: 14 14 14;
+    --or-graphite: 22 22 22;
+    --or-elevated: 32 32 32;
+    --or-line: 44 44 44;
+    background-color: #0e0e0e;
+  }
+  /*
+   * Pricing hero: like the homepage FAQ, the photo is sized from the width and pinned so
+   * the summit (39.3% down mawenzi-slopes = 0.2966 widths) sits on the .pricing-ridge top
+   * edge just under the copy. The sky behind the copy is dimmed; a little of the slopes
+   * shows, then it fades to black right at the ridge bottom (55.2%), where the cards begin.
+   */
+  .pricing-hero,
+  .photo-hero {
+    --pricing-photo-w: max(100vw, 1100px);
+    overflow-x: clip;
+  }
+  .pricing-ridge,
+  .photo-ridge {
+    position: relative;
+    height: calc(var(--pricing-photo-w) * 0.12);
+    margin-top: clamp(1.5rem, 3vw, 3rem);
+    z-index: -1;
+    /* The photo stops at the ridge's bottom edge; below it is plain black for the cards. */
+    clip-path: inset(-200vh -100vw 0 -100vw);
+  }
+  .pricing-hero-photo,
+  .photo-hero-photo {
+    position: absolute;
+    left: 50%;
+    top: calc(var(--pricing-photo-w) * -0.2966);
+    width: var(--pricing-photo-w);
+    transform: translateX(-50%);
+    pointer-events: none;
+  }
+  .pricing-hero-photo img,
+  .photo-hero-photo img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .pricing-hero-photo::after,
+  .photo-hero-photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgb(10 10 10 / 0.64) 0%, rgb(10 10 10 / 0.58) 30%, rgb(10 10 10 / 0.42) 37%, rgb(10 10 10 / 0.16) 41%, rgb(10 10 10 / 0.18) 47%, rgb(10 10 10 / 0.45) 51.5%, #0e0e0e 55.2%);
+  }
+  /* The shared inner-page hero: each landscape sets where its summit sits and its shade. */
+  .photo-ridge {
+    height: calc(var(--pricing-photo-w) * var(--photo-ridge-w, 0.12));
+  }
+  .photo-hero-photo {
+    top: calc(var(--pricing-photo-w) * -1 * var(--photo-peak-w, 0.2966));
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 var(--photo-fade, 0%));
+    mask-image: linear-gradient(180deg, transparent 0, #000 var(--photo-fade, 0%));
+  }
+  .photo-hero-photo::after {
+    background: var(--photo-shade);
+  }
+  /* Feature pages: darkened landscape strips on capability cards and the related card. */
+  .feature-card-photo,
+  .feature-related-photo {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .feature-card-photo-img img,
+  .feature-related-photo-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(0.35) brightness(0.7);
+    transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+  .feature-card-photo-img img {
+    object-position: 50% 60%;
+  }
+  .feature-related-photo[data-crop="1"] img {
+    object-position: 20% 75%;
+  }
+  .feature-card-photo[data-crop="1"] img {
+    object-position: 18% 70%;
+  }
+  .feature-card-photo[data-crop="2"] img {
+    object-position: 85% 45%;
+  }
+  .feature-card-photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgb(14 14 14 / 0.15), rgb(14 14 14 / 0.75));
+  }
+  .feature-related-photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgb(14 14 14 / 0.25) 0%, rgb(14 14 14 / 0.88) 80%);
+  }
+  .group:hover .feature-related-photo-img img {
+    transform: scale(1.04);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .feature-related-photo-img img {
+      transition: none;
+    }
+  }
+  /* Homepage "Review in practice" cards: a darkened landscape under a piece of interface. */
+  .journey-card-photo {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+  .journey-card-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: brightness(0.8);
+  }
+  .journey-card-photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgb(10 12 18 / 0.25), rgb(10 12 18 / 0.55));
+  }
+  .pricing-card-photo {
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 7.5rem;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .pricing-card-photo-img img {
+    width: 100%;
+    height: 100%;
+    filter: grayscale(1) brightness(0.85);
+    object-fit: cover;
+    object-position: 50% 30%;
+  }
+  .pricing-card-photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgb(22 22 22 / 0.35) 0%, rgb(22 22 22 / 0.8) 55%, rgb(22 22 22 / 1) 100%);
+  }
+  .pricing-card-photo-img {
+    position: absolute;
+    inset: 0;
+  }
+
+  /*
+   * Every photo inside a card or panel (Hobbes): the landscape dimmed and slightly
+   * desaturated, with a fine film grain over it. New card photos join these selectors.
+   */
+  .usecase-photo img,
+  .showcase-stage-photo img,
+  .workflow-stage-photo img,
+  .journey-card-photo img {
+    filter: brightness(0.6) saturate(0.8) contrast(1.08);
+  }
+  .usecase-photo::before,
+  .showcase-stage-photo::before,
+  .workflow-stage-photo::before,
+  .journey-card-photo::before,
+  .feature-card-photo::before,
+  .feature-related-photo::before,
+  .pricing-card-photo::before,
+  .card-photo-grain::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 220px 220px;
+    opacity: 0.38;
+    mix-blend-mode: overlay;
+    pointer-events: none;
+  }
   /* Independent white cards (homepage Use Cases, service categories). */
   .feature-card {
     border-radius: 18px;
@@ -425,22 +930,37 @@
     background: linear-gradient(145deg, #fff3ef, #ffe1d7);
     border: 1px solid rgb(194 65 42 / 0.18);
     box-shadow:
-      0 0 0 10px rgb(255 115 92 / 0.06),
-      0 0 0 22px rgb(255 115 92 / 0.035),
+      0 0 0 10px rgb(255 122 51 / 0.06),
+      0 0 0 22px rgb(255 122 51 / 0.035),
       0 24px 50px -24px rgb(194 65 42 / 0.45);
   }
 
   /* Homepage Blog: one pale coral panel holding the editorial rows. */
   .blog-panel {
     background:
-      radial-gradient(60% 55% at 85% 0%, rgb(255 115 92 / 0.14), transparent 70%),
+      radial-gradient(60% 55% at 85% 0%, rgb(255 122 51 / 0.14), transparent 70%),
       linear-gradient(180deg, #fff1eb 0%, #fff6f2 100%);
   }
 
+  /* On the dark pages the old coral washes give way to plain black and neutral glass. */
+  .home-dark .blog-hero,
+  .home-dark .page-glow,
+  .home-dark .closing-glow {
+    background: none;
+  }
+  .home-dark .feature-card {
+    background: rgb(255 255 255 / 0.03);
+    border-color: rgb(255 255 255 / 0.08);
+    box-shadow: none;
+  }
+  .home-dark .blog-panel {
+    background: rgb(255 255 255 / 0.03);
+    border: 1px solid rgb(255 255 255 / 0.08);
+  }
   /* Book a demo: a soft coral atmosphere behind both columns, settling to white. */
   .demo-atmosphere {
     background:
-      radial-gradient(55% 45% at 78% 18%, rgb(255 115 92 / 0.2), transparent 70%),
+      radial-gradient(55% 45% at 78% 18%, rgb(255 122 51 / 0.2), transparent 70%),
       radial-gradient(45% 40% at 8% 4%, rgb(255 158 133 / 0.22), transparent 70%),
       linear-gradient(180deg, #fff1eb 0%, #fff8f5 55%, #ffffff 100%);
   }
@@ -448,36 +968,8 @@
   /* Internal pages: a calm orange light over white, never the full cinematic field. */
   .page-glow {
     background:
-      radial-gradient(70% 100% at 50% 0%, rgb(255 115 92 / 0.18), rgb(255 115 92 / 0.06) 45%, transparent 75%),
+      radial-gradient(70% 100% at 50% 0%, rgb(255 122 51 / 0.18), rgb(255 122 51 / 0.06) 45%, transparent 75%),
       linear-gradient(180deg, #fff6f2 0%, #ffffff 70%);
-  }
-
-  /*
-   * Showcase growth: a CSS scroll-driven animation on the compositor (transform only, so
-   * no layout shift). It starts at two-thirds size and opens to full width as the card
-   * rises. The track is the timeline subject and never transforms itself. Browsers
-   * without scroll timelines, reduced motion, and phones get the static full-size frame.
-   */
-  @keyframes showcase-grow {
-    from {
-      transform: scale(0.68);
-    }
-    to {
-      transform: none;
-    }
-  }
-  @media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
-    @supports (animation-timeline: view()) {
-      .showcase-track {
-        view-timeline: --showcase block;
-      }
-      .showcase-scale {
-        transform-origin: 50% 0;
-        animation: showcase-grow linear both;
-        animation-timeline: --showcase;
-        animation-range: cover 16% cover 58%;
-      }
-    }
   }
 
   .dot-pattern {
@@ -487,7 +979,7 @@
 
   .hero-gradient {
     background:
-      radial-gradient(70% 100% at 50% 0%, rgb(255 115 92 / 0.18), rgb(255 115 92 / 0.06) 45%, transparent 75%),
+      radial-gradient(70% 100% at 50% 0%, rgb(255 122 51 / 0.18), rgb(255 122 51 / 0.06) 45%, transparent 75%),
       linear-gradient(180deg, #fff6f2 0%, rgb(var(--or-midnight)) 70%);
   }
 
@@ -497,7 +989,7 @@
 
   .blog-hero {
     background:
-      radial-gradient(70% 100% at 50% 0%, rgb(255 115 92 / 0.16), rgb(255 115 92 / 0.05) 45%, transparent 75%),
+      radial-gradient(70% 100% at 50% 0%, rgb(255 122 51 / 0.16), rgb(255 122 51 / 0.05) 45%, transparent 75%),
       linear-gradient(180deg, #fff6f2 0%, rgb(var(--or-midnight)) 70%);
   }
 
